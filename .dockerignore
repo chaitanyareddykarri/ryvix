@@ -1,0 +1,23 @@
+# Version Control
+.git/
+.gitignore
+
+# Environment Variables & Secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.cert
+secrets/
+
+# Dependencies & Outputs
+node_modules/
+dist/
+build/
+.next/
+*.log
+
+# Scratch & Temporary
+scratch/
+tmp/

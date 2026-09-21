@@ -1,0 +1,17 @@
+{
+  "name": "@ryvix/ai",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/orchestrator.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ryvix/database": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "typescript": "^5.7.3"
+  }
+}

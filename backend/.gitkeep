@@ -1,0 +1,2 @@
+# Ryvix Core Backend / Orchestrator Directory
+# Contains API routes, task orchestration, permission validation, and tool-call engines.

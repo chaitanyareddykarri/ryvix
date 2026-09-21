@@ -1,0 +1,2 @@
+# Ryvix Infrastructure Directory
+# Contains Docker Compose configs, Kubernetes manifests, Helm charts, and Terraform definitions.
