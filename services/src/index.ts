@@ -78,3 +78,14 @@ export {
   type CodeSynthesisResult,
   type CodeDebugResult
 } from "../../ai/src/coding-assistant";
+
+export {
+  networkServerController,
+  NetworkServerController,
+  type ServerPlatformType,
+  type NetworkIssueType,
+  type NetworkDiagnosticRequest,
+  type NetworkDiagnosticResult,
+  type ServerControlTakeoverPlan,
+  type ServerControlExecutionResult
+} from "../../ai/src/network-server-controller";

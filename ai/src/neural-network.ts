@@ -146,6 +146,14 @@ export const NEURAL_THREAT_CLASSES: string[] = [
   'WEB_CHAT_SRE_INCIDENT_TRIAGE',
   'WEB_CHAT_STREAMING_PROTOCOL_QUERY',
   'WEB_CHAT_SECURITY_FORENSICS',
+
+  // Network Engine, Multi-Cloud Infrastructure & Server Control Head
+  'NETWORK_PORT_SOCKET_COLLISION_EADDRINUSE',
+  'NETWORK_FIREWALL_PORT_BLOCK_DROP',
+  'NETWORK_EPHEMERAL_PORT_EXHAUSTION',
+  'CLOUD_AWS_EC2_SECURITY_GROUP_IMPAIRMENT',
+  'CLOUD_HUGGINGFACE_SPACE_PORT7860_OOM',
+  'SERVER_CONTROL_AUTONOMOUS_FAILOVER_TRIGGER',
 ];
 
 export class NeuralThreatClassifier {
@@ -403,6 +411,21 @@ export class NeuralThreatClassifier {
       isDiffSynthesis?: boolean;
       isStreamingProtocol?: boolean;
     };
+    networkTelemetry?: {
+      targetPort?: number;
+      isPortBlocked?: boolean;
+      timeWaitSockets?: number;
+      hasDnsTimeout?: boolean;
+      hasSniFailure?: boolean;
+    };
+    serverProviderContext?: {
+      platform?: string;
+      isHuggingFaceSpace?: boolean;
+      isAwsEc2?: boolean;
+      isVps?: boolean;
+      isHetznerOrDo?: boolean;
+      isBaremetal?: boolean;
+    };
   }): Float32Array {
     const vec = new Float32Array(this.inputDim);
 
@@ -475,6 +498,23 @@ export class NeuralThreatClassifier {
     }
     if (data.experienceConfidence !== undefined) {
       vec[19] = Math.min(1.0, Math.max(0.0, data.experienceConfidence));
+    }
+
+    // Network & Multi-Cloud Provider Signals
+    if (data.networkTelemetry?.targetPort === 7860 || data.serverProviderContext?.isHuggingFaceSpace) {
+      vec[15] = 1.0;
+    }
+    if (data.serverProviderContext?.isAwsEc2) {
+      vec[12] = 0.85;
+    }
+    if (data.serverProviderContext?.isHetznerOrDo) {
+      vec[13] = 0.85;
+    }
+    if (data.networkTelemetry?.isPortBlocked) {
+      vec[5] = 0.95;
+    }
+    if (data.networkTelemetry?.timeWaitSockets && data.networkTelemetry.timeWaitSockets > 10000) {
+      vec[4] = 1.0;
     }
 
     // 5. Log & Conversational Text Hashing (indices 20 - 63: 44 hash buckets)

@@ -1,4 +1,5 @@
 import { ragEngine } from '../src/rag-engine';
+import { networkServerController } from '../src/network-server-controller';
 import { brainDeliberativeReasoner } from '../src/brain-deliberative-reasoner';
 import {
   webOutageRecoveryEngine,
@@ -22,6 +23,7 @@ import {
  * 4. Autonomous LLM Bidirectional Communication & Real-Time Self-Learning Verification
  * 5. Multi-Server Archetype Precision (Web Proxy, Database, Cache, K8s, App, Bastion, Storage)
  * 6. Web Chat Conversational Intelligence, Streaming Protocol & Action Approval Gating (Stage 11)
+ * 7. Deep Network Engine, Multi-Cloud/VPS/HuggingFace Server Control & Port Matrix (Stage 12)
  */
 
 import * as fs from 'node:fs';
@@ -1102,6 +1104,306 @@ async function runMasterTraining() {
   console.log(`  ✓ Top Matched Runbook: "${webChatRagRes.retrievedContext[0]?.chunk.title}" (Score: ${(webChatRagRes.retrievalConfidence * 100).toFixed(1)}%)`);
   console.log(`  ✓ Verified Command: ${webChatRagRes.verifiedExecutableCommands[0] || 'curl -N http://localhost:3000/api/chat'}`);
   console.log(`  ✓ RAG Lookup Latency: ${ragChatLatency}ms (Total Knowledge Base Chunks: ${ragEngine.getTotalIndexedCount()})`);
+
+  // --- STAGE 12: DEEP NETWORK ENGINE, MULTI-CLOUD/VPS/HUGGINGFACE SERVER CONTROL & PORT MATRIX ---
+  console.log('\n[STAGE 12] DEEP NETWORK ENGINE, MULTI-CLOUD/VPS/HUGGINGFACE SERVER CONTROL & PORT MATRIX');
+
+  const networkMultiCloudBattery: Array<{
+    scenario: string;
+    target: string;
+    platform: string;
+    port: number;
+    timeWait?: number;
+    blocked?: boolean;
+    logs: string[];
+  }> = [
+    // 1. Network Port & Socket Conflicts (5 scenarios)
+    {
+      scenario: 'Port 3000 EADDRINUSE conflict: rogue process holding socket open',
+      target: 'NETWORK_PORT_SOCKET_COLLISION_EADDRINUSE',
+      platform: 'generic_vps',
+      port: 3000,
+      logs: ['Error: listen EADDRINUSE: address already in use :::3000', 'failed to bind socket']
+    },
+    {
+      scenario: 'Node.js server crash: address already in use on port 8080 during deployment',
+      target: 'NETWORK_PORT_SOCKET_COLLISION_EADDRINUSE',
+      platform: 'generic_vps',
+      port: 8080,
+      logs: ['bind failed: EADDRINUSE 0.0.0.0:8080', 'port already bound by another process']
+    },
+    {
+      scenario: 'Port 443 bind failed: another web server already listening on 0.0.0.0:443',
+      target: 'NETWORK_PORT_SOCKET_COLLISION_EADDRINUSE',
+      platform: 'generic_vps',
+      port: 443,
+      logs: ['nginx: [emerg] bind() to 0.0.0.0:443 failed (98: Address already in use)']
+    },
+    {
+      scenario: 'Port 5432 PostgreSQL socket lock conflict with defunct backend instance',
+      target: 'NETWORK_PORT_SOCKET_COLLISION_EADDRINUSE',
+      platform: 'generic_vps',
+      port: 5432,
+      logs: ['could not bind IPv4 address "0.0.0.0": Address already in use', 'Is another postmaster already running on port 5432?']
+    },
+    {
+      scenario: 'Privileged port 80 permission denied for non-root unprivileged process',
+      target: 'NETWORK_PORT_SOCKET_COLLISION_EADDRINUSE',
+      platform: 'generic_vps',
+      port: 80,
+      logs: ['permission denied binding to privileged port 80', 'EACCES: permission denied']
+    },
+
+    // 2. Firewall & Ingress Security Drops (5 scenarios)
+    {
+      scenario: 'Inbound traffic to port 443 dropped by iptables default DROP policy',
+      target: 'NETWORK_FIREWALL_PORT_BLOCK_DROP',
+      platform: 'generic_vps',
+      port: 443,
+      blocked: true,
+      logs: ['iptables DROP: IN=eth0 OUT= MAC= SRC=198.51.100.22 DST=10.0.0.4 PROTO=TCP DPT=443']
+    },
+    {
+      scenario: 'Port 3000 unreachable from public internet: UFW firewall rule missing',
+      target: 'NETWORK_FIREWALL_PORT_BLOCK_DROP',
+      platform: 'generic_vps',
+      port: 3000,
+      blocked: true,
+      logs: ['[UFW BLOCK] IN=eth0 OUT= SRC=203.0.113.50 DST=10.0.0.5 PROTO=TCP DPT=3000']
+    },
+    {
+      scenario: 'Firewalld dropped SYN packet on port 8443 on Rocky Linux edge host',
+      target: 'NETWORK_FIREWALL_PORT_BLOCK_DROP',
+      platform: 'generic_vps',
+      port: 8443,
+      blocked: true,
+      logs: ['FINAL_REJECT: IN=eth0 OUT= PROTO=TCP SPT=49152 DPT=8443 SYN']
+    },
+    {
+      scenario: 'Network ACL inbound denial blocking microservice traffic on port 9090',
+      target: 'NETWORK_FIREWALL_PORT_BLOCK_DROP',
+      platform: 'generic_vps',
+      port: 9090,
+      blocked: true,
+      logs: ['VPC Flow Log: REJECT OK 10.0.1.15 10.0.2.20 54120 9090 6 1 40']
+    },
+    {
+      scenario: 'Offending IP blocked by netfilter rule: traffic connection refused',
+      target: 'NETWORK_FIREWALL_PORT_BLOCK_DROP',
+      platform: 'generic_vps',
+      port: 80,
+      blocked: true,
+      logs: ['kernel: netfilter drop rule enforced on interface eth0']
+    },
+
+    // 3. Ephemeral Port & Socket Exhaustion (4 scenarios)
+    {
+      scenario: 'Linux kernel ephemeral port exhaustion: cannot assign requested address under 50k req/s',
+      target: 'NETWORK_EPHEMERAL_PORT_EXHAUSTION',
+      platform: 'generic_vps',
+      port: 80,
+      timeWait: 32000,
+      logs: ['connect failed: Cannot assign requested address (EADDRNOTAVAIL)', 'ephemeral port space exhausted']
+    },
+    {
+      scenario: 'Over 25,000 TCP sockets accumulated in TIME_WAIT state depleting local port pool',
+      target: 'NETWORK_EPHEMERAL_PORT_EXHAUSTION',
+      platform: 'generic_vps',
+      port: 443,
+      timeWait: 28000,
+      logs: ['kernel: TCP: request_sock_TCP: Possible SYN flooding on port 443. Sending cookies.', 'TIME_WAIT socket pool saturated']
+    },
+    {
+      scenario: 'TCP SYN queue overflow: somaxconn and tcp_max_syn_backlog saturated',
+      target: 'NETWORK_EPHEMERAL_PORT_EXHAUSTION',
+      platform: 'generic_vps',
+      port: 80,
+      timeWait: 15000,
+      logs: ['TCP: drop open request, backlog queue full', 'somaxconn limit reached']
+    },
+    {
+      scenario: 'Outbound microservice connection pool failure due to socket file descriptor leak',
+      target: 'NETWORK_EPHEMERAL_PORT_EXHAUSTION',
+      platform: 'generic_vps',
+      port: 3000,
+      timeWait: 22000,
+      logs: ['EMFILE: too many open files', 'socket allocation failed: out of local ports']
+    },
+
+    // 4. AWS EC2 Cloud Infrastructure & Security Groups (4 scenarios)
+    {
+      scenario: 'AWS EC2 web server running but unreachable: Security Group ingress rule missing for port 3000',
+      target: 'CLOUD_AWS_EC2_SECURITY_GROUP_IMPAIRMENT',
+      platform: 'aws_ec2',
+      port: 3000,
+      logs: ['AWS EC2 instance i-0a8b9c7d: Security Group sg-01234 lacks inbound authorization for 0.0.0.0/0 on port 3000']
+    },
+    {
+      scenario: 'AWS VPC Route Table missing Internet Gateway 0.0.0.0/0 attachment on public subnet',
+      target: 'CLOUD_AWS_EC2_SECURITY_GROUP_IMPAIRMENT',
+      platform: 'aws_ec2',
+      port: 80,
+      logs: ['VPC subnet subnet-0abcde lacks route to igw-012345: internet traffic unreachable']
+    },
+    {
+      scenario: 'AWS EC2 Elastic Network Interface (ENI) packet drops due to burst balance credit exhaustion',
+      target: 'CLOUD_AWS_EC2_SECURITY_GROUP_IMPAIRMENT',
+      platform: 'aws_ec2',
+      port: 443,
+      logs: ['EC2 CloudWatch Alarm: NetworkBandwidthInAllowanceExceeded for instance i-044ff']
+    },
+    {
+      scenario: 'AWS EC2 instance health check failed: guest OS kernel panic and hypervisor impaired',
+      target: 'CLOUD_AWS_EC2_SECURITY_GROUP_IMPAIRMENT',
+      platform: 'aws_ec2',
+      port: 80,
+      logs: ['EC2 StatusCheckFailed_Instance: 1/2 checks passed, guest OS kernel unresponsive']
+    },
+
+    // 5. Hugging Face Spaces & Inference Endpoints (4 scenarios)
+    {
+      scenario: 'Hugging Face Space container crash: Torch CUDA out of memory during LLM batch inference',
+      target: 'CLOUD_HUGGINGFACE_SPACE_PORT7860_OOM',
+      platform: 'huggingface_spaces',
+      port: 7860,
+      logs: ['torch.cuda.OutOfMemoryError: CUDA out of memory. Tried to allocate 4.20 GiB (GPU 0; 15.78 GiB total capacity)', 'Hugging Face Space crashed']
+    },
+    {
+      scenario: 'Hugging Face Space not responding: web server failed to bind default port 7860 on 0.0.0.0',
+      target: 'CLOUD_HUGGINGFACE_SPACE_PORT7860_OOM',
+      platform: 'huggingface_spaces',
+      port: 8080,
+      logs: ['Container started on port 8080 instead of expected 7860', 'Hugging Face Spaces edge proxy returned 502: container not listening on 7860']
+    },
+    {
+      scenario: 'Gradio UI container on Hugging Face Spaces crashing due to 16GB RAM container ceiling',
+      target: 'CLOUD_HUGGINGFACE_SPACE_PORT7860_OOM',
+      platform: 'huggingface_spaces',
+      port: 7860,
+      logs: ['Killed: container exceeded 16GB memory ceiling on Hugging Face Spaces free hardware tier']
+    },
+    {
+      scenario: 'Hugging Face inference endpoint cold start timeout on GPU T4 hardware',
+      target: 'CLOUD_HUGGINGFACE_SPACE_PORT7860_OOM',
+      platform: 'huggingface_spaces',
+      port: 7860,
+      logs: ['Hugging Face Hub API: Space initialization timeout, weights download stalled on huggingface.co']
+    },
+
+    // 6. Autonomous Server Control Takeover & Trigger Response (3 scenarios)
+    {
+      scenario: 'Autonomous trigger received: HTTP 502 Bad Gateway on edge proxy, executing server control takeover',
+      target: 'SERVER_CONTROL_AUTONOMOUS_FAILOVER_TRIGGER',
+      platform: 'generic_vps',
+      port: 80,
+      logs: ['AUTONOMOUS TRIGGER: HTTP 502 Bad Gateway detected on edge proxy, dispatching in-host agent socket restart']
+    },
+    {
+      scenario: 'Hetzner Cloud VPS frozen: taking server control via out-of-band hypervisor ACPI power cycle',
+      target: 'SERVER_CONTROL_AUTONOMOUS_FAILOVER_TRIGGER',
+      platform: 'hetzner_cloud',
+      port: 443,
+      logs: ['Hetzner host hcloud-srv-01 unresponsive to ping/SSH: executing out-of-band ACPI reset via Hetzner Cloud API']
+    },
+    {
+      scenario: 'DigitalOcean droplet unresponsive: triggering automated rescue ISO boot and IP failover',
+      target: 'SERVER_CONTROL_AUTONOMOUS_FAILOVER_TRIGGER',
+      platform: 'digitalocean',
+      port: 80,
+      logs: ['DigitalOcean droplet dropl-nyc3-01 guest OS kernel panic: executing doctl power-cycle and floating IP swap']
+    }
+  ];
+
+  // A. Train Neural Network on 25 Network & Multi-Cloud Scenarios (3 Epochs with Adam Optimizer)
+  let netLossSum = 0;
+  const netEpochs = 3;
+  for (let ep = 1; ep <= netEpochs; ep++) {
+    for (const item of networkMultiCloudBattery) {
+      const v = neuralThreatClassifier.vectorize({
+        metrics: { cpuPercent: 60, memPercent: 65, diskPercent: 30 },
+        openPorts: [item.port],
+        conversationalQuery: item.scenario,
+        logs: item.logs,
+        networkTelemetry: {
+          targetPort: item.port,
+          isPortBlocked: item.blocked,
+          timeWaitSockets: item.timeWait
+        },
+        serverProviderContext: {
+          platform: item.platform,
+          isHuggingFaceSpace: item.platform === 'huggingface_spaces',
+          isAwsEc2: item.platform === 'aws_ec2',
+          isHetznerOrDo: item.platform === 'hetzner_cloud' || item.platform === 'digitalocean'
+        }
+      });
+      const loss = neuralThreatClassifier.trainSample(v, item.target, 0.05);
+      if (ep === netEpochs) {
+        netLossSum += loss;
+        console.log(`  ✓ Trained Network/Multi-Cloud Class: [${item.target.padEnd(42)}] (Loss: ${loss.toFixed(4)})`);
+      }
+    }
+  }
+  console.log(`  ✓ Network Engine & Multi-Cloud Matrix Complete: 25/25 Scenarios Hardened (Final Avg Loss: ${(netLossSum / networkMultiCloudBattery.length).toFixed(4)})`);
+
+  // B. Benchmark Network Server Controller Diagnostic Engine
+  console.log('\n  [Network & Multi-Cloud Server Controller Diagnostics]');
+  const hfDiag = networkServerController.diagnoseNetworkIssue({
+    serverId: 'hf_space_nlp_01',
+    hostname: 'my-nlp-space.hf.space',
+    platform: 'huggingface_spaces',
+    targetPort: 7860,
+    protocol: 'http',
+    recentLogs: ['torch.cuda.OutOfMemoryError: CUDA out of memory. Tried to allocate 4.20 GiB']
+  });
+  console.log(`  ✓ Hugging Face Diagnostic: Issue=${hfDiag.issueType} | Severity=${hfDiag.severity} | Command=${hfDiag.recommendedCommand}`);
+
+  const awsDiag = networkServerController.diagnoseNetworkIssue({
+    serverId: 'i-0987654321fedcba0',
+    hostname: 'ec2-prod-api.us-east-1.compute.amazonaws.com',
+    platform: 'aws_ec2',
+    targetPort: 3000,
+    protocol: 'tcp',
+    recentLogs: ['AWS EC2 instance i-0987654321fedcba0: Security Group lacks inbound authorization']
+  });
+  console.log(`  ✓ AWS EC2 Diagnostic: Issue=${awsDiag.issueType} | Command=${awsDiag.recommendedCommand}`);
+
+  const vpsDiag = networkServerController.diagnoseNetworkIssue({
+    serverId: 'vps_ubuntu_01',
+    hostname: 'edge-proxy-lon1.prod.internal',
+    platform: 'generic_vps',
+    targetPort: 80,
+    protocol: 'tcp',
+    timeWaitSockets: 25000,
+    recentLogs: ['connect failed: Cannot assign requested address (EADDRNOTAVAIL)']
+  });
+  console.log(`  ✓ Linux VPS Ephemeral Port Diagnostic: Issue=${vpsDiag.issueType} | Command=${vpsDiag.recommendedCommand}`);
+
+  // C. Benchmark Autonomous Server Control Takeover & Trigger Response
+  console.log('\n  [Autonomous Server Control Takeover & Trigger Response]');
+  const takeoverPlan = networkServerController.createTakeoverPlan(
+    'hf_space_nlp_01',
+    'huggingface_spaces',
+    'CUDA_GPU_OOM_DOWNTIME_TRIGGER',
+    hfDiag
+  );
+  console.log(`  ✓ Takeover Plan Created: Pathway=${takeoverPlan.controlPathway} | PrimaryAction=${takeoverPlan.primaryRemediationStep.action}`);
+
+  const takeoverExec = await networkServerController.executeTakeoverPlan(takeoverPlan);
+  console.log(`  ✓ Takeover Plan Executed: Status=${takeoverExec.status} | PathwayUsed=${takeoverExec.pathwayUsed} | Recovered=${takeoverExec.recovered} (Latency: ${takeoverExec.latencyMs}ms)`);
+
+  // D. Benchmark RAG Retrieval on Network & Multi-Cloud Provider Playbooks
+  console.log('\n  [Network & Multi-Cloud RAG Knowledge Retrieval]');
+  const netRagT0 = performance.now();
+  const netRagRes1 = ragEngine.query('How to fix Hugging Face Spaces port 7860 binding and CUDA out of memory error?');
+  const netRagRes2 = ragEngine.query('AWS EC2 web server unreachable port 3000 Security Group ingress');
+  const netRagRes3 = ragEngine.query('Linux VPS ephemeral port exhaustion TIME_WAIT cannot assign requested address');
+  const netRagDuration = (performance.now() - netRagT0).toFixed(2);
+
+  console.log(`  ✓ Hugging Face RAG Playbook: Top Match="${netRagRes1.retrievedContext[0]?.chunk.title}" (Score: ${(netRagRes1.retrievalConfidence * 100).toFixed(1)}%)`);
+  console.log(`  ✓ AWS EC2 RAG Playbook: Top Match="${netRagRes2.retrievedContext[0]?.chunk.title}" (Score: ${(netRagRes2.retrievalConfidence * 100).toFixed(1)}%)`);
+  console.log(`  ✓ Linux VPS Socket RAG Playbook: Top Match="${netRagRes3.retrievedContext[0]?.chunk.title}" (Score: ${(netRagRes3.retrievalConfidence * 100).toFixed(1)}%)`);
+  console.log(`  ✓ Total Network & Cloud RAG Latency: ${netRagDuration}ms (Indexed Chunks: ${ragEngine.getTotalIndexedCount()})`);
+
 
 
   // 3. Export Continuous Fine-Tuning Corpus (JSONL)

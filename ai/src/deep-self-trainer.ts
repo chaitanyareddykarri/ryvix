@@ -114,9 +114,9 @@ export class DeepSelfTrainer {
 
     let initialLoss = 0.0;
     let finalLoss = 0.0;
-    let stepCount = 0;
 
     for (let epoch = 0; epoch < epochs; epoch++) {
+      let epochLossSum = 0;
       for (const sample of allSamples) {
         const vec = neuralThreatClassifier.vectorize({
           metrics: sample.syntheticMetrics,
@@ -125,10 +125,10 @@ export class DeepSelfTrainer {
         });
 
         const loss = neuralThreatClassifier.trainSample(vec, sample.baseThreat, 0.01);
-        if (stepCount === 0) initialLoss = loss;
-        finalLoss = loss;
-        stepCount++;
+        epochLossSum += loss;
       }
+      if (epoch === 0) initialLoss = epochLossSum / allSamples.length;
+      if (epoch === epochs - 1) finalLoss = epochLossSum / allSamples.length;
     }
 
     const avgReward = allSamples.reduce((sum, s) => sum + s.rewardScore, 0) / allSamples.length;

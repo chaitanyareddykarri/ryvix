@@ -192,6 +192,66 @@ export const INITIAL_RAG_PLAYBOOKS: RagDocumentChunk[] = [
       'sed -i "s/127.0.0.1:3000/127.0.0.1:3001/" /etc/nginx/sites-available/default && nginx -s reload'
     ],
     tags: ['web chat', 'sre', 'eaddrinuse', '502', 'socket conflict', 'zero-downtime', 'outage triage', 'systemd']
+  },
+  {
+    chunkId: 'runbook_aws_ec2_network_security_group',
+    documentId: 'sec_playbook_aws_01',
+    title: 'AWS EC2 Security Group Ingress & VPC Routing Remediation',
+    category: 'SECURITY_RUNBOOK',
+    content: 'When external web traffic cannot reach an AWS EC2 instance on port 80, 443, or 3000 despite service being active, verify the assigned Security Group ingress rules, Network ACLs, and VPC Route Table Internet Gateway (igw) attachment. Authorize missing ingress ports and verify Elastic IP association.',
+    actionableCommands: [
+      'aws ec2 authorize-security-group-ingress --group-id $SG_ID --protocol tcp --port 3000 --cidr 0.0.0.0/0',
+      'aws ec2 describe-instance-status --instance-ids $INSTANCE_ID'
+    ],
+    tags: ['aws', 'ec2', 'security group', 'vpc', 'port 3000', 'ingress', 'network', 'cloud']
+  },
+  {
+    chunkId: 'runbook_huggingface_spaces_port_7860_oom',
+    documentId: 'arch_playbook_hf_01',
+    title: 'Hugging Face Spaces Port 7860 & GPU CUDA Memory Outage Recovery',
+    category: 'ARCHITECTURE_BLUEPRINT',
+    content: 'Hugging Face Spaces expects web containers to listen on 0.0.0.0:7860 for external edge proxy routing. If a Space fails with Connection Refused or CUDA Out of Memory (OOM), bind application directly to port 7860 (via Uvicorn/Gradio/Streamlit), invoke torch.cuda.empty_cache(), or dispatch out-of-band space restart via huggingface-cli spaces restart with upgraded T4/A10G hardware tier.',
+    actionableCommands: [
+      'python -m uvicorn app:app --host 0.0.0.0 --port 7860',
+      'huggingface-cli spaces restart --space-id $SPACE_ID'
+    ],
+    tags: ['hugging face', 'hf spaces', 'port 7860', 'gradio', 'fastapi', 'cuda', 'gpu oom', 'inference']
+  },
+  {
+    chunkId: 'runbook_vps_ephemeral_port_exhaustion',
+    documentId: 'sre_playbook_vps_01',
+    title: 'Linux VPS Ephemeral Port Exhaustion & TIME_WAIT Socket Saturation',
+    category: 'SRE_OUTAGE_PLAYBOOK',
+    content: 'Under high request volume on Ubuntu/Debian/RHEL VPS servers, thousands of closed TCP connections accumulate in TIME_WAIT state, depleting available local ports (EADDRNOTAVAIL: Cannot assign requested address). Enable TCP time-wait reuse via sysctl net.ipv4.tcp_tw_reuse = 1 and expand local port range to 1024-65535.',
+    actionableCommands: [
+      'sysctl -w net.ipv4.tcp_tw_reuse=1 && sysctl -w net.ipv4.ip_local_port_range="1024 65535"',
+      'ss -s && netstat -nat | grep TIME_WAIT | wc -l'
+    ],
+    tags: ['vps', 'ephemeral ports', 'time_wait', 'socket exhaustion', 'sysctl', 'eaddrnotavail', 'tcp']
+  },
+  {
+    chunkId: 'runbook_hetzner_do_hypervisor_out_of_band',
+    documentId: 'sre_playbook_hetzner_01',
+    title: 'Hetzner & DigitalOcean Out-of-Band Cloud Hypervisor Hardware Recovery',
+    category: 'SRE_OUTAGE_PLAYBOOK',
+    content: 'When guest OS kernel panics, OOM freezes, or network interfaces drop on Hetzner Cloud or DigitalOcean Droplets, in-host agents cannot respond. The Ryvix Cloud Recovery Bridge bypasses guest OS to execute hypervisor ACPI power reset, activates temporary rescue Linux ISO via Robot/vSwitch, and reassigns Floating IP to standby cluster nodes.',
+    actionableCommands: [
+      'curl -X POST -H "Authorization: Bearer $HETZNER_TOKEN" https://api.hetzner.cloud/v1/servers/$SERVER_ID/actions/reset',
+      'doctl compute droplet-action power-cycle $DROPLET_ID'
+    ],
+    tags: ['hetzner', 'digitalocean', 'out of band', 'hypervisor', 'kernel panic', 'hard reset', 'floating ip']
+  },
+  {
+    chunkId: 'runbook_server_control_autonomous_trigger',
+    documentId: 'sec_playbook_ctrl_01',
+    title: 'Autonomous Server Control Takeover & Incident Trigger Response Loop',
+    category: 'SECURITY_RUNBOOK',
+    content: 'Upon receiving any critical server or network trigger (HTTP 502/504, port unreachable, packet drop, memory freeze, GPU failure), the Ryvix Autonomous Control Loop evaluates root causes, selects the highest-reliability control pathway (In-Host Agent, Ed25519 SSH, Cloud Hypervisor API, or Hugging Face Spaces API), executes progressive remediation, and confirms recovery via multi-probe health checks.',
+    actionableCommands: [
+      'fuser -k 3000/tcp && systemctl restart app-backend',
+      'iptables -I INPUT -p tcp --dport 3000 -j ACCEPT'
+    ],
+    tags: ['server control', 'autonomous trigger', 'self healing', 'multi cloud', 'takeover', 'recovery loop']
   }
 ];
 

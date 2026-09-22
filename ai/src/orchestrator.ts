@@ -406,3 +406,14 @@ export {
   type RagSearchResult,
   type RagAugmentedResponse
 } from "./rag-engine";
+
+export {
+  networkServerController,
+  NetworkServerController,
+  type ServerPlatformType,
+  type NetworkIssueType,
+  type NetworkDiagnosticRequest,
+  type NetworkDiagnosticResult,
+  type ServerControlTakeoverPlan,
+  type ServerControlExecutionResult
+} from "./network-server-controller";
