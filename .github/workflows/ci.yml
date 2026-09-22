@@ -89,4 +89,10 @@ jobs:
         run: npm ci
 
       - name: Verify Package Compilation
+        env:
+          NODE_ENV: production
+          NEXT_PUBLIC_SUPABASE_URL: "https://placeholder-project.supabase.co"
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.placeholder"
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.placeholder"
+          NEXT_PUBLIC_SITE_URL: "http://localhost:3000"
         run: npm run --workspaces --if-present build
