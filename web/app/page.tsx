@@ -131,7 +131,7 @@ export default async function Page() {
                 width: "auto",
               }}
             >
-              Sign In (Email OTP)
+              Sign In / Register
             </Link>
           )}
         </div>

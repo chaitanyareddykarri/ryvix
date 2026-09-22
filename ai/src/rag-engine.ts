@@ -264,6 +264,42 @@ export const INITIAL_RAG_PLAYBOOKS: RagDocumentChunk[] = [
       'npm run dev'
     ],
     tags: ['ryvix', 'platform overview', 'website', 'console', 'architecture', 'backend', 'what can this website do', 'how chat works', 'sse streaming', 'frontend backend communication']
+  },
+  {
+    chunkId: 'runbook_customer_server_and_website_health_triage',
+    documentId: 'sre_playbook_customer_01',
+    title: 'Customer Server Telemetry, CPU/Memory Spikes & Website Health Triage',
+    category: 'SRE_OUTAGE_PLAYBOOK',
+    content: 'When a customer asks about their registered server health (e.g. CPU, RAM, disk, active services, port 3000) or website availability, the Ryvix AI queries the in-host connector agent telemetry and external HTTP probes. If CPU exceeds 80%, identify runaway processes with top/ps. If website returns 502, verify backend socket binding with ss -tulpn and systemctl status. If all metrics are within nominal thresholds, reassure the customer with structured service status cards.',
+    actionableCommands: [
+      'systemctl status nginx node-app postgresql',
+      'ss -tulpn | grep -E ":(80|443|3000)"'
+    ],
+    tags: ['customer server', 'website health', 'cpu usage', 'memory usage', 'server status', 'port 3000', 'telemetry', '502 error']
+  },
+  {
+    chunkId: 'runbook_customer_unregistered_server_onboarding',
+    documentId: 'arch_playbook_customer_02',
+    title: 'Unregistered Infrastructure Detection & Customer Server Onboarding Guide',
+    category: 'ARCHITECTURE_BLUEPRINT',
+    content: 'When a customer inquires about their website or server health but has not yet linked a GitHub repository or enrolled a server into Ryvix, the AI detects the absence of infrastructure telemetry. The AI must empathetically inform the customer that no server or repo is currently registered, and provide the exact steps to connect: 1) Link GitHub repository in Dashboard; 2) Add a server in /servers using Pathway A (one-line curl agent installation) or Pathway B (agentless Ed25519 SSH).',
+    actionableCommands: [
+      'curl -fsSL https://ryvix.io/install.sh | bash -s -- --token $ENROLLMENT_TOKEN',
+      'ssh-keygen -t ed25519 -C "ryvix-agentless"'
+    ],
+    tags: ['unregistered server', 'missing server', 'onboarding', 'how to add server', 'link github', 'enroll server', 'install connector']
+  },
+  {
+    chunkId: 'runbook_customer_github_cicd_deployment_health',
+    documentId: 'arch_playbook_customer_03',
+    title: 'Customer GitHub Repository & CI/CD Deployment Health Verification',
+    category: 'ARCHITECTURE_BLUEPRINT',
+    content: 'When a customer asks if their latest GitHub deployment or build succeeded, Ryvix queries the linked repository webhook events and GitHub Actions workflow runs. If the latest deployment succeeded, confirm the commit SHA, branch, and active container. If the deployment failed, isolate the failing step from the build log (e.g. TypeScript error, missing environment secrets, Docker build timeout) and provide exact remediation steps.',
+    actionableCommands: [
+      'git log -n 1 --oneline',
+      'npm run build && npm run test'
+    ],
+    tags: ['github deployment', 'github repo', 'did deployment succeed', 'build status', 'ci cd', 'github actions', 'latest commit']
   }
 ];
 

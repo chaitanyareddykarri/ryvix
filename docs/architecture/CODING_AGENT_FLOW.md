@@ -1,74 +1,82 @@
-# Ryvix Coding Agent Workflow Specification
+# Ryvix Autonomous AI Coding & PR Lifecycle Workflow Specification
 
-## 1. End-to-End Autonomous Coding Flow
+## 1. End-to-End Autonomous Coding Loop
 
-This document details the step-by-step lifecycle when a user asks Ryvix to implement a feature, fix a bug, or update an existing software project.
+This document details the 12-stage lifecycle when a user asks Ryvix to implement a feature, fix a bug, or modernize an existing software project.
 
 ```
-[ 1. User Coding Request ]
-  e.g., "Add a dark mode toggle to the top navigation bar"
+[ 1. User Natural Language Input ]
+  e.g., "make my website look better and put something nice at the top"
        │
        ▼
-[ 2. Context Assembly & Project Analysis ]
-  - Fetch repo structure, detected stack, active branch
-  - Ingest relevant source files (e.g. `Navbar.tsx`, `tailwind.config.js`)
+[ 2. Requirement Understanding & Intent Processing ] (ai/src/understanding/)
+  - Classifies Intent: `IMPROVE_UX`
+  - Identifies Target: `Homepage Hero Section (app/page.tsx or components/Hero.tsx)`
+  - Formulates Constraints: Preserve Auth (Supabase), preserve design tokens, no extra dependencies
+  - Checks for Ambiguity: If vague (e.g. "fix it"), halts and requests clarification
        │
        ▼
-[ 3. AI Planning & Strategy Formulation ]
-  - AI generates phased plan: files to create, files to modify, build commands
-  - AI identifies: "This is a frontend UI change requiring preview"
+[ 3. Context Assembly & Secret Sanitization ] (ai/src/context/)
+  - Ingests target files (top 1–5 files, e.g. `app/page.tsx`, `components/Hero.tsx`, `globals.css`)
+  - Scopes allowed tools & platform policies
+  - Automatically strips & redacts secrets (passwords, tokens, private keys, connection strings)
        │
        ▼
-[ 4. Execution Mode Selection ]
-  - Needs build/test verification? -> Route to Ephemeral Coding Workspace
+[ 4. LLM Gateway & Technical Plan Synthesis ] (ai/src/llm/ & ai/src/planning/)
+  - Multi-tier provider chain (Groq, Hugging Face Qwen 2.5 Coder, Gemini, Ollama, Local Fallback)
+  - Emits structured JSON adhering to `@ryvix/database` `Plan` & `PlanStep` schema (10-step sequence)
        │
        ▼
-[ 5. Workspace Provisioning & Code Modification ]
-  - Clone repo branch
-  - Apply AST/diff edits to source files
-  - Run `pnpm build` -> Checks for compiler errors
-  - Run `pnpm test` -> Checks for test regressions
-  - If errors occur: Feed compiler errors back to AI for auto-correction (max 3 loops)
+[ 5. Plan Validation & Tool Authorization Gate ] (ai/src/validation/)
+  - Validates schema, step numbering, and dependency DAG
+  - Verifies tool authorization (blocks dangerous tools e.g. `system.rm_rf`)
+  - Checks tenant boundaries & blast-radius risk
+  - Enforces `requires_approval = true` on all code diffs, file modifications, and deployments
        │
        ▼
-[ 6. Frontend Preview Generation ]
-  - Spin up preview bundle or ephemeral dev server
-  - Generate temporary isolated URL: `https://preview-task-492.ryvix.preview`
+[ 6. Ephemeral Docker Sandbox Provisioning ] (services/src/workspace/)
+  - Dynamic stack detection (Node/Next.js, Python, Go, Rust, Docker)
+  - Allocates container `ryvix_sbx_<hash>` on isolated bridge (0.5 vCPU, 512MB RAM cap)
+  - Assigns dynamic host preview port in range `3100–3999`
        │
        ▼
-[ 7. Customer Review & Policy Approval ]
-  - Present unified diff + preview link to user in Web Chat or WhatsApp
-  - User inspects visual change and clicks: [Approve & Deploy]
+[ 7. In-Sandbox Code Modification & Diffs ]
+  - Applies synthesized AST / unified git diff to target files
        │
        ▼
-[ 8. Authorized Git Commit & PR Creation ]
-  - Ryvix Backend commits change to feature branch or opens Pull Request
-  - Zero raw tokens exposed; Git operations signed by Ryvix App bot
+[ 8. In-Sandbox Build & Verification ]
+  - Runs typecheck (`tsc --noEmit`) and build (`npm run build`)
+  - Runs regression test suite (`npm test`)
+  - Autonomous Self-Debugging: If compiler fails, error logs feed back to AI for auto-repair
        │
        ▼
-[ 9. Customer CI/CD Build & Deployment ]
-  - Customer's existing GitHub Actions / Vercel pipeline builds & deploys
+[ 9. Live Frontend Preview & Unified Diff Tab ]
+  - Spins up preview server inside container
+  - Exposes interactive iframe in Web Chat with Desktop, Tablet, and Mobile toggles
+  - Displays syntax-highlighted additions (+) and deletions (-) in Diff Tab
        │
        ▼
-[ 10. Post-Deployment Runtime Health Verification ]
-  - Internal & External Connectors monitor production error rates & latency
-  - Confirm system is HEALTHY post-deployment -> Task Marked Complete
+[ 10. Human Action Review & Approval Card ]
+  - Action Approval Card rendered in Web Chat
+  - User reviews preview and diff, clicks: [Approve & Create PR] or [Reject]
+       │
+       ▼
+[ 11. Atomic Git Branch, Commit & GitHub PR ] (backend/src/services/pr.service.ts)
+  - Creates atomic branch `ryvix/ai-<slug>`
+  - Commits signed changes via GitHub App
+  - Opens Pull Request with full test logs and change summary
+       │
+       ▼
+[ 12. Model-Readiness Data Collection & Teardown ] (ai/src/evaluation/)
+  - Ephemeral sandbox container destroyed; preview port released
+  - Sanitized execution trajectory logged for evaluation benchmarks and future fine-tuning
 ```
 
----
+## 2. Multi-Language Support Matrix
 
-## 2. Feedback Loops & Self-Healing During Modification
-
-If the code modification results in compiler or unit test errors in the isolated workspace:
-1. **Error Capture**: Capture structured stdout/stderr, line numbers, and stack traces.
-2. **Self-Correction Invocation**: Prompt the AI Model with the original diff, the error trace, and target file contents.
-3. **Loop Bound**: The self-correction loop is capped at **3 iterations** to prevent infinite token consumption. If the build does not succeed within 3 attempts, the task transitions to `FAILED` with detailed diagnostic reports.
-
----
-
-## 3. Human Approval Gate Enforcement
-
-Ryvix strictly enforces human oversight before production impact:
-- Previews and sandboxed builds run automatically.
-- **Git pushes to protected branches, Pull Request merges, or production deployment triggers CANNOT execute without explicit customer approval.**
-- Customer approval is captured via cryptographically signed JWT tokens emitted from the Web Chat UI or authenticated WhatsApp callback actions.
+The Coding Workspace dynamically detects repository profiles and deploys appropriate base containers:
+- **Next.js / React (TypeScript/JavaScript)**: `node:20-alpine`, port 3000, `npm run build`, `npm test`
+- **Python (FastAPI / Flask / Django)**: `python:3.11-slim`, port 8000, `pytest`
+- **Go (Golang)**: `golang:1.22-alpine`, port 8080, `go test ./...`
+- **Rust**: `rust:1.80-slim`, port 8080, `cargo test`
+- **Containerized**: `docker:dind`, port 8080

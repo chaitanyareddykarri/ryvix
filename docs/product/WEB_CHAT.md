@@ -35,3 +35,15 @@ The **Ryvix Web Console** provides a unified graphical interface combining conve
 3. **Sandboxed Iframe Preview**: Live interactive rendering of the frontend application running from the ephemeral workspace.
 4. **Approval Cards**: Modal action triggers requiring authenticated clicks before high-tier actions are executed.
 5. **Real-Time Telemetry Gauges**: Live sparklines displaying CPU, Memory, and Network rates alongside active chat threads.
+
+
+---
+
+## 3. Cognitive Integration & Flow
+
+The Web Chat Console directly interfaces with the unified AI pipeline:
+1. **Natural Language Understanding**: Users can submit vague or high-level prompts (e.g. *"make my website look better"*). The requirement understanding layer refines this into an architectural specification.
+2. **Ambiguity Clarification Dialogs**: If a request cannot be safely diagnosed, the chat displays clarification guidance before any plan is formed.
+3. **Live Streaming**: Dual-process cognition (System 1 subconscious reflex + System 2 Tree-of-Thoughts) streams tokens directly via SSE.
+4. **Interactive Preview Tab**: Embedded `<iframe>` connects directly to the container's dynamic port (3100-3999) with Desktop, Tablet, and Mobile viewport toggles.
+5. **Action Approval Cards**: Destructive commands, code modifications, or repository pushes require authenticated user clicks before backend execution proceeds.

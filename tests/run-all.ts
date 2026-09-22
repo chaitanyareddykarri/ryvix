@@ -1,5 +1,8 @@
+import { testAIUnderstandingRefinementPlanning } from './ai-understanding-refinement-planning.test';
 import { testWebChatStreaming } from './web-chat-streaming.test';
 import { testNetworkServerControl } from './network-server-control.test';
+import { testCustomerInfrastructureHealth } from './customer-infrastructure-health.test';
+import { testCustomerServerHealthAgent } from './customer-server-health-agent.test';
 import { testRagEngineAndCicd } from './rag-engine-and-cicd.test';
 import { testRiskAlertNotification } from './risk-alert-notification.test';
 import { testWebHttpsFolderInternalApiThreats } from './web-https-folder-internal-api-threats.test';
@@ -74,6 +77,9 @@ async function runAllTests() {
     { name: 'Retrieval-Augmented Generation (RAG) & CI/CD Pipeline Automation', fn: testRagEngineAndCicd as any },
     { name: 'Real-Time Web Chat Console & SSE Streaming Protocol', fn: testWebChatStreaming as any },
     { name: 'Deep Network Engine, Heterogeneous Server Control & Port Matrix', fn: testNetworkServerControl as any },
+    { name: 'Customer Infrastructure Health, Website Telemetry & Onboarding AGI', fn: testCustomerInfrastructureHealth as any },
+    { name: 'Customer Server & Website Health Query Agent (22 Scenarios)', fn: testCustomerServerHealthAgent as any },
+    { name: 'AI Understanding, Requirement Refinement, LLM Planning & Evaluation (15 Scenarios)', fn: testAIUnderstandingRefinementPlanning },
 { name: 'GRAND FINALE: Master End-to-End Total Project Integration', fn: testTotalProjectIntegration },
 
   ];

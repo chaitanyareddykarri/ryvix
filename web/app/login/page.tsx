@@ -17,6 +17,7 @@ export default function LoginPage() {
   // UI state
   const [otpSent, setOtpSent] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
+  const [isAlreadyRegistered, setIsAlreadyRegistered] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -47,6 +48,7 @@ export default function LoginPage() {
     setMode(newMode);
     setErrorMessage("");
     setSuccessMessage("");
+    setIsAlreadyRegistered(false);
     setOtpSent(false);
     setForgotSent(false);
     setOtp("");
@@ -121,8 +123,13 @@ export default function LoginPage() {
       });
 
       if (error) {
-        if (error.message.toLowerCase().includes("already registered")) {
-          setErrorMessage("An account with this email already exists. Please sign in instead.");
+        if (
+          error.message.toLowerCase().includes("already registered") ||
+          error.message.toLowerCase().includes("already exists") ||
+          error.message.toLowerCase().includes("user_already_exists")
+        ) {
+          setIsAlreadyRegistered(true);
+          setErrorMessage("");
         } else {
           setErrorMessage(error.message);
         }
@@ -132,6 +139,12 @@ export default function LoginPage() {
           window.location.href = "/";
         }, 1000);
       } else if (data.user) {
+        // Supabase returns empty identities array when user already exists & is confirmed
+        if (Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+          setIsAlreadyRegistered(true);
+          setErrorMessage("");
+          return;
+        }
         setSuccessMessage(
           `Confirmation email sent to ${email.trim()}! Please open your email and click the confirmation link to complete registration.`
         );
@@ -348,6 +361,63 @@ export default function LoginPage() {
             >
               Back to Sign In
             </button>
+          </div>
+        )}
+
+        {isAlreadyRegistered && (
+          <div
+            style={{
+              background: "rgba(245, 158, 11, 0.12)",
+              border: "1px solid rgba(245, 158, 11, 0.45)",
+              borderRadius: "8px",
+              padding: "0.9rem 1rem",
+              marginBottom: "1.25rem",
+              color: "#fef3c7",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.35rem" }}>
+              <span style={{ fontSize: "1.1rem" }}>âš ï¸ </span>
+              <span style={{ fontWeight: 600, fontSize: "0.92rem", color: "#fbbf24" }}>
+                Account Already Registered
+              </span>
+            </div>
+            <p style={{ fontSize: "0.85rem", color: "#e2e8f0", margin: "0 0 0.75rem 0", lineHeight: 1.4 }}>
+              An account with <strong>{email}</strong> is already registered and confirmed. You do not need to create it again.
+            </p>
+            <div style={{ display: "flex", gap: "0.6rem" }}>
+              <button
+                type="button"
+                onClick={() => switchMode("signin")}
+                style={{
+                  background: "#6366f1",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "6px",
+                  padding: "0.45rem 0.9rem",
+                  fontSize: "0.82rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  transition: "background 0.15s ease",
+                }}
+              >
+                Sign In Now â†’
+              </button>
+              <button
+                type="button"
+                onClick={() => switchMode("forgot")}
+                style={{
+                  background: "transparent",
+                  color: "#94a3b8",
+                  border: "1px solid rgba(148, 163, 184, 0.3)",
+                  borderRadius: "6px",
+                  padding: "0.45rem 0.9rem",
+                  fontSize: "0.82rem",
+                  cursor: "pointer",
+                }}
+              >
+                Reset Password
+              </button>
+            </div>
           </div>
         )}
 

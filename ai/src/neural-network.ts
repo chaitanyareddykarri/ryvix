@@ -154,6 +154,12 @@ export const NEURAL_THREAT_CLASSES: string[] = [
   'CLOUD_AWS_EC2_SECURITY_GROUP_IMPAIRMENT',
   'CLOUD_HUGGINGFACE_SPACE_PORT7860_OOM',
   'SERVER_CONTROL_AUTONOMOUS_FAILOVER_TRIGGER',
+
+  // Customer Infrastructure Health, GitHub Deployments & Onboarding Intelligence
+  'CUSTOMER_SERVER_TELEMETRY_QUERY',
+  'CUSTOMER_WEBSITE_HEALTH_PROBE_QUERY',
+  'CUSTOMER_GITHUB_DEPLOYMENT_STATUS_QUERY',
+  'CUSTOMER_UNREGISTERED_INFRASTRUCTURE_ASSIST',
 ];
 
 export class NeuralThreatClassifier {
@@ -426,6 +432,13 @@ export class NeuralThreatClassifier {
       isHetznerOrDo?: boolean;
       isBaremetal?: boolean;
     };
+    customerInfrastructureContext?: {
+      isCustomerQuery?: boolean;
+      hasRegisteredServers?: boolean;
+      hasLinkedGithub?: boolean;
+      targetServerName?: string;
+      isDeploymentQuery?: boolean;
+    };
   }): Float32Array {
     const vec = new Float32Array(this.inputDim);
 
@@ -515,6 +528,14 @@ export class NeuralThreatClassifier {
     }
     if (data.networkTelemetry?.timeWaitSockets && data.networkTelemetry.timeWaitSockets > 10000) {
       vec[4] = 1.0;
+    }
+
+    // Customer Infrastructure & Deployment Signals
+    if (data.customerInfrastructureContext?.hasRegisteredServers === false) {
+      vec[6] = 0.99;
+    }
+    if (data.customerInfrastructureContext?.isDeploymentQuery || data.customerInfrastructureContext?.hasLinkedGithub) {
+      vec[14] = 0.95;
     }
 
     // 5. Log & Conversational Text Hashing (indices 20 - 63: 44 hash buckets)

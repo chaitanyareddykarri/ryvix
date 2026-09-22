@@ -89,3 +89,41 @@ export {
   type ServerControlTakeoverPlan,
   type ServerControlExecutionResult
 } from "../../ai/src/network-server-controller";
+
+export * from './health-query-tools';
+
+export {
+  CustomerHealthQueryAgent,
+  customerHealthQueryAgent,
+  type HealthQueryDomain,
+  type HealthAgentResponse,
+} from '@ryvix/ai';
+
+// AI Understanding, Context Building, Planning & Validation
+export {
+  RequirementRefiner,
+  requirementRefiner,
+  type RefinedRequirement,
+  type RefinedIntentType,
+  type TaskScope,
+  ContextBuilder,
+  contextBuilder,
+  type TaskContext,
+  type ProjectMetadata,
+  type SanitizationReport,
+  AIAgentLLMGateway,
+  aiAgentLLMGateway,
+  type StructuredLLMPlanResult,
+  PlanGenerator,
+  planGenerator,
+  type PlanGenerationResult,
+  PlanValidator,
+  planValidator,
+  type PlanValidationResult,
+  ModelReadinessManager,
+  modelReadinessManager,
+  type ExecutionDataPoint,
+  type ModelEvaluationMetrics,
+  processUserRequestToPlan,
+  type UserRequestToPlanResult,
+} from '@ryvix/ai';

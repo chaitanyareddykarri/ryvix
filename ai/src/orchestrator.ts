@@ -417,3 +417,125 @@ export {
   type ServerControlTakeoverPlan,
   type ServerControlExecutionResult
 } from "./network-server-controller";
+
+// Customer Server & Website Health Query Agent Exports
+export {
+  CustomerHealthQueryAgent,
+  customerHealthQueryAgent,
+  type HealthQueryDomain,
+  type HealthAgentResponse,
+} from './customer-health-query-agent';
+
+// =========================================================================
+// AI UNDERSTANDING, CONTEXT BUILDER, LLM PLANNING & VALIDATION EXPORTS
+// =========================================================================
+export {
+  RequirementRefiner,
+  requirementRefiner,
+  type RefinedRequirement,
+  type RefinedIntentType,
+  type TaskScope,
+  type RefinementInput,
+} from './understanding/intent-processor';
+
+export {
+  ContextBuilder,
+  contextBuilder,
+  type TaskContext,
+  type ProjectMetadata,
+  type ScopedFileEntry,
+  type SanitizationReport,
+  type ContextBuilderOptions,
+} from './context/context-builder';
+
+export {
+  AIAgentLLMGateway,
+  aiAgentLLMGateway,
+  type RawLLMStep,
+  type StructuredLLMPlanResult,
+} from './llm/llm-gateway';
+
+export {
+  PlanGenerator,
+  planGenerator,
+  type PlanGenerationResult,
+} from './planning/plan-generator';
+
+export {
+  PlanValidator,
+  planValidator,
+  type PlanValidationResult,
+} from './validation/plan-validator';
+
+export {
+  ModelReadinessManager,
+  modelReadinessManager,
+  type ExecutionDataPoint,
+  type ModelEvaluationMetrics,
+} from './evaluation/model-readiness';
+
+import { requirementRefiner, RefinedRequirement } from './understanding/intent-processor';
+import { contextBuilder, TaskContext } from './context/context-builder';
+import { planGenerator, PlanGenerationResult } from './planning/plan-generator';
+import { planValidator, PlanValidationResult } from './validation/plan-validator';
+import type { Plan } from '@ryvix/database';
+
+export interface UserRequestToPlanResult {
+  status: 'ambiguous_clarification_required' | 'plan_ready' | 'plan_rejected';
+  refinedRequirement: RefinedRequirement;
+  context?: TaskContext;
+  plan?: Plan;
+  validation?: PlanValidationResult;
+  clarificationPrompt?: string;
+  llmMetadata?: {
+    providerUsed: string;
+    modelUsed: string;
+    latencyMs: number;
+    isFallback: boolean;
+  };
+}
+
+/**
+ * End-to-End Pipeline:
+ * Natural Language User Request -> Requirement Refinement -> Context Building -> LLM Planning -> Plan Validation
+ */
+export async function processUserRequestToPlan(input: {
+  rawPrompt: string;
+  taskId: string;
+  project?: any;
+  candidateFiles?: any[];
+  runtimeTelemetry?: any;
+}): Promise<UserRequestToPlanResult> {
+  // Step 1: AI Understanding & Requirement Refinement
+  const refined = await requirementRefiner.refine({ rawPrompt: input.rawPrompt });
+  if (refined.isAmbiguous) {
+    return {
+      status: 'ambiguous_clarification_required',
+      refinedRequirement: refined,
+      clarificationPrompt: refined.clarificationPrompt,
+    };
+  }
+
+  // Step 2: Context Building & Secret Stripping
+  const context = await contextBuilder.buildContext(refined, {
+    taskId: input.taskId,
+    project: input.project,
+    candidateFiles: input.candidateFiles,
+    runtimeTelemetry: input.runtimeTelemetry,
+  });
+
+  // Step 3: Structured Technical Plan Generation
+  const planResult: PlanGenerationResult = await planGenerator.generatePlan(refined, context);
+
+  // Step 4: Plan Validation & Tool Authorization
+  const validation: PlanValidationResult = planValidator.validatePlan(planResult.plan, context, refined);
+
+  return {
+    status: validation.isValid ? 'plan_ready' : 'plan_rejected',
+    refinedRequirement: refined,
+    context,
+    plan: planResult.plan,
+    validation,
+    llmMetadata: planResult.llmMetadata,
+  };
+}

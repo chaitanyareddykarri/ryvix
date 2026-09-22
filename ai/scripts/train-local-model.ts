@@ -24,6 +24,7 @@ import {
  * 5. Multi-Server Archetype Precision (Web Proxy, Database, Cache, K8s, App, Bastion, Storage)
  * 6. Web Chat Conversational Intelligence, Streaming Protocol & Action Approval Gating (Stage 11)
  * 7. Deep Network Engine, Multi-Cloud/VPS/HuggingFace Server Control & Port Matrix (Stage 12)
+ * 8. Customer Infrastructure Health, GitHub Deployments & Onboarding AGI Intelligence (Stage 13)
  */
 
 import * as fs from 'node:fs';
@@ -1403,6 +1404,293 @@ async function runMasterTraining() {
   console.log(`  ✓ AWS EC2 RAG Playbook: Top Match="${netRagRes2.retrievedContext[0]?.chunk.title}" (Score: ${(netRagRes2.retrievalConfidence * 100).toFixed(1)}%)`);
   console.log(`  ✓ Linux VPS Socket RAG Playbook: Top Match="${netRagRes3.retrievedContext[0]?.chunk.title}" (Score: ${(netRagRes3.retrievalConfidence * 100).toFixed(1)}%)`);
   console.log(`  ✓ Total Network & Cloud RAG Latency: ${netRagDuration}ms (Indexed Chunks: ${ragEngine.getTotalIndexedCount()})`);
+
+  // --- STAGE 13: CUSTOMER INFRASTRUCTURE HEALTH, GITHUB REPO & TELEMETRY AGI INTELLIGENCE ---
+  console.log('\n[STAGE 13] CUSTOMER INFRASTRUCTURE HEALTH, GITHUB REPO & TELEMETRY AGI INTELLIGENCE');
+
+  const customerInfraBattery: Array<{
+    scenario: string;
+    target: string;
+    query: string;
+    hasServers: boolean;
+    hasGithub: boolean;
+    port?: number;
+    logs: string[];
+  }> = [
+    // 1. Customer Server Telemetry & Health Queries (6 scenarios)
+    {
+      scenario: 'User asks: "Check my server srv_prod_01 CPU and memory usage."',
+      target: 'CUSTOMER_SERVER_TELEMETRY_QUERY',
+      query: 'Check my server srv_prod_01 CPU and memory usage.',
+      hasServers: true,
+      hasGithub: true,
+      port: 3000,
+      logs: ['Host srv_prod_01: CPU 24%, Memory 58%, Disk 32%, LoadAvg 0.42, 0.38, 0.31']
+    },
+    {
+      scenario: 'User asks: "Is my server running fine or are there any issues?"',
+      target: 'CUSTOMER_SERVER_TELEMETRY_QUERY',
+      query: 'Is my server running fine or are there any issues?',
+      hasServers: true,
+      hasGithub: true,
+      port: 80,
+      logs: ['All production nodes reporting healthy synthetic probes, 0 kernel panics, 0 zombie processes']
+    },
+    {
+      scenario: 'User checks host CPU load average and RAM saturation',
+      target: 'CUSTOMER_SERVER_TELEMETRY_QUERY',
+      query: 'What is my current host CPU load average and RAM saturation?',
+      hasServers: true,
+      hasGithub: true,
+      port: 443,
+      logs: ['Memory footprint: 4.6GB allocated out of 8GB total, OS page cache optimized']
+    },
+    {
+      scenario: 'User inspects disk space and inode count on production server srv_prod_01',
+      target: 'CUSTOMER_SERVER_TELEMETRY_QUERY',
+      query: 'Show me disk space and inode count on production server srv_prod_01',
+      hasServers: true,
+      hasGithub: true,
+      logs: ['Root filesystem / usage: 32% (68% free headroom), inode allocation 14%']
+    },
+    {
+      scenario: 'User checks core daemons: nginx, docker, postgresql, node-app',
+      target: 'CUSTOMER_SERVER_TELEMETRY_QUERY',
+      query: 'Are my systemd daemons and background services active on srv_prod_01?',
+      hasServers: true,
+      hasGithub: true,
+      port: 3000,
+      logs: ['nginx.service active, docker.service active, postgresql.service active, node-app active']
+    },
+    {
+      scenario: 'User audits active socket connections and TCP backlog',
+      target: 'CUSTOMER_SERVER_TELEMETRY_QUERY',
+      query: 'Check my server socket pool and active connection count',
+      hasServers: true,
+      hasGithub: true,
+      port: 80,
+      logs: ['TCP sockets: 248 ESTABLISHED, 12 TIME_WAIT, 0 SYN_RECV']
+    },
+
+    // 2. Customer Website Health & Port Probes (7 scenarios)
+    {
+      scenario: 'User asks: "How is my website health right now?"',
+      target: 'CUSTOMER_WEBSITE_HEALTH_PROBE_QUERY',
+      query: 'How is my website health right now?',
+      hasServers: true,
+      hasGithub: true,
+      port: 80,
+      logs: ['Synthetic HTTP probe: 200 OK, latency 42ms p95, TLS 1.3 certificate valid for 82 days']
+    },
+    {
+      scenario: 'User asks: "Why is my website slow or throwing 502 errors?"',
+      target: 'CUSTOMER_WEBSITE_HEALTH_PROBE_QUERY',
+      query: 'Why is my website slow or throwing 502 errors?',
+      hasServers: true,
+      hasGithub: true,
+      port: 3000,
+      logs: ['HTTP 502 Bad Gateway: reverse proxy cannot connect to upstream socket on 127.0.0.1:3000']
+    },
+    {
+      scenario: 'User asks: "Is my port 3000 open and is my backend process active?"',
+      target: 'CUSTOMER_WEBSITE_HEALTH_PROBE_QUERY',
+      query: 'Is my port 3000 open and is my backend process active?',
+      hasServers: true,
+      hasGithub: true,
+      port: 3000,
+      logs: ['Port 3000: LISTEN 0.0.0.0:3000 bound to node-app PID 4128, systemd unit active']
+    },
+    {
+      scenario: 'Customer encounters 504 Gateway Timeout on checkout API route',
+      target: 'CUSTOMER_WEBSITE_HEALTH_PROBE_QUERY',
+      query: 'Website returning 504 Gateway Timeout on checkout page: what is wrong?',
+      hasServers: true,
+      hasGithub: true,
+      port: 3000,
+      logs: ['Nginx upstream timed out (110: Connection timed out) while reading response from upstream:3000']
+    },
+    {
+      scenario: 'Node.js backend crash loop causing intermittent site unavailability',
+      target: 'CUSTOMER_WEBSITE_HEALTH_PROBE_QUERY',
+      query: 'Node.js upstream backend not responding on port 3000, site showing error',
+      hasServers: true,
+      hasGithub: true,
+      port: 3000,
+      logs: ['UnhandledPromiseRejection: connection refused to redis on 127.0.0.1:6379, node process exited']
+    },
+    {
+      scenario: 'Customer tests synthetic response times and SSL certificate health',
+      target: 'CUSTOMER_WEBSITE_HEALTH_PROBE_QUERY',
+      query: 'Probe synthetic endpoint latency and TLS certificate expiration for my domain',
+      hasServers: true,
+      hasGithub: true,
+      port: 443,
+      logs: ['Endpoint ping: 38ms, SSL Handshake: 14ms, Certificate SAN matches domain, zero cipher warnings']
+    },
+    {
+      scenario: 'High traffic surge causing latency spike on reverse proxy backlog',
+      target: 'CUSTOMER_WEBSITE_HEALTH_PROBE_QUERY',
+      query: 'Website latency spike to 4000ms: check reverse proxy socket backlog',
+      hasServers: true,
+      hasGithub: true,
+      port: 80,
+      logs: ['kernel: somaxconn queue 128 saturated during surge, increase net.core.somaxconn']
+    },
+
+    // 3. Customer GitHub CI/CD Deployment Health (6 scenarios)
+    {
+      scenario: 'User asks: "Did my latest GitHub deployment succeed?"',
+      target: 'CUSTOMER_GITHUB_DEPLOYMENT_STATUS_QUERY',
+      query: 'Did my latest GitHub deployment succeed?',
+      hasServers: true,
+      hasGithub: true,
+      logs: ['Deployment #142: SUCCESS on commit dbaf461, zero-downtime rolling container restart active']
+    },
+    {
+      scenario: 'User audits commit SHA deployment verification',
+      target: 'CUSTOMER_GITHUB_DEPLOYMENT_STATUS_QUERY',
+      query: 'Check GitHub Actions build status for commit dbaf461',
+      hasServers: true,
+      hasGithub: true,
+      logs: ['GitHub Actions workflow deploy.yml: 32 test suites passed, Docker build successful, image tagged sha-dbaf461']
+    },
+    {
+      scenario: 'User verifies Docker container production rollout',
+      target: 'CUSTOMER_GITHUB_DEPLOYMENT_STATUS_QUERY',
+      query: 'Did the Docker container deploy cleanly on main branch?',
+      hasServers: true,
+      hasGithub: true,
+      logs: ['Container app-prod-active healthy: listening on port 3000, cutover complete']
+    },
+    {
+      scenario: 'User checks deployment rollback availability and version history',
+      target: 'CUSTOMER_GITHUB_DEPLOYMENT_STATUS_QUERY',
+      query: 'Verify latest deployment rollout and rollback availability',
+      hasServers: true,
+      hasGithub: true,
+      logs: ['Rollback candidate available: commit a497fe1 preserved in registry for instant rollback']
+    },
+    {
+      scenario: 'User verifies CI/CD unit tests and lint gating on production release',
+      target: 'CUSTOMER_GITHUB_DEPLOYMENT_STATUS_QUERY',
+      query: 'Check CI/CD test results and lint status on latest release',
+      hasServers: true,
+      hasGithub: true,
+      logs: ['0 lint errors, 32/32 test suites passed (100% green), typecheck verified 0 errors']
+    },
+    {
+      scenario: 'Zero-downtime blue-green deployment verification on live cluster',
+      target: 'CUSTOMER_GITHUB_DEPLOYMENT_STATUS_QUERY',
+      query: 'Did blue-green deployment cutover complete with 0 downtime?',
+      hasServers: true,
+      hasGithub: true,
+      logs: ['Nginx upstream reloaded: traffic routed to new container with zero dropped packets']
+    },
+
+    // 4. Unregistered Infrastructure & Onboarding Intelligence (6 scenarios)
+    {
+      scenario: 'User asks: "How do I add or register my server to Ryvix?"',
+      target: 'CUSTOMER_UNREGISTERED_INFRASTRUCTURE_ASSIST',
+      query: 'How do I add or register my server to Ryvix?',
+      hasServers: false,
+      hasGithub: false,
+      logs: ['User has not enrolled any server node yet: provide one-line curl connector command and token']
+    },
+    {
+      scenario: 'User notes: "I have not added any server yet: how can Ryvix monitor my site?"',
+      target: 'CUSTOMER_UNREGISTERED_INFRASTRUCTURE_ASSIST',
+      query: 'I have not added any server yet: how can Ryvix monitor my site?',
+      hasServers: false,
+      hasGithub: false,
+      logs: ['No server registered in tenant account: instruct user to connect host or configure synthetic probe']
+    },
+    {
+      scenario: 'Ryvix detects no servers: "You did not add your server yet: guide user on one-line curl connector"',
+      target: 'CUSTOMER_UNREGISTERED_INFRASTRUCTURE_ASSIST',
+      query: 'Check my server health, but user did not add any server yet',
+      hasServers: false,
+      hasGithub: false,
+      logs: ['Tenant infrastructure registry is empty: guide user through /servers onboarding wizard']
+    },
+    {
+      scenario: 'User asks: "How to link my GitHub repository for deployment tracking?"',
+      target: 'CUSTOMER_UNREGISTERED_INFRASTRUCTURE_ASSIST',
+      query: 'How to link my GitHub repository for deployment tracking?',
+      hasServers: false,
+      hasGithub: false,
+      logs: ['No GitHub OAuth linkage found: provide GitHub app installation link and webhook configuration steps']
+    },
+    {
+      scenario: 'User visits chat without connected infrastructure: guide onboarding',
+      target: 'CUSTOMER_UNREGISTERED_INFRASTRUCTURE_ASSIST',
+      query: 'Connect my website to Ryvix console: what are the steps?',
+      hasServers: false,
+      hasGithub: false,
+      logs: ['Step 1: Link GitHub repository. Step 2: Install Ryvix agent on server host.']
+    },
+    {
+      scenario: 'Customer asks to connect AWS EC2 or VPS server',
+      target: 'CUSTOMER_UNREGISTERED_INFRASTRUCTURE_ASSIST',
+      query: 'Connect my AWS EC2 or VPS server to Ryvix monitoring console',
+      hasServers: false,
+      hasGithub: false,
+      logs: ['Provide enrollment token: curl -fsSL https://ryvix.io/install.sh | bash -s -- --token $TOKEN']
+    }
+  ];
+
+  // A. Train Neural Network on 25 Customer Infrastructure Scenarios (3 Epochs with Adam Optimizer)
+  let custLossSum = 0;
+  const custEpochs = 3;
+  for (let ep = 1; ep <= custEpochs; ep++) {
+    for (const item of customerInfraBattery) {
+      const v = neuralThreatClassifier.vectorize({
+        metrics: item.hasServers ? { cpuPercent: 24, memPercent: 58, diskPercent: 32 } : {},
+        openPorts: item.port ? [item.port] : [],
+        conversationalQuery: item.query,
+        logs: item.logs,
+        customerInfrastructureContext: {
+          isCustomerQuery: true,
+          hasRegisteredServers: item.hasServers,
+          hasLinkedGithub: item.hasGithub,
+          isDeploymentQuery: item.target === 'CUSTOMER_GITHUB_DEPLOYMENT_STATUS_QUERY'
+        }
+      });
+      const loss = neuralThreatClassifier.trainSample(v, item.target, 0.05);
+      if (ep === custEpochs) {
+        custLossSum += loss;
+        console.log(`  ✓ Trained Customer Infra Class: [${item.target.padEnd(45)}] (Loss: ${loss.toFixed(4)})`);
+      }
+    }
+  }
+  console.log(`  ✓ Customer Infrastructure Matrix Complete: 25/25 Scenarios Hardened (Final Avg Loss: ${(custLossSum / customerInfraBattery.length).toFixed(4)})`);
+
+  // B. Benchmark Conversational Agent on Customer Questions
+  console.log('\n  [Customer Infrastructure Health Conversational Agent Benchmarks]');
+  const q1 = await conversationalAgent.chat('Check my server srv_prod_01 CPU and memory usage.');
+  console.log(`  ✓ Server Telemetry Query: Intent=${q1.detectedIntent} | Persona=${q1.personaUsed} | ResponseLength=${q1.message.length} chars`);
+
+  const q2 = await conversationalAgent.chat('Why is my website slow or throwing 502 errors?');
+  console.log(`  ✓ Website Health Probe: Intent=${q2.detectedIntent} | Persona=${q2.personaUsed} | HasArtifacts=${Boolean(q2.actionableArtifacts?.length)}`);
+
+  const q3 = await conversationalAgent.chat('Did my latest GitHub deployment succeed?');
+  console.log(`  ✓ GitHub Deployment Status: Intent=${q3.detectedIntent} | Persona=${q3.personaUsed} | ArtifactCount=${q3.actionableArtifacts?.length}`);
+
+  const q4 = await conversationalAgent.chat('I have not added any server yet: how can Ryvix monitor my site?');
+  console.log(`  ✓ Unregistered Infra Assist: Intent=${q4.detectedIntent} | Persona=${q4.personaUsed} | ContainsTokenCommand=${q4.message.includes('curl -fsSL')}`);
+
+  // C. Benchmark RAG Retrieval on Customer Infrastructure Playbooks
+  console.log('\n  [Customer Infrastructure RAG Knowledge Retrieval]');
+  const custRagT0 = performance.now();
+  const custRagRes1 = ragEngine.query('How is my server srv_prod_01 CPU and memory usage?');
+  const custRagRes2 = ragEngine.query('I have not added any server yet, how do I link GitHub and install agent?');
+  const custRagRes3 = ragEngine.query('Did my latest GitHub deployment succeed on commit dbaf461?');
+  const custRagDuration = (performance.now() - custRagT0).toFixed(2);
+
+  console.log(`  ✓ Server & Web Health RAG: Top Match="${custRagRes1.retrievedContext[0]?.chunk.title}" (Score: ${(custRagRes1.retrievalConfidence * 100).toFixed(1)}%)`);
+  console.log(`  ✓ Unregistered Onboarding RAG: Top Match="${custRagRes2.retrievedContext[0]?.chunk.title}" (Score: ${(custRagRes2.retrievalConfidence * 100).toFixed(1)}%)`);
+  console.log(`  ✓ GitHub Deployment RAG: Top Match="${custRagRes3.retrievedContext[0]?.chunk.title}" (Score: ${(custRagRes3.retrievalConfidence * 100).toFixed(1)}%)`);
+  console.log(`  ✓ Total Customer Infra RAG Latency: ${custRagDuration}ms (Indexed Chunks: ${ragEngine.getTotalIndexedCount()})`);
+
 
 
 
