@@ -38,6 +38,25 @@ export default async function Page() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
           <Link
+            href="/chat"
+            style={{
+              padding: "0.35rem 0.85rem",
+              borderRadius: "9999px",
+              fontSize: "0.82rem",
+              fontWeight: 600,
+              background: "rgba(139, 92, 246, 0.25)",
+              border: "1px solid rgba(139, 92, 246, 0.5)",
+              color: "#c084fc",
+              textDecoration: "none",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              boxShadow: "0 0 12px rgba(139, 92, 246, 0.3)"
+            }}
+          >
+            💬 Web Chat Console
+          </Link>
+          <Link
             href="/servers"
             style={{
               padding: "0.35rem 0.85rem",
@@ -120,6 +139,44 @@ export default async function Page() {
 
       {/* Main Grid */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "1.5rem" }}>
+        {/* Phase 9: Real-Time Web Chat Console Card */}
+        <div className="glass-panel glow-purple" style={{ padding: "1.75rem", border: "1px solid rgba(139, 92, 246, 0.4)", background: "linear-gradient(180deg, rgba(139, 92, 246, 0.08) 0%, rgba(15, 23, 42, 0.6) 100%)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+            <h2 style={{ fontSize: "1.15rem", fontWeight: 600, color: "#f8fafc", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <span>💬</span> Web Chat &amp; Visual Console
+            </h2>
+            <span style={{ fontSize: "0.78rem", background: "rgba(139, 92, 246, 0.2)", color: "#c084fc", padding: "0.2rem 0.6rem", borderRadius: "4px", fontWeight: 700 }}>
+              Phase 9 Active
+            </span>
+          </div>
+          <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", lineHeight: 1.5, marginBottom: "1.25rem" }}>
+            Unified conversational developer workbench with real-time token streaming, dual-process System 1/2 reasoning traces, unified diff inspection, and live sandboxed previews.
+          </p>
+          <div style={{ background: "rgba(0,0,0,0.4)", borderRadius: "8px", padding: "0.85rem 1rem", fontSize: "0.85rem", fontFamily: "var(--font-mono)", marginBottom: "1.25rem" }}>
+            <div style={{ color: "#9ca3af", marginBottom: "0.35rem" }}>Streaming Protocol: <span style={{ color: "#34d399" }}>Server-Sent Events (SSE)</span></div>
+            <div style={{ color: "#9ca3af", marginBottom: "0.35rem" }}>Cognition Stream: <span style={{ color: "#c084fc" }}>OODA Loop + System 1 &amp; 2</span></div>
+            <div style={{ color: "#9ca3af" }}>Interactive Tools: <span style={{ color: "#60a5fa" }}>Diff Viewer &amp; Action Approvals</span></div>
+          </div>
+          <Link
+            href="/chat"
+            className="btn-primary"
+            style={{
+              display: "inline-block",
+              textAlign: "center",
+              padding: "0.55rem 1.25rem",
+              fontSize: "0.88rem",
+              textDecoration: "none",
+              borderRadius: "8px",
+              background: "linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)",
+              color: "#ffffff",
+              fontWeight: 600,
+              boxShadow: "0 4px 14px rgba(139, 92, 246, 0.35)"
+            }}
+          >
+            Launch Web Chat Console &rarr;
+          </Link>
+        </div>
+
         {/* Supabase Connection Card */}
         <div className="glass-panel glow-cyan" style={{ padding: "1.75rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>

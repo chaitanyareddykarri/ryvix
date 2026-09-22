@@ -71,3 +71,10 @@ export {
   type RagSearchResult,
   type RagAugmentedResponse
 } from "../../ai/src/rag-engine";
+
+export {
+  codingAssistant,
+  CodingAssistant,
+  type CodeSynthesisResult,
+  type CodeDebugResult
+} from "../../ai/src/coding-assistant";

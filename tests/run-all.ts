@@ -1,3 +1,4 @@
+import { testWebChatStreaming } from './web-chat-streaming.test';
 import { testRagEngineAndCicd } from './rag-engine-and-cicd.test';
 import { testRiskAlertNotification } from './risk-alert-notification.test';
 import { testWebHttpsFolderInternalApiThreats } from './web-https-folder-internal-api-threats.test';
@@ -70,6 +71,7 @@ async function runAllTests() {
     { name: 'Web, HTTPS, Folder Brute-Force & Internal API Auth Protection Suite', fn: testWebHttpsFolderInternalApiThreats as any },
     { name: 'Real-Time Risk Alert & Multi-Channel Developer Notification System', fn: testRiskAlertNotification as any },
     { name: 'Retrieval-Augmented Generation (RAG) & CI/CD Pipeline Automation', fn: testRagEngineAndCicd as any },
+    { name: 'Real-Time Web Chat Console & SSE Streaming Protocol', fn: testWebChatStreaming as any },
 { name: 'GRAND FINALE: Master End-to-End Total Project Integration', fn: testTotalProjectIntegration },
 
   ];
