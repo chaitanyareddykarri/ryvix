@@ -42,22 +42,22 @@ export const updateSession = async (request: NextRequest) => {
 
   const pathname = request.nextUrl.pathname;
   const isApiRoute = pathname.startsWith("/api");
-  const isPublicAuthRoute = 
+  const isPublicRoute = 
+    pathname === "/" ||
     pathname.startsWith("/login") || 
     pathname.startsWith("/auth/callback") || 
     pathname.startsWith("/auth/reset-password") ||
     isApiRoute;
 
-  // If user is authenticated and attempts to access /login, redirect to /
+  // If user is authenticated and attempts to access /login, redirect to /dashboard
   if (user && pathname.startsWith("/login")) {
     const url = request.nextUrl.clone();
-    url.pathname = "/";
+    url.pathname = "/dashboard";
     return NextResponse.redirect(url);
   }
 
   // If user is unauthenticated and attempts to access protected routes, redirect to /login
-  // Protected routes include "/" and any non-public paths
-  if (!user && !isPublicAuthRoute) {
+  if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
