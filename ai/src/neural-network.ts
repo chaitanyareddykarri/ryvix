@@ -139,6 +139,13 @@ export const NEURAL_THREAT_CLASSES: string[] = [
   'WEB_ENV_CONFIG_MISSING',
   'WEB_FIREWALL_PORT_BLOCKED',
   'WEB_HEALTHCHECK_PROBE_FAILED',
+
+  // Web Chat Intelligence & Interactive Gating Head
+  'WEB_CHAT_INTERACTIVE_APPROVAL_GATE',
+  'WEB_CHAT_PAIR_PROGRAMMING_DIFF',
+  'WEB_CHAT_SRE_INCIDENT_TRIAGE',
+  'WEB_CHAT_STREAMING_PROTOCOL_QUERY',
+  'WEB_CHAT_SECURITY_FORENSICS',
 ];
 
 export class NeuralThreatClassifier {
@@ -389,6 +396,12 @@ export class NeuralThreatClassifier {
       httpStatusCode?: number;
       isListeningOnPort?: boolean;
       systemdState?: 'active' | 'inactive' | 'failed';
+    };
+    webChatContext?: {
+      isWebChat?: boolean;
+      requiresApproval?: boolean;
+      isDiffSynthesis?: boolean;
+      isStreamingProtocol?: boolean;
     };
   }): Float32Array {
     const vec = new Float32Array(this.inputDim);
@@ -817,7 +830,7 @@ export class NeuralThreatClassifier {
   }
 
   public loadWeights(weights: Record<string, any>): void {
-    if (weights.inputDim === this.inputDim && weights.outputDim === this.outputDim && weights.W_res) {
+    if (weights.inputDim === this.inputDim && weights.W_res) {
       if (weights.W1 && weights.W1.length === this.W1.length) this.W1.set(weights.W1);
       if (weights.b1 && weights.b1.length === this.b1.length) this.b1.set(weights.b1);
       if (weights.W_res && weights.W_res.length === this.W_res.length) this.W_res.set(weights.W_res);
@@ -828,8 +841,20 @@ export class NeuralThreatClassifier {
       if (weights.b_res2 && weights.b_res2.length === this.b_res2.length) this.b_res2.set(weights.b_res2);
       if (weights.W2 && weights.W2.length === this.W2.length) this.W2.set(weights.W2);
       if (weights.b2 && weights.b2.length === this.b2.length) this.b2.set(weights.b2);
-      if (weights.W3 && weights.W3.length === this.W3.length) this.W3.set(weights.W3);
-      if (weights.b3 && weights.b3.length === this.b3.length) this.b3.set(weights.b3);
+      if (weights.outputDim === this.outputDim) {
+        if (weights.W3 && weights.W3.length === this.W3.length) this.W3.set(weights.W3);
+        if (weights.b3 && weights.b3.length === this.b3.length) this.b3.set(weights.b3);
+      } else if (weights.outputDim && weights.outputDim <= this.outputDim && weights.W3) {
+        const oldOut = weights.outputDim;
+        for (let h = 0; h < this.hidden2Dim; h++) {
+          for (let c = 0; c < oldOut; c++) {
+            this.W3[h * this.outputDim + c] = weights.W3[h * oldOut + c];
+          }
+        }
+        for (let c = 0; c < oldOut; c++) {
+          this.b3[c] = weights.b3[c];
+        }
+      }
     }
   }
 }

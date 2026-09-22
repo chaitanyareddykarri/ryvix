@@ -142,6 +142,56 @@ export const INITIAL_RAG_PLAYBOOKS: RagDocumentChunk[] = [
       'docker run --read-only --user 10001:10001 --cap-drop=ALL -d app:hardened'
     ],
     tags: ['docker', 'container', 'kubernetes', 'non-root', 'distroless', 'security']
+  },
+  {
+    chunkId: 'runbook_web_chat_sse_streaming',
+    documentId: 'arch_playbook_webchat_01',
+    title: 'Web Chat Server-Sent Events (SSE) Streaming Protocol & Keep-Alive Architecture',
+    category: 'ARCHITECTURE_BLUEPRINT',
+    content: 'The Ryvix Web Chat SSE streaming protocol provides continuous real-time transmission of cognitive thought traces and token chunks over a persistent HTTP text/event-stream connection. Emits sequential events: start (cycleId, conversationId, timestamp), thought (System 1 intuitive reflex, RAG runbooks, System 2 multi-LLM dialectic debate), plan (primary domain, intent, blast radius, action plan), diff (unified syntax-highlighted code diff), approval (interactive human action approval card for high-blast commands), token (fluid response words with 12ms pacing), and done (completion metrics). Next.js API route /api/chat enforces Content-Type text/event-stream, Cache-Control no-cache, no-transform, and Connection keep-alive.',
+    actionableCommands: [
+      'curl -N -X POST http://localhost:3000/api/chat -H "Content-Type: application/json" -d "{\"prompt\":\"status check\",\"stream\":true}"',
+      'systemctl status nextjs-web'
+    ],
+    tags: ['web chat', 'sse', 'streaming', 'thought stream', 'token', 'event-stream', 'architecture', 'next.js', 'real-time']
+  },
+  {
+    chunkId: 'runbook_web_chat_action_approval',
+    documentId: 'sec_playbook_webchat_01',
+    title: 'Web Chat Interactive Action Gating & Human-in-the-Loop Safeguards',
+    category: 'SECURITY_RUNBOOK',
+    content: 'Autonomous remediation actions and destructive commands with high or critical blast radius (e.g. iptables -j DROP, kill -9, rm, reboot, psql ALTER SYSTEM, container quarantine) executed via Web Chat trigger mandatory approval gating. The API halts autonomous dispatch and emits an approval event containing approvalId, title, action, blastRadius, riskScore, suggestedSteps, and mitigationCommand. The user inspects the proposal in an interactive Action Approval Card in the Web Chat console and provides authorization before live execution occurs.',
+    actionableCommands: [
+      'iptables -L -n -v',
+      'ps aux | grep node',
+      'systemctl is-active web-service'
+    ],
+    tags: ['web chat', 'approval', 'action gating', 'human in the loop', 'blast radius', 'security safeguard', 'authorization']
+  },
+  {
+    chunkId: 'runbook_web_chat_coding_synthesis',
+    documentId: 'arch_playbook_webchat_02',
+    title: 'Web Chat Pair-Programming Code Synthesis & Unified Diff Inspection',
+    category: 'ARCHITECTURE_BLUEPRINT',
+    content: 'When a developer requests code generation, refactoring, or bug fixes in Web Chat, the CodingAssistant AST synthesizer constructs a unified git diff format with @@ hunk headers, + additions, and - removals. The Web Chat UI renders a split-screen syntax-highlighted diff viewer and embeds a sandboxed live preview iframe supporting Desktop, Tablet (768px), and Mobile (375px) responsive breakpoints with zero hallucination.',
+    actionableCommands: [
+      'git diff --stat',
+      'npm run typecheck',
+      'npm run test'
+    ],
+    tags: ['web chat', 'coding assistant', 'diff', 'pair programming', 'syntax highlight', 'live preview', 'git']
+  },
+  {
+    chunkId: 'runbook_web_chat_sre_outage_triage',
+    documentId: 'sre_playbook_webchat_01',
+    title: 'Web Chat Real-Time SRE Outage & Socket Conflict Interactive Triage',
+    category: 'SRE_OUTAGE_PLAYBOOK',
+    content: 'When an engineer reports an outage in Web Chat (such as EADDRINUSE on port 3000, Nginx 502 Bad Gateway, Postgres connection pool exhaustion, or Node V8 heap crash), the AI immediately activates the SRE Outage Recovery Engine, performs root-cause isolation, delivers verified remediation commands, and proposes automated warm restart or upstream standby failover.',
+    actionableCommands: [
+      'fuser -k 3000/tcp && systemctl restart app-backend',
+      'sed -i "s/127.0.0.1:3000/127.0.0.1:3001/" /etc/nginx/sites-available/default && nginx -s reload'
+    ],
+    tags: ['web chat', 'sre', 'eaddrinuse', '502', 'socket conflict', 'zero-downtime', 'outage triage', 'systemd']
   }
 ];
 
@@ -168,6 +218,16 @@ export class RagEngine {
         const list: RagDocumentChunk[] = JSON.parse(raw);
         for (const c of list) {
           this.documentChunks.set(c.chunkId, c);
+        }
+        let addedNew = false;
+        for (const chunk of INITIAL_RAG_PLAYBOOKS) {
+          if (!this.documentChunks.has(chunk.chunkId)) {
+            this.indexDocument(chunk);
+            addedNew = true;
+          }
+        }
+        if (addedNew) {
+          this.persistToDisk();
         }
         return;
       } catch {}
