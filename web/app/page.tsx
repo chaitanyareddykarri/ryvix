@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 
@@ -36,6 +37,42 @@ export default async function Page() {
           </p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+          <Link
+            href="/servers"
+            style={{
+              padding: "0.35rem 0.85rem",
+              borderRadius: "9999px",
+              fontSize: "0.82rem",
+              fontWeight: 600,
+              background: "rgba(16, 185, 129, 0.2)",
+              border: "1px solid rgba(16, 185, 129, 0.4)",
+              color: "#34d399",
+              textDecoration: "none",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+            }}
+          >
+            🖥️ Servers
+          </Link>
+          <Link
+            href="/tasks"
+            style={{
+              padding: "0.35rem 0.85rem",
+              borderRadius: "9999px",
+              fontSize: "0.82rem",
+              fontWeight: 600,
+              background: "rgba(59, 130, 246, 0.2)",
+              border: "1px solid rgba(59, 130, 246, 0.4)",
+              color: "#60a5fa",
+              textDecoration: "none",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+            }}
+          >
+            💻 Coding Workspace
+          </Link>
           <span
             className="badge-connected"
             style={{
@@ -64,7 +101,7 @@ export default async function Page() {
               </form>
             </div>
           ) : (
-            <a
+            <Link
               href="/login"
               className="btn-primary"
               style={{
@@ -76,7 +113,7 @@ export default async function Page() {
               }}
             >
               Sign In (Email OTP)
-            </a>
+            </Link>
           )}
         </div>
       </header>
@@ -105,18 +142,70 @@ export default async function Page() {
         <div className="glass-panel glow-indigo" style={{ padding: "1.75rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
             <h2 style={{ fontSize: "1.15rem", fontWeight: 600 }}>Dual-Path Connectors</h2>
-            <span style={{ fontSize: "0.78rem", background: "rgba(99, 102, 241, 0.15)", color: "#a5b4fc", padding: "0.2rem 0.6rem", borderRadius: "4px" }}>
-              Architecture Verified
+            <span style={{ fontSize: "0.78rem", background: "rgba(99, 102, 241, 0.2)", color: "#a5b4fc", padding: "0.2rem 0.6rem", borderRadius: "4px" }}>
+              Path 2 Active
             </span>
           </div>
           <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", lineHeight: 1.5, marginBottom: "1.25rem" }}>
             Dual-path operational architecture isolating the internal daemon from out-of-band external cloud recovery.
           </p>
-          <div style={{ background: "rgba(0,0,0,0.4)", borderRadius: "8px", padding: "0.85rem 1rem", fontSize: "0.85rem", fontFamily: "var(--font-mono)" }}>
-            <div style={{ color: "#9ca3af", marginBottom: "0.35rem" }}>Internal Daemon: <span style={{ color: "#93c5fd" }}>Ready for Enrollment</span></div>
-            <div style={{ color: "#9ca3af", marginBottom: "0.35rem" }}>Out-of-Band Probe: <span style={{ color: "#93c5fd" }}>External Standby</span></div>
+          <div style={{ background: "rgba(0,0,0,0.4)", borderRadius: "8px", padding: "0.85rem 1rem", fontSize: "0.85rem", fontFamily: "var(--font-mono)", marginBottom: "1.25rem" }}>
+            <div style={{ color: "#9ca3af", marginBottom: "0.35rem" }}>Internal Daemon: <span style={{ color: "#34d399" }}>Zero-Inbound TLS</span></div>
+            <div style={{ color: "#9ca3af", marginBottom: "0.35rem" }}>Out-of-Band Probe: <span style={{ color: "#60a5fa" }}>Hypervisor Reset API</span></div>
             <div style={{ color: "#9ca3af" }}>Failover Policy: <span style={{ color: "#34d399" }}>Air-Gapped Isolation</span></div>
           </div>
+          <Link
+            href="/servers"
+            className="btn-primary"
+            style={{
+              display: "inline-block",
+              textAlign: "center",
+              padding: "0.55rem 1.25rem",
+              fontSize: "0.88rem",
+              textDecoration: "none",
+              borderRadius: "8px",
+              background: "linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)",
+              color: "#ffffff",
+              fontWeight: 600,
+            }}
+          >
+            Manage Server Connectors &rarr;
+          </Link>
+        </div>
+
+        {/* AI Coding Workspaces & Pipeline Card */}
+        <div className="glass-panel glow-purple" style={{ padding: "1.75rem", border: "1px solid rgba(139, 92, 246, 0.3)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+            <h2 style={{ fontSize: "1.15rem", fontWeight: 600 }}>Coding Workspaces</h2>
+            <span style={{ fontSize: "0.78rem", background: "rgba(139, 92, 246, 0.2)", color: "#c084fc", padding: "0.2rem 0.6rem", borderRadius: "4px" }}>
+              Path 1 Active
+            </span>
+          </div>
+          <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", lineHeight: 1.5, marginBottom: "1.25rem" }}>
+            Autonomous repository analyzer, AI reasoning engine, Docker sandbox execution, and GitHub PR pipeline.
+          </p>
+          <div style={{ background: "rgba(0,0,0,0.4)", borderRadius: "8px", padding: "0.85rem 1rem", fontSize: "0.85rem", fontFamily: "var(--font-mono)", marginBottom: "1.25rem" }}>
+            <div style={{ color: "#9ca3af", marginBottom: "0.35rem" }}>Stack Detector: <span style={{ color: "#34d399" }}>Multi-Runtime</span></div>
+            <div style={{ color: "#9ca3af", marginBottom: "0.35rem" }}>Docker Sandbox: <span style={{ color: "#60a5fa" }}>Ephemeral Ports (3100+)</span></div>
+            <div style={{ color: "#9ca3af" }}>PR Pipeline: <span style={{ color: "#f472b6" }}>Automated Branching</span></div>
+          </div>
+          <Link
+            href="/tasks"
+            className="btn-primary"
+            style={{
+              display: "inline-block",
+              textAlign: "center",
+              padding: "0.55rem 1.25rem",
+              fontSize: "0.88rem",
+              textDecoration: "none",
+              borderRadius: "8px",
+              background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+              color: "#ffffff",
+              fontWeight: 600,
+            }}
+          >
+            Launch AI Workspace &rarr;
+          </Link>
         </div>
 
         {/* Intelligence Layer Card */}

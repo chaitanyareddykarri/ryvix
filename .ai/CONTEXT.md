@@ -62,3 +62,10 @@ Ryvix is an **AI-powered autonomous software and infrastructure operations platf
 5. **Docker Isolation**: Customer code never runs on the Ryvix host; runs in ephemeral unprivileged sandboxes (`UID 1000`, 2 vCPUs, 4GB RAM, 15m timeout).
 6. **Supabase Cloud Hosted**: Supabase is hosted at `https://tsoyrpgifovzwqtgpkkb.supabase.co`. Do NOT create a local Postgres container.
 7. **Transactional Mail vs Connector Separation**: Supabase Auth handles 6-digit OTP delivery; Gmail connector handles task digests and customer communication.
+
+## Current Implementation Status (Live & Verified)
+- **Monorepo Architecture**: `@ryvix/database`, `@ryvix/backend`, `@ryvix/ai`, `@ryvix/services`, `@ryvix/web`.
+- **Path 1**: Repository Analyzer (`github.connector.ts`), Docker Sandbox (`docker-workspace.manager.ts`), PR Service (`pr.service.ts`), Web Console (`/tasks`, `/api/tasks`).
+- **Path 2**: Internal Agent (`internal-agent.ts`), Cloud Recovery Bridge (`cloud-recovery.bridge.ts`), Server Console (`/servers`, `/api/servers`).
+- **Database**: PostgreSQL 17.6 on Supabase (`tsoyrpgifovzwqtgpkkb`). All 35 tables present, 100% RLS enforced.
+- **Master Test Runner**: `tests/run-all.ts` running 9 comprehensive test suites (100% pass).

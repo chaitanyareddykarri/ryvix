@@ -66,3 +66,10 @@ Workspaces are not monolithic images bloated with every runtime. Instead, Ryvix 
 | **Build & Test Run** | Deferred to Customer CI/CD | Executed and verified locally before commit |
 | **Frontend Preview** | Not available | Ephemeral URL generated |
 | **Resource Cost** | Minimal / Instant | Requires container spin-up (10-30s) |
+
+## 10. Implemented Components & Verification Status (Path 1)
+- **Repository Analyzer**: `RepositoryAnalyzer` in `backend/src/connectors/github.connector.ts` detecting Next.js, Node.js, Python/FastAPI, Go, Rust, Docker.
+- **Docker Sandbox Manager**: `DockerWorkspaceManager` in `services/src/workspace/docker-workspace.manager.ts` managing containers (`ryvix_sbx_*`), port mapping (`3100+`), diff application, command execution, and 15m expiry.
+- **Pull Request Service**: `PullRequestService` in `backend/src/services/pr.service.ts` opening GitHub PRs with branch names and additions/deletions summaries.
+- **Interactive Web Console**: `web/app/tasks/page.tsx` and `web/app/api/tasks/route.ts`.
+- **Test Suite**: `tests/coding-workspace.test.ts` (100% PASSED).

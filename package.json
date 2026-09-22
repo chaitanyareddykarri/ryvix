@@ -15,7 +15,10 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present && tsx tests/run-all.ts",
-    "test:e2e": "tsx tests/run-all.ts"
+    "test:e2e": "tsx tests/run-all.ts",
+    "dev": "npm run dev --workspace=@ryvix/web",
+    "train:ai": "tsx ai/scripts/train-local-model.ts",
+    "train:deep": "tsx ai/scripts/deep-train-ai.ts"
   },
   "devDependencies": {
     "@types/node": "^22.13.4",

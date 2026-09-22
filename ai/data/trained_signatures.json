@@ -1,0 +1,467 @@
+[
+  {
+    "group": "WEB_APPLICATION_ATTACKS",
+    "name": "SQL Injection (Union & Blind Payload)",
+    "threatType": "SQL_INJECTION",
+    "serverArchetype": "DATABASE_HOST",
+    "capability": {
+      "action": "waf.block_pattern",
+      "params": {
+        "target": "SQL_INJECTION",
+        "host": "api-database-proxy-01",
+        "reason": "SQL_INJECTION"
+      }
+    }
+  },
+  {
+    "group": "WEB_APPLICATION_ATTACKS",
+    "name": "Cross-Site Scripting (XSS Injected Payload)",
+    "threatType": "CROSS_SITE_SCRIPTING_XSS",
+    "serverArchetype": "WEB_EDGE_PROXY",
+    "capability": {
+      "action": "waf.block_pattern",
+      "params": {
+        "target": "CROSS_SITE_SCRIPTING_XSS",
+        "host": "edge-ingress-gateway",
+        "reason": "CROSS_SITE_SCRIPTING_XSS"
+      }
+    }
+  },
+  {
+    "group": "WEB_APPLICATION_ATTACKS",
+    "name": "Server-Side Request Forgery (SSRF Cloud Metadata)",
+    "threatType": "SERVER_SIDE_REQUEST_FORGERY_SSRF",
+    "serverArchetype": "APPLICATION_RUNTIME",
+    "capability": {
+      "action": "firewall.block_egress_ip",
+      "params": {
+        "target": "SERVER_SIDE_REQUEST_FORGERY_SSRF",
+        "host": "microservice-fetcher-01",
+        "ip": "169.254.169.254",
+        "reason": "SERVER_SIDE_REQUEST_FORGERY_SSRF"
+      }
+    }
+  },
+  {
+    "group": "WEB_APPLICATION_ATTACKS",
+    "name": "Directory Path Traversal & LFI (/etc/passwd)",
+    "threatType": "PATH_TRAVERSAL_LFI",
+    "serverArchetype": "APPLICATION_RUNTIME",
+    "capability": {
+      "action": "waf.block_pattern",
+      "params": {
+        "target": "PATH_TRAVERSAL_LFI",
+        "host": "file-viewer-service",
+        "reason": "PATH_TRAVERSAL_LFI"
+      }
+    }
+  },
+  {
+    "group": "WEB_APPLICATION_ATTACKS",
+    "name": "XML External Entity (XXE) Arbitrary Read",
+    "threatType": "XML_EXTERNAL_ENTITY_XXE",
+    "serverArchetype": "APPLICATION_RUNTIME",
+    "capability": {
+      "action": "waf.block_pattern",
+      "params": {
+        "target": "XML_EXTERNAL_ENTITY_XXE",
+        "host": "xml-ingestion-worker",
+        "reason": "XML_EXTERNAL_ENTITY_XXE"
+      }
+    }
+  },
+  {
+    "group": "WEB_APPLICATION_ATTACKS",
+    "name": "Insecure Deserialization Gadget Chain",
+    "threatType": "INSECURE_DESERIALIZATION",
+    "serverArchetype": "APPLICATION_RUNTIME",
+    "capability": {
+      "action": "service.restart",
+      "params": {
+        "target": "INSECURE_DESERIALIZATION",
+        "host": "queue-consumer-node",
+        "reason": "INSECURE_DESERIALIZATION"
+      }
+    }
+  },
+  {
+    "group": "WEB_APPLICATION_ATTACKS",
+    "name": "HTTP Request Smuggling (CL.TE Desync)",
+    "threatType": "HTTP_REQUEST_SMUGGLING",
+    "serverArchetype": "WEB_EDGE_PROXY",
+    "capability": {
+      "action": "reverse_proxy.harden_timeouts",
+      "params": {
+        "target": "HTTP_REQUEST_SMUGGLING",
+        "host": "edge-proxy-lon-01",
+        "reason": "HTTP_REQUEST_SMUGGLING"
+      }
+    }
+  },
+  {
+    "group": "WEB_APPLICATION_ATTACKS",
+    "name": "Broken Auth & JWT Alg:None Tampering",
+    "threatType": "BROKEN_AUTH_JWT_TAMPERING",
+    "serverArchetype": "WEB_EDGE_PROXY",
+    "capability": {
+      "action": "security.lock_session",
+      "params": {
+        "target": "BROKEN_AUTH_JWT_TAMPERING",
+        "host": "api-auth-gateway",
+        "reason": "BROKEN_AUTH_JWT_TAMPERING"
+      }
+    }
+  },
+  {
+    "group": "WEB_APPLICATION_ATTACKS",
+    "name": "Malicious Web Shell Upload (/var/www)",
+    "threatType": "WEB_SHELL_UPLOAD",
+    "serverArchetype": "APPLICATION_RUNTIME",
+    "capability": {
+      "action": "disk.cleanup_temp",
+      "params": {
+        "target": "WEB_SHELL_UPLOAD",
+        "host": "web-storefront-01",
+        "reason": "WEB_SHELL_UPLOAD"
+      }
+    }
+  },
+  {
+    "group": "SERVER_SYSTEM_ATTACKS",
+    "name": "SSH Distributed Brute-Force on Bastion",
+    "threatType": "SSH_BRUTE_FORCE",
+    "serverArchetype": "SECURITY_BASTION",
+    "capability": {
+      "action": "firewall.block_ip",
+      "params": {
+        "target": "SSH_BRUTE_FORCE",
+        "host": "bastion-vpn-gateway",
+        "ip": "198.51.100.5",
+        "reason": "SSH_BRUTE_FORCE"
+      }
+    }
+  },
+  {
+    "group": "SERVER_SYSTEM_ATTACKS",
+    "name": "TCP SYN Flood Volumetric DDoS",
+    "threatType": "SYN_FLOOD_DDOS",
+    "serverArchetype": "WEB_EDGE_PROXY",
+    "capability": {
+      "action": "sysctl.enable_syncookies",
+      "params": {
+        "target": "SYN_FLOOD_DDOS",
+        "host": "ingress-lb-01",
+        "reason": "SYN_FLOOD_DDOS"
+      }
+    }
+  },
+  {
+    "group": "SERVER_SYSTEM_ATTACKS",
+    "name": "HTTP/2 Rapid Reset Storm (CVE-2023-44487)",
+    "threatType": "HTTP2_RAPID_RESET_DDOS",
+    "serverArchetype": "WEB_EDGE_PROXY",
+    "capability": {
+      "action": "reverse_proxy.harden_timeouts",
+      "params": {
+        "target": "HTTP2_RAPID_RESET_DDOS",
+        "host": "edge-reverse-proxy",
+        "reason": "HTTP2_RAPID_RESET_DDOS"
+      }
+    }
+  },
+  {
+    "group": "SERVER_SYSTEM_ATTACKS",
+    "name": "HTTP Slowloris Connection Starvation",
+    "threatType": "HTTP_SLOWLORIS_DDOS",
+    "serverArchetype": "WEB_EDGE_PROXY",
+    "capability": {
+      "action": "reverse_proxy.harden_timeouts",
+      "params": {
+        "target": "HTTP_SLOWLORIS_DDOS",
+        "host": "web-edge-01",
+        "reason": "HTTP_SLOWLORIS_DDOS"
+      }
+    }
+  },
+  {
+    "group": "SERVER_SYSTEM_ATTACKS",
+    "name": "OS Command Injection Subshell Spawning",
+    "threatType": "COMMAND_INJECTION",
+    "serverArchetype": "APPLICATION_RUNTIME",
+    "capability": {
+      "action": "security.terminate_process_tree",
+      "params": {
+        "target": "COMMAND_INJECTION",
+        "host": "api-backend-node",
+        "reason": "COMMAND_INJECTION"
+      }
+    }
+  },
+  {
+    "group": "SERVER_SYSTEM_ATTACKS",
+    "name": "Outbound Interactive Reverse Shell",
+    "threatType": "REVERSE_SHELL",
+    "serverArchetype": "SECURITY_BASTION",
+    "capability": {
+      "action": "security.kill_reverse_shell",
+      "params": {
+        "target": "REVERSE_SHELL",
+        "host": "bastion-internal-01",
+        "ip": "203.0.113.88",
+        "reason": "REVERSE_SHELL"
+      }
+    }
+  },
+  {
+    "group": "SERVER_SYSTEM_ATTACKS",
+    "name": "Cryptocurrency Miner Compute Hijacking",
+    "threatType": "CRYPTO_MINER",
+    "serverArchetype": "APPLICATION_RUNTIME",
+    "capability": {
+      "action": "process.kill_by_name",
+      "params": {
+        "target": "CRYPTO_MINER",
+        "host": "compute-worker-02",
+        "reason": "CRYPTO_MINER"
+      }
+    }
+  },
+  {
+    "group": "SERVER_SYSTEM_ATTACKS",
+    "name": "Root Privilege Escalation (PwnKit/DirtyPipe)",
+    "threatType": "PRIVILEGE_ESCALATION",
+    "serverArchetype": "DATABASE_HOST",
+    "capability": {
+      "action": "security.lock_session",
+      "params": {
+        "target": "PRIVILEGE_ESCALATION",
+        "host": "db-host-01",
+        "reason": "PRIVILEGE_ESCALATION"
+      }
+    }
+  },
+  {
+    "group": "SERVER_SYSTEM_ATTACKS",
+    "name": "Ransomware Mass File Alteration",
+    "threatType": "RANSOMWARE_ENCRYPTION",
+    "serverArchetype": "STORAGE_VOLUME_NODE",
+    "capability": {
+      "action": "host.isolate_network",
+      "params": {
+        "target": "RANSOMWARE_ENCRYPTION",
+        "host": "storage-nas-01",
+        "reason": "RANSOMWARE_ENCRYPTION"
+      }
+    }
+  },
+  {
+    "group": "SERVER_SYSTEM_ATTACKS",
+    "name": "Container Namespace Escape Breakout",
+    "threatType": "CONTAINER_ESCAPE",
+    "serverArchetype": "CONTAINER_CLUSTER_NODE",
+    "capability": {
+      "action": "container.restart_with_bump",
+      "params": {
+        "target": "CONTAINER_ESCAPE",
+        "host": "k8s-node-worker-01",
+        "reason": "CONTAINER_ESCAPE"
+      }
+    }
+  },
+  {
+    "group": "SERVER_SYSTEM_ATTACKS",
+    "name": "OS Credential Dumping (/etc/shadow Scrape)",
+    "threatType": "CREDENTIAL_DUMPING_SHADOW",
+    "serverArchetype": "SECURITY_BASTION",
+    "capability": {
+      "action": "security.lock_session",
+      "params": {
+        "target": "CREDENTIAL_DUMPING_SHADOW",
+        "host": "bastion-edge-02",
+        "reason": "CREDENTIAL_DUMPING_SHADOW"
+      }
+    }
+  },
+  {
+    "group": "SERVER_SYSTEM_ATTACKS",
+    "name": "Malicious Cron Persistence Backdoor",
+    "threatType": "MALICIOUS_CRON_PERSISTENCE",
+    "serverArchetype": "APPLICATION_RUNTIME",
+    "capability": {
+      "action": "security.lock_session",
+      "params": {
+        "target": "MALICIOUS_CRON_PERSISTENCE",
+        "host": "app-service-01",
+        "reason": "MALICIOUS_CRON_PERSISTENCE"
+      }
+    }
+  },
+  {
+    "group": "SERVER_SYSTEM_ATTACKS",
+    "name": "Port Scan Reconnaissance Sweep",
+    "threatType": "PORT_SCAN_RECON",
+    "serverArchetype": "WEB_EDGE_PROXY",
+    "capability": {
+      "action": "firewall.tarpit_ip",
+      "params": {
+        "target": "PORT_SCAN_RECON",
+        "host": "firewall-ingress-01",
+        "reason": "PORT_SCAN_RECON"
+      }
+    }
+  },
+  {
+    "group": "OPERATIONAL_CRISES",
+    "name": "PostgreSQL Connection Pool Saturated",
+    "threatType": "DATABASE_POOL_EXHAUSTION",
+    "serverArchetype": "DATABASE_HOST",
+    "capability": {
+      "action": "database.kill_idle_connections",
+      "params": {
+        "target": "DATABASE_POOL_EXHAUSTION",
+        "host": "pg-primary-cluster",
+        "reason": "DATABASE_POOL_EXHAUSTION"
+      }
+    }
+  },
+  {
+    "group": "OPERATIONAL_CRISES",
+    "name": "Redis Cache Memory OOM Collapse",
+    "threatType": "REDIS_OOM_EVICTION_COLLAPSE",
+    "serverArchetype": "CACHE_MESSAGE_BROKER",
+    "capability": {
+      "action": "cache.flush_expired",
+      "params": {
+        "target": "REDIS_OOM_EVICTION_COLLAPSE",
+        "host": "redis-session-master",
+        "reason": "REDIS_OOM_EVICTION_COLLAPSE"
+      }
+    }
+  },
+  {
+    "group": "OPERATIONAL_CRISES",
+    "name": "Nginx 502 Bad Gateway (Dead Upstream)",
+    "threatType": "NGINX_502_UPSTREAM_DOWN",
+    "serverArchetype": "WEB_EDGE_PROXY",
+    "capability": {
+      "action": "service.restart",
+      "params": {
+        "target": "NGINX_502_UPSTREAM_DOWN",
+        "host": "edge-proxy-us-west",
+        "reason": "NGINX_502_UPSTREAM_DOWN"
+      }
+    }
+  },
+  {
+    "group": "OPERATIONAL_CRISES",
+    "name": "Kubernetes Container CrashLoopBackOff",
+    "threatType": "CONTAINER_CRASH_LOOP",
+    "serverArchetype": "CONTAINER_CLUSTER_NODE",
+    "capability": {
+      "action": "container.restart_with_bump",
+      "params": {
+        "target": "CONTAINER_CRASH_LOOP",
+        "host": "k8s-node-worker-02",
+        "reason": "CONTAINER_CRASH_LOOP"
+      }
+    }
+  },
+  {
+    "group": "OPERATIONAL_CRISES",
+    "name": "Host RAM OOM Memory Leak",
+    "threatType": "MEMORY_LEAK_OOM",
+    "serverArchetype": "APPLICATION_RUNTIME",
+    "capability": {
+      "action": "disk.cleanup_temp",
+      "params": {
+        "target": "MEMORY_LEAK_OOM",
+        "host": "app-worker-analytics",
+        "reason": "MEMORY_LEAK_OOM"
+      }
+    }
+  },
+  {
+    "group": "OPERATIONAL_CRISES",
+    "name": "Storage Volume Inode Table Exhaustion",
+    "threatType": "DISK_INODE_PRESSURE",
+    "serverArchetype": "STORAGE_VOLUME_NODE",
+    "capability": {
+      "action": "disk.purge_orphaned_inodes",
+      "params": {
+        "target": "DISK_INODE_PRESSURE",
+        "host": "minio-storage-pool-01",
+        "reason": "DISK_INODE_PRESSURE"
+      }
+    }
+  },
+  {
+    "group": "OPERATIONAL_CRISES",
+    "name": "Disk Block Storage Critical (>90%)",
+    "threatType": "DISK_PRESSURE",
+    "serverArchetype": "APPLICATION_RUNTIME",
+    "capability": {
+      "action": "disk.cleanup_temp",
+      "params": {
+        "target": "DISK_PRESSURE",
+        "host": "log-collector-01",
+        "reason": "DISK_PRESSURE"
+      }
+    }
+  },
+  {
+    "group": "OPERATIONAL_CRISES",
+    "name": "Zombie Defunct Process Saturation",
+    "threatType": "ZOMBIE_PROCESS_LEAK",
+    "serverArchetype": "APPLICATION_RUNTIME",
+    "capability": {
+      "action": "process.reap_zombies",
+      "params": {
+        "target": "ZOMBIE_PROCESS_LEAK",
+        "host": "legacy-app-server",
+        "reason": "ZOMBIE_PROCESS_LEAK"
+      }
+    }
+  },
+  {
+    "group": "OPERATIONAL_CRISES",
+    "name": "DNS Resolution Failure (EAI_AGAIN)",
+    "threatType": "DNS_RESOLUTION_FAILURE",
+    "serverArchetype": "APPLICATION_RUNTIME",
+    "capability": {
+      "action": "network.flush_dns_cache",
+      "params": {
+        "target": "DNS_RESOLUTION_FAILURE",
+        "host": "api-service-prod",
+        "reason": "DNS_RESOLUTION_FAILURE"
+      }
+    }
+  },
+  {
+    "group": "OPERATIONAL_CRISES",
+    "name": "SSL/TLS Certificate Expiration Alert",
+    "threatType": "SSL_EXPIRATION_ALERT",
+    "serverArchetype": "WEB_EDGE_PROXY",
+    "capability": {
+      "action": "security.renew_ssl_cert",
+      "params": {
+        "target": "SSL_EXPIRATION_ALERT",
+        "host": "portal-proxy-prod",
+        "reason": "SSL_EXPIRATION_ALERT"
+      }
+    }
+  },
+  {
+    "group": "OPERATIONAL_CRISES",
+    "name": "Systemd Service Fatal Crash Loop",
+    "threatType": "SERVICE_CRASH_LOOP",
+    "serverArchetype": "APPLICATION_RUNTIME",
+    "capability": {
+      "action": "service.restart",
+      "params": {
+        "target": "SERVICE_CRASH_LOOP",
+        "host": "payment-gateway-host",
+        "reason": "SERVICE_CRASH_LOOP"
+      }
+    }
+  }
+]

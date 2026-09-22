@@ -5,7 +5,6 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
 export const updateSession = async (request: NextRequest) => {
-  // Create an unmodified response
   let supabaseResponse = NextResponse.next({
     request: {
       headers: request.headers,
@@ -33,8 +32,31 @@ export const updateSession = async (request: NextRequest) => {
     },
   );
 
-  // Refresh auth token if expired
-  await supabase.auth.getUser();
+  // Authenticate user & refresh expired token
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const pathname = request.nextUrl.pathname;
+  const isApiRoute = pathname.startsWith("/api");
+  const isPublicAuthRoute = 
+    pathname.startsWith("/login") || 
+    pathname.startsWith("/auth/callback") || 
+    pathname.startsWith("/auth/reset-password") ||
+    isApiRoute;
+
+  // If user is authenticated and attempts to access /login, redirect to /
+  if (user && pathname.startsWith("/login")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    return NextResponse.redirect(url);
+  }
+
+  // If user is unauthenticated and attempts to access protected routes, redirect to /login
+  // Protected routes include "/" and any non-public paths
+  if (!user && !isPublicAuthRoute) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
 
   return supabaseResponse;
 };

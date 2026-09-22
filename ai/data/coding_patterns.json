@@ -1,0 +1,4 @@
+{
+  "styling": "Tailwind CSS with dark mode",
+  "state": "Zustand store with Immer"
+}

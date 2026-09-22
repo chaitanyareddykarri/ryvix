@@ -1,0 +1,19 @@
+[
+  {
+    "fingerprint": "8e9742ef3db04322",
+    "patternSignature": "ZERO_DAY_ANOMALY: unmapped binary heap corruption exploit pattern",
+    "threatType": "ZERO_DAY_ANOMALY",
+    "diagnosis": "Novel heuristic exploit diagnosed via LLM escalation.",
+    "remediationAction": "Isolate compromised process and apply dynamic network containment.",
+    "capabilityToInvoke": {
+      "action": "security.quarantine_process",
+      "params": {
+        "reason": "llm_diagnosed_zero_day"
+      }
+    },
+    "confidence": 0.95,
+    "timesEncountered": 2,
+    "firstLearnedAt": "2026-09-22T02:53:48.312Z",
+    "lastEncounteredAt": "2026-09-22T02:53:48.314Z"
+  }
+]

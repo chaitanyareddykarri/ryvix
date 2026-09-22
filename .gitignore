@@ -62,3 +62,4 @@ supabase/.temp/
 # Scratch & Temporary agent files
 scratch/
 tmp/
+web/ai/

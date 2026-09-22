@@ -131,3 +131,9 @@ The dual-path design enables automated, safe recovery during severe infrastructu
 | **Credentials Used** | Ephemeral ed25519 token / JWT | Scoped Cloud Provider API Token (KMS-backed) |
 | **Execution Boundary** | Strictly whitelisted systemd / Docker commands | Strictly scoped instance reboot / power APIs |
 | **Failure Survivability**| Dies if server OS crashes | **Unaffected by server OS crashes** |
+
+## 6. Implemented Components & Verification Status (Path 2)
+- **Internal Host Daemon**: `InternalAgent` in `services/src/connector/internal-agent.ts` with zero-inbound TLS telemetry, HMAC-SHA256 enrollment tokens, and capability whitelisting (`service.restart`, `container.restart`, `disk.cleanup_temp`, `logs.fetch`).
+- **Out-of-Band Cloud Bridge**: `CloudRecoveryBridge` in `services/src/connector/cloud-recovery.bridge.ts` supporting AWS, DigitalOcean, Hetzner, GCP hypervisor probes, differential diagnosis, and out-of-band hard reset.
+- **Server Fleet Console**: `web/app/servers/page.tsx` and `web/app/api/servers/route.ts` with real-time gauges and one-click shell enrollment.
+- **Test Suite**: `tests/server-connector-pipeline.test.ts` (100% PASSED).

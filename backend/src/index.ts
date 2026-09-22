@@ -3,3 +3,7 @@ export * from './repositories/task.repository';
 export * from './repositories/audit.repository';
 export * from './tools/task-tools';
 export * from './connectors/gmail.connector';
+
+export * from './connectors/github.connector';
+
+export * from './services/pr.service';
