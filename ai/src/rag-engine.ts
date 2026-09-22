@@ -252,6 +252,18 @@ export const INITIAL_RAG_PLAYBOOKS: RagDocumentChunk[] = [
       'iptables -I INPUT -p tcp --dport 3000 -j ACCEPT'
     ],
     tags: ['server control', 'autonomous trigger', 'self healing', 'multi cloud', 'takeover', 'recovery loop']
+  },
+  {
+    chunkId: 'runbook_ryvix_platform_overview_and_website_architecture',
+    documentId: 'arch_playbook_platform_01',
+    title: 'Ryvix Platform Architecture, Web Consoles & Backend Communication Blueprint',
+    category: 'ARCHITECTURE_BLUEPRINT',
+    content: 'Ryvix is an Autonomous Cloud Infrastructure, AI SRE, and Self-Healing Platform designed to monitor, protect, and repair heterogeneous servers across AWS EC2, Generic Linux VPS, Hugging Face Spaces, Hetzner, DigitalOcean, and Bare Metal. The web application comprises 4 primary consoles: 1) Dashboard (/) for real-time cluster health, node telemetry, and security feeds; 2) Web Chat (/chat) for interactive pair-programming and SRE incident command with live SSE streaming; 3) Servers (/servers) for managing multi-tenant fleet access via In-Host Agent (Pathway A), Agentless Ed25519 SSH (Pathway B), and Cloud Hypervisor APIs (Pathway C); and 4) Tasks (/tasks) for DAG workflow monitoring and circuit-breaker history. How the Web Chat talks to the Backend: The client in /chat sends an HTTP POST request to /api/chat with the prompt and stream=true. The API route invokes the Ryvix AGI Core (executing an OODA loop: Observe, Orient, Decide, Act, Reflect) and the Coding Assistant. It establishes a persistent Server-Sent Events (SSE) text/event-stream connection emitting sequential events: start (metadata), thought (System 1 reflex, RAG runbooks, System 2 multi-LLM dialectic debate), plan (domain, intent, blast radius, actions), diff (unified syntax-highlighted git diffs), approval (interactive cards for high-blast operations), token (fluid response word chunks with 12ms pacing), and done (total duration). The frontend reads these chunks in real time, dynamically rendering collapsible thought traces, split-screen diffs, and responsive live previews.',
+    actionableCommands: [
+      'curl -N -X POST http://localhost:3000/api/chat -H "Content-Type: application/json" -d \'{"prompt":"What is Ryvix?","stream":true}\'',
+      'npm run dev'
+    ],
+    tags: ['ryvix', 'platform overview', 'website', 'console', 'architecture', 'backend', 'what can this website do', 'how chat works', 'sse streaming', 'frontend backend communication']
   }
 ];
 

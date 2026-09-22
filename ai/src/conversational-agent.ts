@@ -260,6 +260,21 @@ export class ConversationalAgent {
 
   public classifyIntent(input: string): string {
     const lower = input.toLowerCase();
+    if (
+      lower.includes('what is ryvix') ||
+      lower.includes('about ryvix') ||
+      lower.includes('what can this website do') ||
+      lower.includes('about this website') ||
+      lower.includes('how does this work') ||
+      lower.includes('talk to your backend') ||
+      lower.includes('talk to ur back end') ||
+      lower.includes('how chat talks') ||
+      lower.includes('platform overview') ||
+      lower.includes('know about the this website') ||
+      lower.includes('know about this website')
+    ) {
+      return 'INTENT_RYVIX_PLATFORM_EXPLANATION';
+    }
     if (lower.includes('approval') || lower.includes('authorize') || lower.includes('confirm') || lower.includes('approval gate') || lower.includes('action gate') || lower.includes('quarantine') || lower.includes('drop rule')) {
       return 'INTENT_WEB_CHAT_APPROVAL_GATE';
     }
@@ -300,6 +315,46 @@ export class ConversationalAgent {
     intent: string,
     persona: AgentPersona
   ): ConversationalTurnResponse {
+    if (intent === 'INTENT_RYVIX_PLATFORM_EXPLANATION') {
+      return {
+        detectedIntent: intent,
+        personaUsed: 'STAFF_ARCHITECT',
+        message: [
+          '# Welcome to Ryvix — Autonomous Cloud Infrastructure, AI SRE & Self-Healing Platform',
+          '',
+          'Ryvix is an end-to-end cognitive cloud platform engineered to monitor, secure, and autonomously remediate heterogeneous servers across AWS EC2, generic Linux VPS, Hugging Face Spaces, Hetzner, DigitalOcean, and Bare Metal.',
+          '',
+          '### 🌐 What Can This Website Do?',
+          '- **Live Dashboard (`/`)**: Real-time cluster health score, CPU/memory telemetry, active server nodes, and continuous threat monitoring.',
+          '- **Web Chat Console (`/chat`)**: Real-time interactive AI workbench for SRE incident triage, architecture advisory, and pair-programming code synthesis with live streaming thought traces and syntax-highlighted git diffs.',
+          '- **Servers Fleet Manager (`/servers`)**: Multi-tenant server access across 3 pathways: In-Host Agent (Pathway A), Agentless Ed25519 SSH (Pathway B), and Out-of-Band Cloud Hypervisor APIs (Pathway C).',
+          '- **Background Tasks Console (`/tasks`)**: Distributed task DAG execution, self-healing audit trail, and circuit-breaker safety ledger.',
+          '',
+          '### ⚡ How Does The Web Chat Talk To The Backend?',
+          '1. **Client Dispatch**: When you type a prompt in the Web Chat (`web/app/chat/page.tsx`), it sends an HTTP POST request to `/api/chat` with `{ prompt, stream: true }`.',
+          '2. **Top-Level AGI Cognitive OODA Cycle**: The Next.js API route invokes `ryvixAgi.executeOodaCycle()`. The AI observes your input, orients domains, queries authoritative RAG runbooks, debates hypotheses across System 1 reflex and System 2 multi-LLM dialectics, and decides on an action plan.',
+          '3. **Persistent SSE Streaming Protocol**: The backend opens an HTTP `text/event-stream` persistent connection and streams 7 real-time events:',
+          '   - `event: start` -> Cycle metadata & conversation ID',
+          '   - `event: thought` -> System 1 intuitive reflex, RAG runbooks, and System 2 dialectic deliberation',
+          '   - `event: plan` -> Domain classification, blast radius assessment, and action plan',
+          '   - `event: diff` -> Unified syntax-highlighted git diffs (if coding requested)',
+          '   - `event: approval` -> Interactive Action Approval Card if blast radius is High/Critical',
+          '   - `event: token` -> Fluid progressive response chunks with 12ms pacing',
+          '   - `event: done` -> Total execution metrics and completion status',
+          '4. **Real-Time UI Rendering**: The React frontend reads chunks using `ReadableStreamDefaultReader`, progressively updating thought drawers, split-screen diff viewers, and sandboxed live preview iframes.',
+          '',
+          '### 🧠 Is It Connected to an LLM?',
+          '- **Zero-Call Embedded Intelligence**: Ryvix runs an embedded Float32Array neural network and local vector RAG engine with sub-millisecond execution (<0.05ms) requiring ZERO external API calls or internet dependencies.',
+          '- **Hybrid LLM Gateway**: If an `ANTHROPIC_API_KEY` (Claude 3.5 Sonnet) or `OPENAI_API_KEY` (GPT-4o) is configured, Ryvix transparently routes dialectic co-thinking to cloud LLMs while keeping all sensitive execution and telemetry strictly local.'
+        ].join('\n'),
+        suggestedFollowUps: [
+          'How does the action approval gating prevent accidental downtime?',
+          'How do I add a new AWS or VPS server to my fleet?',
+          'Can you synthesize a Next.js component with diff preview?'
+        ]
+      };
+    }
+
     if (persona === 'INCIDENT_COMMANDER') {
       const deduction = generalIntelligenceEngine.reasonAboutProblem({
         title: 'Urgent Live Incident',
