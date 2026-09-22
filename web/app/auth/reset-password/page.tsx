@@ -15,7 +15,31 @@ export default function ResetPasswordPage() {
   const supabase = createClient();
 
   useEffect(() => {
+    // 1. Listen for Supabase PASSWORD_RECOVERY event
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && session)) {
+        setHasRecoverySession(true);
+        setCheckingSession(false);
+        setErrorMessage("");
+      }
+    });
+
     async function checkSession() {
+      // 2. Check if a PKCE code exists in the query parameters
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get("code");
+        if (code) {
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          if (!error && data?.session) {
+            setHasRecoverySession(true);
+            setCheckingSession(false);
+            return;
+          }
+        }
+      }
+
+      // 3. Fallback to active session check
       try {
         const { data: { user }, error } = await supabase.auth.getUser();
         if (error || !user) {
@@ -33,6 +57,10 @@ export default function ResetPasswordPage() {
     }
 
     checkSession();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [supabase]);
 
   async function handlePasswordUpdate(e: React.FormEvent) {

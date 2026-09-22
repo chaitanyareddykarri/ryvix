@@ -28,8 +28,8 @@ export default function LoginPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    // 1. Listen for Supabase recovery auth event
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
+    // 1. Listen for Supabase recovery auth events
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "PASSWORD_RECOVERY") {
         setMode("reset");
         setErrorMessage("");
@@ -37,11 +37,35 @@ export default function LoginPage() {
       }
     });
 
-    // 2. Check URL search params and hash fragment for recovery token
+    // 2. Handle URL parameters, PKCE code exchange, and hash fragments
     if (typeof window !== "undefined") {
       const hash = window.location.hash;
       const params = new URLSearchParams(window.location.search);
-      if (hash.includes("type=recovery") || params.get("type") === "recovery") {
+      const code = params.get("code");
+
+      if (code) {
+        setLoading(true);
+        // Exchange PKCE authentication code for active session
+        supabase.auth.exchangeCodeForSession(code).then(({ data, error }) => {
+          setLoading(false);
+          if (!error && data?.session) {
+            setMode("reset");
+            setErrorMessage("");
+            setSuccessMessage("Identity verified! Please set your new password below.");
+          } else if (error) {
+            // Check if already authenticated via session
+            supabase.auth.getUser().then(({ data: userData }) => {
+              if (userData?.user) {
+                setMode("reset");
+                setErrorMessage("");
+                setSuccessMessage("Identity verified! Please set your new password below.");
+              } else {
+                setErrorMessage("Reset link is invalid or has expired. Please request a new one.");
+              }
+            });
+          }
+        });
+      } else if (hash.includes("type=recovery") || params.get("type") === "recovery") {
         setMode("reset");
         setErrorMessage("");
         setSuccessMessage("Identity verified! Please set your new password below.");
