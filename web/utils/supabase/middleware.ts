@@ -3,11 +3,11 @@ import { type NextRequest, NextResponse } from "next/server";
 
 const supabaseUrl =
   process.env.NEXT_PUBLIC_SUPABASE_URL ||
-  "https://placeholder-project.supabase.co";
+  "https://tsoyrpgifovzwqtgpkkb.supabase.co";
 const supabaseKey =
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.placeholder";
+  "sb_publishable_1QBmq8pKJ3ssCAGufAzfYw_IdB6sYsY";
 
 export const updateSession = async (request: NextRequest) => {
   let supabaseResponse = NextResponse.next({

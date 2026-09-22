@@ -4,7 +4,9 @@ import React, { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
 
 export default function LoginPage() {
-  const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot" | "reset">("signin");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [authMethod, setAuthMethod] = useState<"password" | "otp">("password");
 
   // Form Fields
@@ -26,15 +28,34 @@ export default function LoginPage() {
   const supabase = createClient();
 
   useEffect(() => {
+    // 1. Listen for Supabase recovery auth event
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setMode("reset");
+        setErrorMessage("");
+        setSuccessMessage("Identity verified! Please set your new password below.");
+      }
+    });
+
+    // 2. Check URL search params and hash fragment for recovery token
     if (typeof window !== "undefined") {
+      const hash = window.location.hash;
       const params = new URLSearchParams(window.location.search);
-      if (params.get("error") === "auth_callback_failed") {
+      if (hash.includes("type=recovery") || params.get("type") === "recovery") {
+        setMode("reset");
+        setErrorMessage("");
+        setSuccessMessage("Identity verified! Please set your new password below.");
+      } else if (params.get("error") === "auth_callback_failed") {
         setErrorMessage("Confirmation link expired or invalid. Please request a new link.");
       } else if (params.get("verified") === "true") {
         setSuccessMessage("Email verified successfully! You may now sign in.");
       }
     }
-  }, []);
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [supabase]);
 
   useEffect(() => {
     if (resendCountdown <= 0) return;
@@ -44,7 +65,7 @@ export default function LoginPage() {
     return () => clearInterval(interval);
   }, [resendCountdown]);
 
-  function switchMode(newMode: "signin" | "signup" | "forgot") {
+  function switchMode(newMode: "signin" | "signup" | "forgot" | "reset") {
     setMode(newMode);
     setErrorMessage("");
     setSuccessMessage("");
@@ -52,6 +73,8 @@ export default function LoginPage() {
     setOtpSent(false);
     setForgotSent(false);
     setOtp("");
+    setNewPassword("");
+    setConfirmNewPassword("");
   }
 
   // Sign in with Email & Password
@@ -252,6 +275,45 @@ export default function LoginPage() {
     }
   }
 
+  // Reset Password Flow (from email recovery link)
+  async function handleResetPassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newPassword || !confirmNewPassword) return;
+
+    if (newPassword.length < 6) {
+      setErrorMessage("New password must be at least 6 characters long.");
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setErrorMessage("Passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) {
+        setErrorMessage(error.message);
+      } else {
+        setSuccessMessage("Password updated successfully! Redirecting to workspace...");
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 1200);
+      }
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : "Failed to update password.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div
       style={{
@@ -303,7 +365,18 @@ export default function LoginPage() {
         </div>
 
         {/* Mode Switcher Tabs */}
-        {mode !== "forgot" ? (
+        {mode === "reset" ? (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
+            <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#818cf8" }}>Set New Password</h2>
+            <button
+              type="button"
+              onClick={() => switchMode("signin")}
+              style={{ background: "none", border: "none", color: "var(--text-secondary)", fontSize: "0.82rem", cursor: "pointer", textDecoration: "underline" }}
+            >
+              Cancel
+            </button>
+          </div>
+        ) : mode !== "forgot" ? (
           <div
             style={{
               display: "flex",
@@ -937,6 +1010,100 @@ export default function LoginPage() {
               </div>
             )}
           </div>
+        )}
+
+        {/* TAB 4: RESET PASSWORD */}
+        {mode === "reset" && (
+          <form onSubmit={handleResetPassword} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+            <p style={{ fontSize: "0.88rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+              Choose a strong new password to secure your account.
+            </p>
+
+            <div>
+              <label
+                htmlFor="reset-new-password"
+                style={{
+                  display: "block",
+                  fontSize: "0.85rem",
+                  fontWeight: 500,
+                  color: "var(--text-secondary)",
+                  marginBottom: "0.4rem",
+                }}
+              >
+                New Password (min 6 characters)
+              </label>
+              <input
+                id="reset-new-password"
+                type="password"
+                required
+                autoFocus
+                minLength={6}
+                placeholder="••••••••••••"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="input-field"
+                disabled={loading}
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="reset-confirm-password"
+                style={{
+                  display: "block",
+                  fontSize: "0.85rem",
+                  fontWeight: 500,
+                  color: "var(--text-secondary)",
+                  marginBottom: "0.4rem",
+                }}
+              >
+                Confirm New Password
+              </label>
+              <input
+                id="reset-confirm-password"
+                type="password"
+                required
+                minLength={6}
+                placeholder="••••••••••••"
+                value={confirmNewPassword}
+                onChange={(e) => setConfirmNewPassword(e.target.value)}
+                className="input-field"
+                disabled={loading}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading || !newPassword || !confirmNewPassword}
+              className="btn-primary"
+            >
+              {loading ? (
+                <>
+                  <span className="pulse-dot" style={{ background: "#ffffff" }}></span>
+                  Updating Password...
+                </>
+              ) : (
+                "Set New Password & Sign In"
+              )}
+            </button>
+
+            <div style={{ textAlign: "center", marginTop: "0.25rem" }}>
+              <button
+                type="button"
+                onClick={() => switchMode("signin")}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#818cf8",
+                  fontSize: "0.82rem",
+                  cursor: "pointer",
+                  textDecoration: "underline",
+                }}
+              >
+                Cancel and return to Sign In
+              </button>
+            </div>
+          </form>
         )}
 
         <div
