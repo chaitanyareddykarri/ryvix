@@ -109,6 +109,7 @@ export default function WebChatPage() {
         handleSendMessage(queryPrompt);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const toggleThoughts = (msgId: string) => {

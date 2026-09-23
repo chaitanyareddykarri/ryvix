@@ -26,6 +26,7 @@ export default function ObservabilityPage() {
 
   useEffect(() => {
     loadLogs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterSeverity]);
 
   async function loadLogs() {

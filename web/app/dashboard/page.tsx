@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import MovingBlocks3D from "@/components/MovingBlocks3D";
+import ConnectRepositoryModal from "@/components/ConnectRepositoryModal";
+import ConnectServerModal from "@/components/ConnectServerModal";
 
 // =========================================================================
 // 1. LUCIDE-STYLE VECTOR ICONS (Zero external dependencies, pixel-perfect)
@@ -232,6 +234,9 @@ export default function DashboardPage() {
 
   // GitHub & Project Connection State
   const [githubConnected, setGithubConnected] = useState<boolean>(true);
+  const [isRepoModalOpen, setIsRepoModalOpen] = useState<boolean>(false);
+  const [isServerModalOpen, setIsServerModalOpen] = useState<boolean>(false);
+  const [connectedRepos, setConnectedRepos] = useState<any[]>([]);
   const [showProjectModal, setShowProjectModal] = useState<boolean>(false);
   const [connectStep, setConnectStep] = useState<1 | 2 | 3 | 4>(1);
   const [repoSearch, setRepoSearch] = useState<string>("");
@@ -357,6 +362,18 @@ export default function DashboardPage() {
         }
 
         const serverResp = await fetch("/api/servers");
+        try {
+          const repoResp = await fetch("/api/github/repositories");
+          if (repoResp.ok) {
+            const repoData = await repoResp.json();
+            if (Array.isArray(repoData.repositories) && repoData.repositories.length > 0) {
+              setConnectedRepos(repoData.repositories);
+              setGithubConnected(true);
+            }
+          }
+        } catch {
+          // ignore
+        }
         if (serverResp.ok) {
           const serverData = await serverResp.json();
           if (Array.isArray(serverData.servers) && serverData.servers.length > 0) {
@@ -771,7 +788,25 @@ export default function DashboardPage() {
                 <span style={{ fontSize: "0.68rem", color: "#66717F" }}>▾</span>
               </button>
 
-              {showWebsiteModal && (
+              <ConnectRepositoryModal
+        isOpen={isRepoModalOpen}
+        onClose={() => setIsRepoModalOpen(false)}
+        onConnected={(newRepo) => {
+          setConnectedRepos((prev) => [newRepo, ...prev]);
+          setGithubConnected(true);
+          setSelectedWebsite(newRepo.name || newRepo.full_name);
+          setIsRepoModalOpen(false);
+        }}
+      />
+      <ConnectServerModal
+        isOpen={isServerModalOpen}
+        onClose={() => setIsServerModalOpen(false)}
+        onConnected={(newServer) => {
+          setServers((prev) => [newServer, ...prev]);
+          setIsServerModalOpen(false);
+        }}
+      />
+      {showWebsiteModal && (
                 <div
                   style={{
                     position: "absolute",
