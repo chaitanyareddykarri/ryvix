@@ -160,6 +160,24 @@ export const NEURAL_THREAT_CLASSES: string[] = [
   'CUSTOMER_WEBSITE_HEALTH_PROBE_QUERY',
   'CUSTOMER_GITHUB_DEPLOYMENT_STATUS_QUERY',
   'CUSTOMER_UNREGISTERED_INFRASTRUCTURE_ASSIST',
+  // Coding Space & Ephemeral Sandboxes
+  'CODING_WORKSPACE_SANDBOX_SPAWN',
+  'CODING_WORKSPACE_PORT_ALLOCATION',
+  'CODING_WORKSPACE_DIFF_SYNTHESIS',
+  'CODING_WORKSPACE_STACK_DETECTION',
+  'CODING_WORKSPACE_PR_AUTOMATION',
+  'CODING_WORKSPACE_CLEANUP_REAPER',
+
+  // Self-Understanding: AGI, Cognitive Memory, GraphRAG, Swarm, MCTS, Neural & RAG
+  'AGI_OODA_CYCLE_DELIBERATION',
+  'MEM0_COGNITIVE_MEMORY_RECALL',
+  'GRAPHRAG_TOPOLOGY_PATHFINDING',
+  'SWARM_JURY_DEBATE_CONSENSUS',
+  'MCTS_GRAPH_OF_THOUGHT_PLANNING',
+  'SPECULATIVE_EXECUTION_SIMULATOR',
+  'AUTONOMOUS_REFLEXION_SELF_CORRECTION',
+  'NEURAL_NETWORK_MLP_INFERENCE',
+  'HYBRID_RAG_SEMANTIC_SEARCH',
 ];
 
 export class NeuralThreatClassifier {
@@ -439,6 +457,24 @@ export class NeuralThreatClassifier {
       targetServerName?: string;
       isDeploymentQuery?: boolean;
     };
+    codingWorkspaceContext?: {
+      isCodingWorkspace?: boolean;
+      hasDockerSandbox?: boolean;
+      previewPort?: number;
+      isDiffSynthesis?: boolean;
+      stackDetected?: string;
+    };
+    agiCognitiveContext?: {
+      isAgiOoda?: boolean;
+      isMem0Recall?: boolean;
+      isGraphRag?: boolean;
+      isSwarmJury?: boolean;
+      isMctsPlan?: boolean;
+      isSpeculativeSim?: boolean;
+      isReflexion?: boolean;
+      isNeuralInference?: boolean;
+      isHybridRag?: boolean;
+    };
   }): Float32Array {
     const vec = new Float32Array(this.inputDim);
 
@@ -536,6 +572,37 @@ export class NeuralThreatClassifier {
     }
     if (data.customerInfrastructureContext?.isDeploymentQuery || data.customerInfrastructureContext?.hasLinkedGithub) {
       vec[14] = 0.95;
+    }
+
+    // Coding Space Context Signals
+    if (data.codingWorkspaceContext?.isCodingWorkspace) {
+      vec[13] = 0.95;
+    }
+    if (data.codingWorkspaceContext?.hasDockerSandbox) {
+      vec[15] = 0.95;
+    }
+    if (data.codingWorkspaceContext?.previewPort && data.codingWorkspaceContext.previewPort >= 3100) {
+      vec[16] = 0.95;
+    }
+
+    // AGI & Deep Cognitive Context Signals
+    if (data.agiCognitiveContext?.isAgiOoda) {
+      vec[7] = 0.98;
+    }
+    if (data.agiCognitiveContext?.isMem0Recall) {
+      vec[8] = 0.98;
+    }
+    if (data.agiCognitiveContext?.isGraphRag || data.agiCognitiveContext?.isSwarmJury) {
+      vec[9] = 0.98;
+    }
+    if (data.agiCognitiveContext?.isMctsPlan || data.agiCognitiveContext?.isSpeculativeSim) {
+      vec[17] = 0.98;
+    }
+    if (data.agiCognitiveContext?.isReflexion || data.agiCognitiveContext?.isNeuralInference) {
+      vec[18] = 0.98;
+    }
+    if (data.agiCognitiveContext?.isHybridRag) {
+      vec[19] = 0.98;
     }
 
     // 5. Log & Conversational Text Hashing (indices 20 - 63: 44 hash buckets)

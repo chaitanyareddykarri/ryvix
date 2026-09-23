@@ -300,6 +300,87 @@ export const INITIAL_RAG_PLAYBOOKS: RagDocumentChunk[] = [
       'npm run build && npm run test'
     ],
     tags: ['github deployment', 'github repo', 'did deployment succeed', 'build status', 'ci cd', 'github actions', 'latest commit']
+  },
+  {
+    chunkId: 'runbook_coding_workspace_sandbox_lifecycle',
+    documentId: 'arch_playbook_coding_01',
+    title: 'Docker Coding Workspace Sandbox & Ephemeral Container Lifecycle',
+    category: 'ARCHITECTURE_BLUEPRINT',
+    content: 'Ryvix provisions ephemeral, isolated Docker sandbox containers for coding tasks. Containers run with non-root security boundaries (uid=1000), read-only root filesystems, and strict Linux cgroups v2 resource ceilings (1-2 vCPUs, 2048-4096MB RAM, max 1024 pids). Customer repositories are securely mounted to /workspace without exposing host filesystems. Containers are monitored by an automated reaper that terminates sessions after 15 minutes of inactivity or test completion.',
+    actionableCommands: [
+      'docker run -d --rm --user 1000:1000 --cpus="2.0" --memory="2048m" --pids-limit 1024 -v /tmp/workspace:/workspace node:22-alpine',
+      'docker stats --no-stream --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}"'
+    ],
+    tags: ['coding space', 'coding workspace', 'docker sandbox', 'ephemeral container', 'cgroups', 'resource limits', 'container lifecycle', 'non-root container']
+  },
+  {
+    chunkId: 'runbook_coding_workspace_ephemeral_port_proxy',
+    documentId: 'arch_playbook_coding_02',
+    title: 'Coding Workspace Dynamic Port Allocation & Live Preview Proxy',
+    category: 'ARCHITECTURE_BLUEPRINT',
+    content: 'Each coding sandbox dynamically reserves collision-free ephemeral preview ports in the range 3100-3999. Ryvix reverse-proxies container internal ports (e.g. 3000, 5173, 8080) to these dedicated preview ports, injecting Keep-Alive, WebSocket upgrade, and permissive iframe embedding headers (Content-Security-Policy: frame-ancestors *). This enables developers and stakeholders to preview running web applications live inside the Ryvix Web Console.',
+    actionableCommands: [
+      'netstat -tlpn | grep -E "3[1-9][0-9]{2}"',
+      'curl -Iv http://localhost:3100/healthz'
+    ],
+    tags: ['ephemeral port', 'preview port', 'port 3100', 'live preview', 'iframe preview', 'coding sandbox preview', 'reverse proxy', 'port allocation']
+  },
+  {
+    chunkId: 'runbook_coding_workspace_unified_diff_and_pr',
+    documentId: 'arch_playbook_coding_03',
+    title: 'AI Code Diff Synthesis, Stack Detection & GitHub Pull Request Automation',
+    category: 'ARCHITECTURE_BLUEPRINT',
+    content: 'The Ryvix AI Coding Partner auto-detects programming languages and frameworks by inspecting project manifests (package.json, pyproject.toml, go.mod, Cargo.toml). It synthesizes atomic, unified git diffs (--- a/file, +++ b/file) adhering to project style conventions. Diffs are validated in the sandbox before committing. Once verified, the AI automates GitHub branch creation (ryvix/feature-*), cryptographically stages commits, and opens Pull Requests accompanied by human-readable explanations and test matrices.',
+    actionableCommands: [
+      'git diff --stat && git apply --check patch.diff',
+      'gh pr create --title "feat: automated feature implementation" --body "Synthesized and verified via Ryvix Coding Sandbox"'
+    ],
+    tags: ['code diff', 'unified diff', 'git diff', 'stack detection', 'github pr', 'pull request', 'coding assistant', 'patch apply']
+  },
+  {
+    chunkId: 'runbook_ryvix_agi_ooda_deliberation',
+    documentId: 'arch_playbook_agi_01',
+    title: 'Ryvix AGI Core: Epistemic OODA Cycle & Autonomous Deliberation Engine',
+    category: 'ARCHITECTURE_BLUEPRINT',
+    content: 'Ryvix AGI Core executes continuous Observe-Orient-Decide-Act-Reflect (OODA) cognitive cycles. In Observe, it ingests multi-sensor telemetry, logs, and user dialogue. In Orient, it computes Bayesian belief priors and maps blast-radius risks. In Decide, it conducts MCTS tree-of-thought exploration, Swarm jury consensus, and speculative dry-run simulation. In Act, it dispatches idempotent actions with strict authorization gating. In Reflect, it triggers ReAct self-critique, writes DPO preference pairs to the experience ledger, and commits learnings to Mem0 cognitive memory.',
+    actionableCommands: [
+      'node -e "const { ryvixAgi } = require(\"@ryvix/ai\"); console.log(ryvixAgi.getState());"',
+      'curl -s http://localhost:3000/api/ai/agi-cycle'
+    ],
+    tags: ['agi', 'agi core', 'ooda cycle', 'observe orient decide act reflect', 'epistemic beliefs', 'autonomous deliberation', 'ai self learning']
+  },
+  {
+    chunkId: 'runbook_mem0_3tier_cognitive_memory',
+    documentId: 'arch_playbook_agi_02',
+    title: 'Mem0 3-Tier Cognitive Memory Engine: Working, Persistent & Associative Vector Memory',
+    category: 'ARCHITECTURE_BLUEPRINT',
+    content: 'Mem0 provides human-like cognitive memory through three interconnected tiers: 1) Short-Term Working Memory retains sliding-window conversational turns and a scratchpad for intermediate plan steps; 2) Long-Term Persistent Memory extracts and registers structured facts, user preferences, and infrastructure topology into disk storage; 3) Semantic Associative Vector Memory computes 64-D dense embeddings and performs sub-millisecond cosine similarity search across past resolutions and domain knowledge. The Unified Cognitive Engine synthesizes these into a 360-degree context with zero hallucinations.',
+    actionableCommands: [
+      'node -e "const { cognitiveMemory } = require(\"@ryvix/ai\"); console.log(cognitiveMemory.getStats());"'
+    ],
+    tags: ['mem0', 'cognitive memory', 'short term memory', 'long term memory', 'semantic memory', 'associative vector memory', '3-tier memory', 'memory recall']
+  },
+  {
+    chunkId: 'runbook_deep_cognitive_subsystems_graphrag_swarm_mcts',
+    documentId: 'arch_playbook_agi_03',
+    title: 'Deep Cognitive Subsystems: GraphRAG Topology, Swarm Jury, MCTS & Speculative Dry-Run',
+    category: 'ARCHITECTURE_BLUEPRINT',
+    content: 'Ryvix integrates five autonomous cognitive subsystems: 1) GraphRAG builds an entity-relationship knowledge graph of customer servers, routes, and databases, executing BFS traversals to compute blast radius; 2) Multi-Agent Swarm with Debate & Jury Consensus runs adversarial debates between Security Red-Team, SRE Speed, and Code Architect agents with Supreme Judge consensus scoring; 3) Monte Carlo Tree Search (MCTS) Planner utilizes UCB1 exploration to discover optimal multi-step plans; 4) Speculative Execution Simulator dry-runs commands in a shadow memory container to issue cryptographically signed DryRunCertificates; 5) Reflexion Engine conducts autonomous self-correction loops when errors are encountered.',
+    actionableCommands: [
+      'node -e "const { swarmJury, graphRag } = require(\"@ryvix/ai\"); console.log(graphRag.getTopologyStats());"'
+    ],
+    tags: ['graphrag', 'system topology', 'swarm jury', 'multi-agent debate', 'mcts', 'monte carlo tree search', 'speculative simulator', 'dry-run certificate', 'reflexion engine']
+  },
+  {
+    chunkId: 'runbook_neural_network_mlp_and_hybrid_rag',
+    documentId: 'arch_playbook_agi_04',
+    title: 'Ryvix Neural Network MLP Tensor Engine & Hybrid RAG Vector Database',
+    category: 'ARCHITECTURE_BLUEPRINT',
+    content: 'The Ryvix Deep Neural Network is an ultra-fast (<0.05ms) Multi-Layer Perceptron (MLP) built directly on native Float32Array SIMD cache locality. It features LeakyReLU projections, dual residual skip connections, self-attention gating, layer normalization, and Adam optimizer backpropagation. The Hybrid RAG Engine pairs 64-dimensional dense semantic embeddings with sparse BM25 N-gram inverted indexing and Reciprocal Rank Fusion (RRF), backed by an in-memory Semantic Vector Cache (<0.01ms hit latency) for instant retrieval.',
+    actionableCommands: [
+      'node -e "const { neuralThreatClassifier, ragEngine } = require(\"@ryvix/ai\"); console.log(neuralThreatClassifier.exportWeights().metadata);"'
+    ],
+    tags: ['neural network', 'mlp', 'float32array', 'weights', 'forward pass', 'backpropagation', 'hybrid rag', 'bm25', 'semantic cache', 'vector embeddings']
   }
 ];
 

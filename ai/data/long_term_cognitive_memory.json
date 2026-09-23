@@ -1,0 +1,541 @@
+[
+  {
+    "id": "fact_seed_security_policy_go2u",
+    "entityId": "global",
+    "category": "SECURITY_POLICY",
+    "fact": "Ryvix Authentication mandates 100% 6-digit email OTP for all 3 flows: Signup, Existing Login, and Password Recovery. Magic links and clickable confirmation URLs are strictly disallowed.",
+    "confidence": 1,
+    "tags": [
+      "auth",
+      "otp",
+      "supabase",
+      "security"
+    ],
+    "accessCount": 143,
+    "createdAt": "2026-09-23T03:41:05.079Z",
+    "lastAccessedAt": "2026-09-23T04:36:43.245Z"
+  },
+  {
+    "id": "fact_seed_tech_stack_rk56",
+    "entityId": "global",
+    "category": "TECH_STACK",
+    "fact": "Ryvix Web is built with Next.js 15 App Router, React 19, TypeScript, Vanilla CSS for visual elegance, and Supabase for database and auth.",
+    "confidence": 1,
+    "tags": [
+      "frontend",
+      "nextjs",
+      "react",
+      "css",
+      "typescript"
+    ],
+    "accessCount": 143,
+    "createdAt": "2026-09-23T03:41:05.079Z",
+    "lastAccessedAt": "2026-09-23T04:36:43.245Z"
+  },
+  {
+    "id": "fact_seed_historical_incident_z524",
+    "entityId": "global",
+    "category": "HISTORICAL_INCIDENT",
+    "fact": "EADDRINUSE 3000 collision occurs if dev and build servers run simultaneously. Kill competing node processes or clear .next before dev startup.",
+    "confidence": 0.95,
+    "tags": [
+      "sre",
+      "port3000",
+      "eaddrinuse",
+      "build"
+    ],
+    "accessCount": 124,
+    "createdAt": "2026-09-23T03:41:05.079Z",
+    "lastAccessedAt": "2026-09-23T04:36:43.245Z"
+  },
+  {
+    "id": "fact_seed_user_preference_d9n2",
+    "entityId": "global",
+    "category": "USER_PREFERENCE",
+    "fact": "User requires clean, responsive, dark-mode cyberpunk glassmorphism UI with interactive 3D moving blocks background and dynamic glowing animations.",
+    "confidence": 0.98,
+    "tags": [
+      "ui",
+      "design",
+      "threejs",
+      "animations",
+      "preferences"
+    ],
+    "accessCount": 123,
+    "createdAt": "2026-09-23T03:41:05.079Z",
+    "lastAccessedAt": "2026-09-23T04:36:43.245Z"
+  },
+  {
+    "id": "fact_1790134865124_lruv6",
+    "entityId": "usr_tester_jyij",
+    "category": "USER_PREFERENCE",
+    "fact": "User prefers TypeScript and Vanilla CSS with dark mode aesthetics",
+    "confidence": 0.98,
+    "accessCount": 3,
+    "tags": [
+      "typescript",
+      "css",
+      "darkmode"
+    ],
+    "createdAt": "2026-09-23T03:41:05.124Z",
+    "lastAccessedAt": "2026-09-23T03:41:05.126Z"
+  },
+  {
+    "id": "fact_1790134865124_adj39",
+    "entityId": "usr_tester_jyij",
+    "category": "USER_PREFERENCE",
+    "fact": "User preference: I prefer to use PostgreSQL on port 5432 and always use 6-digit OTP for logins",
+    "confidence": 0.85,
+    "accessCount": 4,
+    "tags": [
+      "user_stated",
+      "preference"
+    ],
+    "createdAt": "2026-09-23T03:41:05.124Z",
+    "lastAccessedAt": "2026-09-23T03:41:05.126Z"
+  },
+  {
+    "id": "fact_1790134865126_mq1wy",
+    "entityId": "usr_tester_jyij",
+    "category": "TECH_STACK",
+    "fact": "Tech stack specification: We are using Next",
+    "confidence": 0.9,
+    "accessCount": 3,
+    "tags": [
+      "tech_stack",
+      "infrastructure"
+    ],
+    "createdAt": "2026-09-23T03:41:05.126Z",
+    "lastAccessedAt": "2026-09-23T03:41:05.126Z"
+  },
+  {
+    "id": "fact_1790134889941_8clkt",
+    "entityId": "usr_tester_33hb",
+    "category": "USER_PREFERENCE",
+    "fact": "User prefers TypeScript and Vanilla CSS with dark mode aesthetics",
+    "confidence": 0.98,
+    "accessCount": 3,
+    "tags": [
+      "typescript",
+      "css",
+      "darkmode"
+    ],
+    "createdAt": "2026-09-23T03:41:29.941Z",
+    "lastAccessedAt": "2026-09-23T03:41:29.943Z"
+  },
+  {
+    "id": "fact_1790134889941_goyep",
+    "entityId": "usr_tester_33hb",
+    "category": "USER_PREFERENCE",
+    "fact": "User preference: I prefer to use PostgreSQL on port 5432 and always use 6-digit OTP for logins",
+    "confidence": 0.85,
+    "accessCount": 4,
+    "tags": [
+      "user_stated",
+      "preference"
+    ],
+    "createdAt": "2026-09-23T03:41:29.941Z",
+    "lastAccessedAt": "2026-09-23T03:41:29.943Z"
+  },
+  {
+    "id": "fact_1790134889942_9oetp",
+    "entityId": "usr_tester_33hb",
+    "category": "TECH_STACK",
+    "fact": "Tech stack specification: We are using Next",
+    "confidence": 0.9,
+    "accessCount": 3,
+    "tags": [
+      "tech_stack",
+      "infrastructure"
+    ],
+    "createdAt": "2026-09-23T03:41:29.942Z",
+    "lastAccessedAt": "2026-09-23T03:41:29.943Z"
+  },
+  {
+    "id": "fact_1790135050224_ve4z9",
+    "entityId": "usr_tester_2fh0",
+    "category": "USER_PREFERENCE",
+    "fact": "User prefers TypeScript and Vanilla CSS with dark mode aesthetics",
+    "confidence": 0.98,
+    "accessCount": 3,
+    "tags": [
+      "typescript",
+      "css",
+      "darkmode"
+    ],
+    "createdAt": "2026-09-23T03:44:10.224Z",
+    "lastAccessedAt": "2026-09-23T03:44:10.226Z"
+  },
+  {
+    "id": "fact_1790135050225_rx7v5",
+    "entityId": "usr_tester_2fh0",
+    "category": "USER_PREFERENCE",
+    "fact": "User preference: I prefer to use PostgreSQL on port 5432 and always use 6-digit OTP for logins",
+    "confidence": 0.85,
+    "accessCount": 4,
+    "tags": [
+      "user_stated",
+      "preference"
+    ],
+    "createdAt": "2026-09-23T03:44:10.225Z",
+    "lastAccessedAt": "2026-09-23T03:44:10.226Z"
+  },
+  {
+    "id": "fact_1790135050226_e1sl7",
+    "entityId": "usr_tester_2fh0",
+    "category": "TECH_STACK",
+    "fact": "Tech stack specification: We are using Next",
+    "confidence": 0.9,
+    "accessCount": 3,
+    "tags": [
+      "tech_stack",
+      "infrastructure"
+    ],
+    "createdAt": "2026-09-23T03:44:10.226Z",
+    "lastAccessedAt": "2026-09-23T03:44:10.226Z"
+  },
+  {
+    "id": "fact_1790135386330_ltkkp",
+    "entityId": "usr_tester_80td",
+    "category": "USER_PREFERENCE",
+    "fact": "User prefers TypeScript and Vanilla CSS with dark mode aesthetics",
+    "confidence": 0.98,
+    "accessCount": 3,
+    "tags": [
+      "typescript",
+      "css",
+      "darkmode"
+    ],
+    "createdAt": "2026-09-23T03:49:46.330Z",
+    "lastAccessedAt": "2026-09-23T03:49:46.331Z"
+  },
+  {
+    "id": "fact_1790135386330_b5b5e",
+    "entityId": "usr_tester_80td",
+    "category": "USER_PREFERENCE",
+    "fact": "User preference: I prefer to use PostgreSQL on port 5432 and always use 6-digit OTP for logins",
+    "confidence": 0.85,
+    "accessCount": 4,
+    "tags": [
+      "user_stated",
+      "preference"
+    ],
+    "createdAt": "2026-09-23T03:49:46.330Z",
+    "lastAccessedAt": "2026-09-23T03:49:46.331Z"
+  },
+  {
+    "id": "fact_1790135386331_8ldq0",
+    "entityId": "usr_tester_80td",
+    "category": "TECH_STACK",
+    "fact": "Tech stack specification: We are using Next",
+    "confidence": 0.9,
+    "accessCount": 3,
+    "tags": [
+      "tech_stack",
+      "infrastructure"
+    ],
+    "createdAt": "2026-09-23T03:49:46.331Z",
+    "lastAccessedAt": "2026-09-23T03:49:46.331Z"
+  },
+  {
+    "id": "fact_1790135920923_yi7n1",
+    "entityId": "usr_tester_1rx2",
+    "category": "USER_PREFERENCE",
+    "fact": "User prefers TypeScript and Vanilla CSS with dark mode aesthetics",
+    "confidence": 0.98,
+    "accessCount": 3,
+    "tags": [
+      "typescript",
+      "css",
+      "darkmode"
+    ],
+    "createdAt": "2026-09-23T03:58:40.923Z",
+    "lastAccessedAt": "2026-09-23T03:58:40.924Z"
+  },
+  {
+    "id": "fact_1790135920923_11fli",
+    "entityId": "usr_tester_1rx2",
+    "category": "USER_PREFERENCE",
+    "fact": "User preference: I prefer to use PostgreSQL on port 5432 and always use 6-digit OTP for logins",
+    "confidence": 0.85,
+    "accessCount": 4,
+    "tags": [
+      "user_stated",
+      "preference"
+    ],
+    "createdAt": "2026-09-23T03:58:40.923Z",
+    "lastAccessedAt": "2026-09-23T03:58:40.924Z"
+  },
+  {
+    "id": "fact_1790135920924_m0l5z",
+    "entityId": "usr_tester_1rx2",
+    "category": "TECH_STACK",
+    "fact": "Tech stack specification: We are using Next",
+    "confidence": 0.9,
+    "accessCount": 3,
+    "tags": [
+      "tech_stack",
+      "infrastructure"
+    ],
+    "createdAt": "2026-09-23T03:58:40.924Z",
+    "lastAccessedAt": "2026-09-23T03:58:40.925Z"
+  },
+  {
+    "id": "fact_1790135995423_91zgo",
+    "entityId": "usr_tester_hk15",
+    "category": "USER_PREFERENCE",
+    "fact": "User prefers TypeScript and Vanilla CSS with dark mode aesthetics",
+    "confidence": 0.98,
+    "accessCount": 3,
+    "tags": [
+      "typescript",
+      "css",
+      "darkmode"
+    ],
+    "createdAt": "2026-09-23T03:59:55.423Z",
+    "lastAccessedAt": "2026-09-23T03:59:55.424Z"
+  },
+  {
+    "id": "fact_1790135995423_a8p61",
+    "entityId": "usr_tester_hk15",
+    "category": "USER_PREFERENCE",
+    "fact": "User preference: I prefer to use PostgreSQL on port 5432 and always use 6-digit OTP for logins",
+    "confidence": 0.85,
+    "accessCount": 4,
+    "tags": [
+      "user_stated",
+      "preference"
+    ],
+    "createdAt": "2026-09-23T03:59:55.423Z",
+    "lastAccessedAt": "2026-09-23T03:59:55.424Z"
+  },
+  {
+    "id": "fact_1790135995424_dd8qi",
+    "entityId": "usr_tester_hk15",
+    "category": "TECH_STACK",
+    "fact": "Tech stack specification: We are using Next",
+    "confidence": 0.9,
+    "accessCount": 3,
+    "tags": [
+      "tech_stack",
+      "infrastructure"
+    ],
+    "createdAt": "2026-09-23T03:59:55.424Z",
+    "lastAccessedAt": "2026-09-23T03:59:55.425Z"
+  },
+  {
+    "id": "fact_1790136222164_hbkbm",
+    "entityId": "usr_tester_sot9",
+    "category": "USER_PREFERENCE",
+    "fact": "User prefers TypeScript and Vanilla CSS with dark mode aesthetics",
+    "confidence": 0.98,
+    "accessCount": 3,
+    "tags": [
+      "typescript",
+      "css",
+      "darkmode"
+    ],
+    "createdAt": "2026-09-23T04:03:42.164Z",
+    "lastAccessedAt": "2026-09-23T04:03:42.165Z"
+  },
+  {
+    "id": "fact_1790136222164_1ksek",
+    "entityId": "usr_tester_sot9",
+    "category": "USER_PREFERENCE",
+    "fact": "User preference: I prefer to use PostgreSQL on port 5432 and always use 6-digit OTP for logins",
+    "confidence": 0.85,
+    "accessCount": 4,
+    "tags": [
+      "user_stated",
+      "preference"
+    ],
+    "createdAt": "2026-09-23T04:03:42.164Z",
+    "lastAccessedAt": "2026-09-23T04:03:42.165Z"
+  },
+  {
+    "id": "fact_1790136222165_99k88",
+    "entityId": "usr_tester_sot9",
+    "category": "TECH_STACK",
+    "fact": "Tech stack specification: We are using Next",
+    "confidence": 0.9,
+    "accessCount": 3,
+    "tags": [
+      "tech_stack",
+      "infrastructure"
+    ],
+    "createdAt": "2026-09-23T04:03:42.165Z",
+    "lastAccessedAt": "2026-09-23T04:03:42.166Z"
+  },
+  {
+    "id": "fact_1790136411909_wb6rn",
+    "entityId": "usr_tester_78w9",
+    "category": "USER_PREFERENCE",
+    "fact": "User prefers TypeScript and Vanilla CSS with dark mode aesthetics",
+    "confidence": 0.98,
+    "accessCount": 3,
+    "tags": [
+      "typescript",
+      "css",
+      "darkmode"
+    ],
+    "createdAt": "2026-09-23T04:06:51.909Z",
+    "lastAccessedAt": "2026-09-23T04:06:51.912Z"
+  },
+  {
+    "id": "fact_1790136411910_4x0nc",
+    "entityId": "usr_tester_78w9",
+    "category": "USER_PREFERENCE",
+    "fact": "User preference: I prefer to use PostgreSQL on port 5432 and always use 6-digit OTP for logins",
+    "confidence": 0.85,
+    "accessCount": 4,
+    "tags": [
+      "user_stated",
+      "preference"
+    ],
+    "createdAt": "2026-09-23T04:06:51.910Z",
+    "lastAccessedAt": "2026-09-23T04:06:51.912Z"
+  },
+  {
+    "id": "fact_1790136411911_cn6sl",
+    "entityId": "usr_tester_78w9",
+    "category": "TECH_STACK",
+    "fact": "Tech stack specification: We are using Next",
+    "confidence": 0.9,
+    "accessCount": 3,
+    "tags": [
+      "tech_stack",
+      "infrastructure"
+    ],
+    "createdAt": "2026-09-23T04:06:51.911Z",
+    "lastAccessedAt": "2026-09-23T04:06:51.912Z"
+  },
+  {
+    "id": "fact_1790137322521_8cdkw",
+    "entityId": "usr_tester_6p8d",
+    "category": "USER_PREFERENCE",
+    "fact": "User prefers TypeScript and Vanilla CSS with dark mode aesthetics",
+    "confidence": 0.98,
+    "accessCount": 3,
+    "tags": [
+      "typescript",
+      "css",
+      "darkmode"
+    ],
+    "createdAt": "2026-09-23T04:22:02.521Z",
+    "lastAccessedAt": "2026-09-23T04:22:02.523Z"
+  },
+  {
+    "id": "fact_1790137322521_7ok19",
+    "entityId": "usr_tester_6p8d",
+    "category": "USER_PREFERENCE",
+    "fact": "User preference: I prefer to use PostgreSQL on port 5432 and always use 6-digit OTP for logins",
+    "confidence": 0.85,
+    "accessCount": 4,
+    "tags": [
+      "user_stated",
+      "preference"
+    ],
+    "createdAt": "2026-09-23T04:22:02.521Z",
+    "lastAccessedAt": "2026-09-23T04:22:02.523Z"
+  },
+  {
+    "id": "fact_1790137322522_rg38o",
+    "entityId": "usr_tester_6p8d",
+    "category": "TECH_STACK",
+    "fact": "Tech stack specification: We are using Next",
+    "confidence": 0.9,
+    "accessCount": 3,
+    "tags": [
+      "tech_stack",
+      "infrastructure"
+    ],
+    "createdAt": "2026-09-23T04:22:02.522Z",
+    "lastAccessedAt": "2026-09-23T04:22:02.523Z"
+  },
+  {
+    "id": "fact_1790137487994_zb3r4",
+    "entityId": "usr_tester_80ew",
+    "category": "USER_PREFERENCE",
+    "fact": "User prefers TypeScript and Vanilla CSS with dark mode aesthetics",
+    "confidence": 0.98,
+    "accessCount": 3,
+    "tags": [
+      "typescript",
+      "css",
+      "darkmode"
+    ],
+    "createdAt": "2026-09-23T04:24:47.994Z",
+    "lastAccessedAt": "2026-09-23T04:24:47.996Z"
+  },
+  {
+    "id": "fact_1790137487995_u5r30",
+    "entityId": "usr_tester_80ew",
+    "category": "USER_PREFERENCE",
+    "fact": "User preference: I prefer to use PostgreSQL on port 5432 and always use 6-digit OTP for logins",
+    "confidence": 0.85,
+    "accessCount": 4,
+    "tags": [
+      "user_stated",
+      "preference"
+    ],
+    "createdAt": "2026-09-23T04:24:47.995Z",
+    "lastAccessedAt": "2026-09-23T04:24:47.996Z"
+  },
+  {
+    "id": "fact_1790137487996_ryq7h",
+    "entityId": "usr_tester_80ew",
+    "category": "TECH_STACK",
+    "fact": "Tech stack specification: We are using Next",
+    "confidence": 0.9,
+    "accessCount": 3,
+    "tags": [
+      "tech_stack",
+      "infrastructure"
+    ],
+    "createdAt": "2026-09-23T04:24:47.996Z",
+    "lastAccessedAt": "2026-09-23T04:24:47.996Z"
+  },
+  {
+    "id": "fact_1790138203244_r1v6r",
+    "entityId": "usr_tester_ued4",
+    "category": "USER_PREFERENCE",
+    "fact": "User prefers TypeScript and Vanilla CSS with dark mode aesthetics",
+    "confidence": 0.98,
+    "accessCount": 3,
+    "tags": [
+      "typescript",
+      "css",
+      "darkmode"
+    ],
+    "createdAt": "2026-09-23T04:36:43.244Z",
+    "lastAccessedAt": "2026-09-23T04:36:43.245Z"
+  },
+  {
+    "id": "fact_1790138203244_dynv9",
+    "entityId": "usr_tester_ued4",
+    "category": "USER_PREFERENCE",
+    "fact": "User preference: I prefer to use PostgreSQL on port 5432 and always use 6-digit OTP for logins",
+    "confidence": 0.85,
+    "accessCount": 4,
+    "tags": [
+      "user_stated",
+      "preference"
+    ],
+    "createdAt": "2026-09-23T04:36:43.244Z",
+    "lastAccessedAt": "2026-09-23T04:36:43.245Z"
+  },
+  {
+    "id": "fact_1790138203245_pnlmr",
+    "entityId": "usr_tester_ued4",
+    "category": "TECH_STACK",
+    "fact": "Tech stack specification: We are using Next",
+    "confidence": 0.9,
+    "accessCount": 3,
+    "tags": [
+      "tech_stack",
+      "infrastructure"
+    ],
+    "createdAt": "2026-09-23T04:36:43.245Z",
+    "lastAccessedAt": "2026-09-23T04:36:43.246Z"
+  }
+]

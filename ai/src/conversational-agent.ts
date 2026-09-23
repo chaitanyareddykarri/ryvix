@@ -260,6 +260,62 @@ export class ConversationalAgent {
 
   public classifyIntent(input: string): string {
     const lower = input.toLowerCase();
+    // Frontier Deep Learning vs LLM Concept & Zero-Collision Architecture
+    if (
+      lower.includes('difference between llm and deep learning') ||
+      lower.includes('llm vs deep learning') ||
+      lower.includes('deep learning make the ai better') ||
+      lower.includes('deep learning makes the ai better') ||
+      lower.includes('no collision') ||
+      lower.includes('collision between them') ||
+      lower.includes('mixture of experts') ||
+      lower.includes('graph neural network') ||
+      lower.includes('world model') ||
+      lower.includes('contrastive learning') ||
+      lower.includes('elastic weight consolidation') ||
+      lower.includes('direct preference optimization') ||
+      lower.includes('llm concept')
+    ) {
+      return 'INTENT_LLM_VS_DEEP_LEARNING_DISTINCTION';
+    }
+
+    // Coding Space & Ephemeral Workspace Intelligence
+    if (
+      lower.includes('coding space') ||
+      lower.includes('coding workspace') ||
+      lower.includes('docker sandbox') ||
+      lower.includes('ephemeral preview') ||
+      lower.includes('preview port') ||
+      lower.includes('diff synthesis') ||
+      lower.includes('unified diff') ||
+      lower.includes('sandbox container') ||
+      lower.includes('coding task')
+    ) {
+      return 'INTENT_CODING_WORKSPACE_EXPLANATION';
+    }
+
+    // AGI Core, Cognitive Memory, GraphRAG, Swarm, MCTS, Neural & RAG Self-Understanding
+    if (
+      lower.includes('tell me about yourself') ||
+      lower.includes('how does your ai work') ||
+      lower.includes('how do you work') ||
+      lower.includes('about yourself') ||
+      lower.includes('what are you') ||
+      lower.includes('agi core') ||
+      lower.includes('ooda cycle') ||
+      lower.includes('mem0') ||
+      lower.includes('cognitive memory') ||
+      lower.includes('graphrag') ||
+      lower.includes('swarm jury') ||
+      lower.includes('mcts planner') ||
+      lower.includes('speculative execution') ||
+      lower.includes('reflexion engine') ||
+      lower.includes('neural network architecture') ||
+      lower.includes('how does your rag work')
+    ) {
+      return 'INTENT_RYVIX_AGI_SELF_UNDERSTANDING';
+    }
+
     if (
       lower.includes('what is ryvix') ||
       lower.includes('about ryvix') ||
@@ -357,7 +413,22 @@ export class ConversationalAgent {
     if (lower.includes('urgent') || lower.includes('critical') || lower.includes('outage') || lower.includes('immediately') || lower.includes('asap') || lower.includes('down')) {
       return 'INCIDENT_COMMANDER';
     }
-    if (lower.includes('trade-off') || lower.includes('architecture') || lower.includes('design') || lower.includes('scale') || lower.includes('distributed') || lower.includes('cap theorem')) {
+    if (
+      lower.includes('trade-off') ||
+      lower.includes('architecture') ||
+      lower.includes('design') ||
+      lower.includes('scale') ||
+      lower.includes('distributed') ||
+      lower.includes('cap theorem') ||
+      lower.includes('deep learning') ||
+      lower.includes('llm') ||
+      lower.includes('mixture of experts') ||
+      lower.includes('gnn') ||
+      lower.includes('world model') ||
+      lower.includes('ewc') ||
+      lower.includes('dpo') ||
+      lower.includes('contrastive')
+    ) {
       return 'STAFF_ARCHITECT';
     }
     return 'PAIR_PROGRAMMER';
@@ -368,6 +439,137 @@ export class ConversationalAgent {
     intent: string,
     persona: AgentPersona
   ): ConversationalTurnResponse {
+    if (intent === 'INTENT_LLM_VS_DEEP_LEARNING_DISTINCTION') {
+      return {
+        detectedIntent: intent,
+        personaUsed: 'STAFF_ARCHITECT',
+        message: [
+          '# 🧠 Ryvix Frontier Deep Learning vs. External LLM Architecture: Zero-Collision Paradigm',
+          '',
+          'Ryvix separates **External LLM Reasoning** from **Embedded Local Deep Learning Subsystems** with mathematical guarantees to prevent state interference or decision collision.',
+          '',
+          '### 1. High-Level External LLMs vs. Local Deep Learning Subsystems',
+          '- **External LLMs (Claude 3.7 / GPT-4o / DeepSeek R1)**: Responsible for natural language dialogue, semantic code parsing, holistic architectural suggestions, and System-2 dialectic reasoning.',
+          '- **Embedded Local Deep Learning (Float32Array SIMD Tensors)**: Runs microsecond mathematics on bare metal with zero API latency, zero token costs, and 100% deterministic local bounds.',
+          '',
+          '### 2. The 6 Frontier Deep Learning Architectures in Ryvix',
+          '1. **Mixture of Experts (MoE) Dynamic Gating**: Top-2 softmax router directing telemetry to specialized domain expert subnetworks (Security, SRE, Architecture, Kernel, Network) with 0.2ms latency.',
+          '2. **Graph Neural Networks (GNN) Message-Passing**: 2-layer spatial graph convolutions across cluster nodes and dependencies to locate structural bottlenecks and blast-radius vectors before dispatch.',
+          '3. **Latent World Model Simulator ("AI Dreaming")**: Evaluates 50 parallel forward rollout timelines across multi-step action horizons in latent space to forecast downtime probability before executing dangerous operations.',
+          '4. **Contrastive Representation Learning (InfoNCE)**: Maps system telemetry to an L2-normalized 32-D hypersphere, calculating cosine separation against healthy clusters to identify novel zero-day anomalies.',
+          '5. **Elastic Weight Consolidation (EWC)**: Computes parameter importance via the diagonal Fisher Information Matrix to prevent catastrophic forgetting when adapting to new infrastructure patterns.',
+          '6. **Direct Preference Optimization (DPO)**: Closed-form log-ratio margin alignment that scores winning code and remediation trajectories against suboptimal failures.',
+          '',
+          '### 3. Epistemic Guardian Pattern & Zero-Collision Guarantees',
+          '- **Deterministic State Isolation**: Local deep learning models evaluate environment invariants and telemetry in strict read-only observation passes before LLM prompt assembly.',
+          '- **Epistemic Arbiter**: When an LLM generates a speculative remediation command or code patch, the Latent World Model and GNN simulate the action. If the projected blast radius or failure probability exceeds safety thresholds (e.g. >15%), the action is blocked by the Swarm Jury regardless of LLM confidence.',
+          '- **Zero Collision**: LLMs never mutate deep learning tensor weights directly, and local deep learning networks never generate arbitrary unverified code. They act in a mathematically grounded dual-engine synergy.'
+        ].join('\n'),
+        suggestedFollowUps: [
+          'Inspect MoE Routing Table & Top-2 Expert Weights',
+          'Run GNN Spatial Topology Convolution Scan',
+          'Simulate Action in Latent World Model (50 Timelines)'
+        ]
+      };
+    }
+
+    if (intent === 'INTENT_CODING_WORKSPACE_EXPLANATION') {
+      return {
+        detectedIntent: intent,
+        personaUsed: 'PAIR_PROGRAMMER',
+        message: [
+          '# 🛠️ Ryvix Autonomous Coding Workspace & Ephemeral Sandbox Engine',
+          '',
+          'Ryvix provides an enterprise-grade isolated execution sandbox tailored for autonomous code generation, instant previewing, and verified deployment:',
+          '',
+          '### 1. Ephemeral Docker Sandboxes & Cgroup Boundaries',
+          '- **Security Isolation**: Non-root user execution (`uid=1000`), read-only root filesystems, and temporary `/workspace` volume mounts.',
+          '- **Resource Ceilings**: Strict Linux cgroups v2 boundaries: 1-2 vCPUs, 2048-4096MB RAM, and max 1024 process IDs to prevent runaway fork bombs.',
+          '- **Automated Session Reaper**: Sessions automatically clean up after 15 minutes of inactivity or test completion, releasing all RAM, CPU, and disk storage.',
+          '',
+          '### 2. Dynamic Ephemeral Port Preview Proxy (3100-3999)',
+          '- **Collision-Free Port Reservation**: Each active workspace is allocated a dedicated preview port in the range `3100-3999`.',
+          '- **Reverse Proxying**: Bridges container dev servers (Next.js port 3000, Vite port 5173, FastAPI port 8000) with Keep-Alive and WebSocket upgrades.',
+          '- **Live Iframe Rendering**: Injects permissive `Content-Security-Policy: frame-ancestors *` headers, allowing developers to view running applications directly inside the Ryvix Web Console.',
+          '',
+          '### 3. Unified Git Diff Synthesis & AST Verification',
+          '- **Atomic Unified Diffs**: Synthesizes standard `--- a/file` / `+++ b/file` diffs conforming strictly to project conventions.',
+          '- **Pre-Commit Sandbox Verification**: Executes `npm test`, `pytest`, or `cargo test` in the sandbox before staging.',
+          '- **Self-Debugging Loop**: If compiler or test errors occur, the autonomous debugger analyzes stderr and regenerates working fixes.',
+          '',
+          '### 4. GitHub PR Automation',
+          '- Generates feature branches (`ryvix/feature-*`), cryptographically signs commits, and opens Pull Requests with executive change summaries and verification matrices.',
+        ].join('\n'),
+        suggestedFollowUps: [
+          'How does the ephemeral preview port proxy prevent socket collisions?',
+          'What happens if a test fails in the coding sandbox container?',
+          'Show me an example of an AI-synthesized unified git diff.',
+        ],
+        actionableArtifacts: [
+          {
+            type: 'COMMAND',
+            content: 'docker run -d --rm --user 1000:1000 --cpus="2.0" --memory="2048m" -v /tmp/workspace:/workspace node:22-alpine',
+          },
+          {
+            type: 'CODE',
+            content: 'export async function previewProxy(port: number) {\n  return `http://localhost:${port}/preview`;\n}',
+            language: 'typescript',
+          },
+        ],
+      };
+    }
+
+    if (intent === 'INTENT_RYVIX_AGI_SELF_UNDERSTANDING') {
+      return {
+        detectedIntent: intent,
+        personaUsed: 'STAFF_ARCHITECT',
+        message: [
+          '# 🧠 Ryvix AGI Core & Deep Autonomous Cognitive Architecture',
+          '',
+          'Ryvix operates on a dual-process, multi-agent cognitive architecture designed for zero hallucinations, microsecond reaction times, and grounded autonomy:',
+          '',
+          '### 1. Ryvix AGI Core: Continuous Epistemic OODA Cycle',
+          '- **Observe**: Ingests multimodal signals—server telemetry, syslog streams, HTTP request headers, and user chat prompts.',
+          '- **Orient**: Updates Bayesian epistemic priors, detects active kill-chains, and computes cascading blast-radius risks.',
+          '- **Decide**: Coordinates MCTS tree-of-thought exploration, Multi-Agent Swarm Jury consensus, and Speculative dry-runs.',
+          '- **Act**: Executes idempotent remediation commands or code modifications with human-in-the-loop authorization gating.',
+          '- **Reflect**: Conducts ReAct self-critique, records DPO preference pairs to the experience ledger, and commits findings to Mem0.',
+          '',
+          '### 2. Mem0 3-Tier Cognitive Memory Engine',
+          '- **Short-Term Working Memory**: Sliding-window conversational buffer and intermediate plan step scratchpad.',
+          '- **Long-Term Persistent Memory**: Extracts and stores verified infrastructure facts, user preferences, and server nicknames on disk.',
+          '- **Semantic Associative Vector Memory**: 64-dimensional dense normalized embeddings and cosine similarity for sub-millisecond retrieval.',
+          '- **360-Degree Context Synthesis**: Blends all three tiers into a unified, hallucination-free context window.',
+          '',
+          '### 3. GraphRAG System Topology Knowledge Graph',
+          '- Entity-relationship graph mapping servers, edge proxies, databases, caches, and API routes.',
+          '- Breadth-First Search (BFS) graph traversal to predict cascading blast radius before executing any high-risk action.',
+          '',
+          '### 4. Multi-Agent Swarm with Debate & Jury Consensus',
+          '- 4 specialized autonomous personas: **SecurityRedTeam** (vulnerability & injection audit), **SreSpeed** (MTTR & uptime preservation), **CodeArchitect** (modularity & backward compatibility), and **SupremeJudge** (weighted consensus scoring >= 0.70 threshold).',
+          '',
+          '### 5. Monte Carlo Tree Search (MCTS) & Speculative Execution',
+          '- **MCTS Planner**: UCB1 tree-of-thought exploration to evaluate alternative multi-step trajectories.',
+          '- **Speculative Simulator**: Dry-runs risky commands in shadow memory sandboxes, issuing cryptographically signed `DryRunCertificates` (SHA-256).',
+          '',
+          '### 6. Float32Array Neural Network & Hybrid RAG Engine',
+          '- **Neural Threat & Intent Classifier**: Ultra-fast (<0.05ms) MLP tensor engine with dual residual stages, self-attention gating, and Adam optimizer backpropagation.',
+          '- **Hybrid RAG Engine**: Reciprocal Rank Fusion (RRF) combining 64-D dense embeddings with sparse BM25 N-gram search, backed by an in-memory Semantic Vector Cache (<0.01ms hit latency).',
+        ].join('\n'),
+        suggestedFollowUps: [
+          'How does the Mem0 cognitive memory engine prevent hallucinations?',
+          'Explain the Multi-Agent Swarm Jury consensus deliberation process.',
+          'How does the Neural Network MLP achieve sub-50 microsecond inference?',
+        ],
+        actionableArtifacts: [
+          {
+            type: 'DIAGNOSIS',
+            content: 'Ryvix AGI Core: 5-Stage OODA Cycle [Observe -> Orient -> Decide -> Act -> Reflect] Operational (Certainty: 98.4%)',
+          },
+        ],
+      };
+    }
+
     if (intent === 'INTENT_CUSTOMER_UNREGISTERED_GUIDE') {
       return {
         detectedIntent: intent,

@@ -4,6 +4,7 @@ import {
   codingAssistant,
   customerHealthQueryAgent,
   requirementRefiner,
+  cognitiveMemory,
   type OodaCycleResult,
   type CodeSynthesisResult
 } from "@ryvix/services";
@@ -258,6 +259,19 @@ ${refinedRequirement.clarificationPrompt}`,
         `I analyzed your prompt through the Ryvix AGI cognitive engine (OODA Cycle ${ooda.cycleId}). Strategic Directive: ${ooda.decide.actionPlan[0] || "continue_normal_monitoring"}.`;
     }
 
+
+    // 4b. Record Assistant Response in Mem0 Cognitive Working Memory
+    try {
+      cognitiveMemory.recordInteraction({
+        sessionId: conversationId,
+        userId: body.userId || "usr_web_session",
+        role: "assistant",
+        content: assistantResponse
+      });
+    } catch (e: any) {
+      console.warn("[Chat API] Memory recording note:", e.message);
+    }
+
     // 5. Handle Non-Streaming JSON fallback
     if (!stream) {
       return NextResponse.json({
@@ -322,6 +336,30 @@ ${refinedRequirement.clarificationPrompt}`,
               rationale: ooda.deliberativeThoughtReport.system2Deliberation.rationale,
               branches: ooda.deliberativeThoughtReport.system2Deliberation.treeOfThoughts.length,
               latencyMs: ooda.deliberativeThoughtReport.totalCognitiveLatencyMs
+            });
+          }
+
+
+          // Event B1: Multi-Agent Swarm Jury Verdict Stream
+          if (ooda.juryVerdict) {
+            sendEvent("thought", {
+              type: "jury",
+              label: `Multi-Agent Swarm Jury (${ooda.juryVerdict.decision})`,
+              content: ooda.juryVerdict.verdictSummary,
+              safeguards: ooda.juryVerdict.enforcedSafeguards,
+              latencyMs: ooda.juryVerdict.latencyMs
+            });
+          }
+
+          // Event B2: Speculative Dry-Run Simulator Stream
+          if (ooda.dryRunCertificate) {
+            sendEvent("thought", {
+              type: "simulator",
+              label: `Speculative Dry-Run (${ooda.dryRunCertificate.recommendation})`,
+              content: ooda.dryRunCertificate.predictedSideEffects.join("; "),
+              riskScore: ooda.dryRunCertificate.mutationRiskScore,
+              certificateHash: ooda.dryRunCertificate.certificateHash.slice(0, 16) + "...",
+              latencyMs: ooda.dryRunCertificate.latencyMs
             });
           }
 

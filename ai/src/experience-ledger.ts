@@ -25,7 +25,19 @@ export interface RemedyScoring {
   recommendedWeight: number; // 0.0 to 1.0
 }
 
+
+export interface DpoPreferencePair {
+  id: string;
+  prompt: string;
+  chosen: string;
+  rejected: string;
+  source: 'user_approval' | 'remediation_trial' | 'reflexion_loop';
+  confidenceMargin: number; // 0.0 to 1.0
+  timestamp: string;
+}
+
 export class ExperienceReplayLedger {
+  private dpoPairs: DpoPreferencePair[] = [];
   private trials: RemediationTrial[] = [];
 
   public recordTrial(trial: Omit<RemediationTrial, 'timestamp'>): void {
@@ -81,6 +93,33 @@ export class ExperienceReplayLedger {
 
   public clear(): void {
     this.trials = [];
+  }
+
+  public recordPreference(
+    pair: Omit<DpoPreferencePair, 'id' | 'timestamp'>
+  ): DpoPreferencePair {
+    const entry: DpoPreferencePair = {
+      id: `dpo_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      ...pair,
+      timestamp: new Date().toISOString()
+    };
+    this.dpoPairs.push(entry);
+    return entry;
+  }
+
+  public exportDpoDataset(limit: number = 100): DpoPreferencePair[] {
+    return this.dpoPairs.slice(-limit);
+  }
+
+  public getDpoStats(): { totalPairs: number; sources: Record<string, number> } {
+    const sources: Record<string, number> = {};
+    for (const p of this.dpoPairs) {
+      sources[p.source] = (sources[p.source] || 0) + 1;
+    }
+    return {
+      totalPairs: this.dpoPairs.length,
+      sources
+    };
   }
 }
 

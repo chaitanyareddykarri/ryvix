@@ -100,6 +100,17 @@ export default function WebChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isStreaming]);
 
+  // Auto-send or prefill prompt if passed from Dashboard AI command bar
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const queryPrompt = params.get("prompt");
+      if (queryPrompt && !isStreaming) {
+        handleSendMessage(queryPrompt);
+      }
+    }
+  }, []);
+
   const toggleThoughts = (msgId: string) => {
     setExpandedThoughts(prev => ({ ...prev, [msgId]: !prev[msgId] }));
   };

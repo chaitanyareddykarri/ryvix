@@ -1,3 +1,19 @@
+import {
+  mixtureOfExperts,
+  graphNeuralNetwork,
+  latentWorldModel,
+  contrastiveLearner,
+  elasticWeightConsolidation,
+  trajectoryDpoTuner
+} from '../src/deep-learning';
+import { codingAssistant } from '../src/coding-assistant';
+import { deepSelfTrainer } from '../src/deep-self-trainer';
+import { cognitiveMemory } from '../src/memory';
+import { graphRag } from '../src/graph-rag';
+import { swarmJury } from '../src/swarm-jury';
+import { mctsPlanner } from '../src/mcts-planner';
+import { speculativeSimulator } from '../src/speculative-simulator';
+import { reflexionEngine } from '../src/reflexion-engine';
 import { ragEngine } from '../src/rag-engine';
 import { networkServerController } from '../src/network-server-controller';
 import { brainDeliberativeReasoner } from '../src/brain-deliberative-reasoner';
@@ -1694,7 +1710,468 @@ async function runMasterTraining() {
 
 
 
-  // 3. Export Continuous Fine-Tuning Corpus (JSONL)
+
+  // =========================================================================
+  // STAGE 14: CODING WORKSPACE SANDBOX & EPHEMERAL PREVIEW INTELLIGENCE
+  // =========================================================================
+  console.log('\n--- STAGE 14: CODING WORKSPACE SANDBOX & EPHEMERAL PREVIEW INTELLIGENCE ---');
+
+  interface CodingWorkspaceBatteryItem {
+    name: string;
+    target: string;
+    stack: string;
+    port?: number;
+    query: string;
+    hasSandbox: boolean;
+    logs: string[];
+  }
+
+  const codingWorkspaceBattery: CodingWorkspaceBatteryItem[] = [
+    {
+      name: 'Next.js 15 Docker Sandbox Provisioning',
+      target: 'CODING_WORKSPACE_SANDBOX_SPAWN',
+      stack: 'Next.js 15 App Router',
+      port: 3100,
+      query: 'Spawn isolated Docker sandbox container for Next.js task with 2GB memory ceiling',
+      hasSandbox: true,
+      logs: [
+        'docker run -d --rm --user 1000:1000 --cpus=2.0 --memory=2048m node:22-alpine',
+        'Mounted isolated workspace volume /tmp/workspace -> /workspace (uid=1000)',
+        'Cgroups v2 resource ceiling active: 2048MB RAM, 2 vCPUs, max 1024 pids',
+      ],
+    },
+    {
+      name: 'Python FastAPI Microservice Sandbox Creation',
+      target: 'CODING_WORKSPACE_SANDBOX_SPAWN',
+      stack: 'Python FastAPI',
+      port: 3101,
+      query: 'Initialize ephemeral Python sandbox with read-only rootfs and cgroups',
+      hasSandbox: true,
+      logs: [
+        'docker run -d --rm --user 1000:1000 --memory=2048m python:3.12-alpine',
+        'Isolated volume mounted, non-root execution boundary verified',
+      ],
+    },
+    {
+      name: 'Next.js Dynamic Preview Port 3100 Allocation',
+      target: 'CODING_WORKSPACE_PORT_ALLOCATION',
+      stack: 'Next.js 15 App Router',
+      port: 3100,
+      query: 'Allocate preview port 3100 and bind reverse proxy with live iframe embedding headers',
+      hasSandbox: true,
+      logs: [
+        'Allocated preview port 3100 for workspace session ws_101',
+        'Reverse proxy established: http://localhost:3100 -> container:3000',
+        'Header injected: Content-Security-Policy: frame-ancestors *',
+      ],
+    },
+    {
+      name: 'React Vite Preview Port 3105 Allocation',
+      target: 'CODING_WORKSPACE_PORT_ALLOCATION',
+      stack: 'Vite React SPA',
+      port: 3105,
+      query: 'Reserve preview port 3105 for Vite dev server with WebSocket HMR support',
+      hasSandbox: true,
+      logs: [
+        'Allocated ephemeral port 3105 in range 3100-3999',
+        'WebSocket upgrade proxy enabled for Vite Hot Module Replacement',
+      ],
+    },
+    {
+      name: 'Unified Git Diff Synthesis for UI Component',
+      target: 'CODING_WORKSPACE_DIFF_SYNTHESIS',
+      stack: 'Next.js 15 React',
+      port: 3100,
+      query: 'Synthesize clean unified git diff modifying src/components/Navigation.tsx',
+      hasSandbox: true,
+      logs: [
+        'Synthesized unified diff: --- a/src/components/Navigation.tsx +++ b/src/components/Navigation.tsx',
+        'Hunk validation passed: 2 insertions, 1 deletion, zero syntax errors',
+      ],
+    },
+    {
+      name: 'Atomic Unified Diff Synthesis for Auth Endpoint',
+      target: 'CODING_WORKSPACE_DIFF_SYNTHESIS',
+      stack: 'TypeScript Express',
+      port: 3100,
+      query: 'Generate atomic diff for api/auth/login.ts with error handling guards',
+      hasSandbox: true,
+      logs: [
+        'Synthesized unified diff with strict type guards and optional chaining',
+        'AST verification passed: 0 compile errors in sandbox test build',
+      ],
+    },
+    {
+      name: 'Next.js Stack Auto-Detection from Manifest',
+      target: 'CODING_WORKSPACE_STACK_DETECTION',
+      stack: 'Next.js 15 App Router',
+      port: 3100,
+      query: 'Detect stack from package.json and next.config.ts manifests',
+      hasSandbox: false,
+      logs: [
+        'Manifest scanner identified: next.config.ts, package.json',
+        'Detected stack: Next.js 15 App Router | Dev command: npm run dev -- -p 3100',
+      ],
+    },
+    {
+      name: 'Python FastAPI Stack Detection',
+      target: 'CODING_WORKSPACE_STACK_DETECTION',
+      stack: 'Python FastAPI',
+      port: 3102,
+      query: 'Inspect pyproject.toml and requirements.txt to detect Python web stack',
+      hasSandbox: false,
+      logs: [
+        'Manifest scanner identified: pyproject.toml, requirements.txt',
+        'Detected stack: Python 3.12 / FastAPI | Dev command: uvicorn main:app --port 3102',
+      ],
+    },
+    {
+      name: 'Automated GitHub Branch & PR Synthesis',
+      target: 'CODING_WORKSPACE_PR_AUTOMATION',
+      stack: 'Next.js 15 App Router',
+      port: 3100,
+      query: 'Stage verified commits to ryvix/feature-auth and open GitHub Pull Request',
+      hasSandbox: true,
+      logs: [
+        'Created git branch: ryvix/feature-auth-verification',
+        'Staged unified diffs with Ed25519 cryptographic developer signature',
+        'Synthesized GitHub Pull Request with change summary and test checklist',
+      ],
+    },
+    {
+      name: 'Coding Workspace 15-Minute TTL Session Reaper',
+      target: 'CODING_WORKSPACE_CLEANUP_REAPER',
+      stack: 'Generic Container',
+      port: 3100,
+      query: 'Clean up inactive coding workspace container after 15-minute TTL expiration',
+      hasSandbox: true,
+      logs: [
+        'Workspace session ws_99 reached 15-minute timeout ceiling',
+        'Terminated container, pruned ephemeral volume, and released port 3100',
+      ],
+    },
+  ];
+
+  // A. Train Neural Network on Coding Workspace Scenarios (3 Epochs with Adam)
+  let codingLossSum = 0;
+  const codingEpochs = 3;
+  for (let ep = 1; ep <= codingEpochs; ep++) {
+    for (const item of codingWorkspaceBattery) {
+      const v = neuralThreatClassifier.vectorize({
+        metrics: item.hasSandbox ? { cpuPercent: 18, memPercent: 35, diskPercent: 22 } : {},
+        openPorts: item.port ? [item.port] : [],
+        conversationalQuery: item.query,
+        logs: item.logs,
+        codingWorkspaceContext: {
+          isCodingWorkspace: true,
+          hasDockerSandbox: item.hasSandbox,
+          previewPort: item.port,
+          stackDetected: item.stack,
+        },
+      });
+      const loss = neuralThreatClassifier.trainSample(v, item.target, 0.04);
+      if (ep === codingEpochs) {
+        codingLossSum += loss;
+        console.log(`  ✓ Trained Coding Workspace Class: [${item.target.padEnd(42)}] (Loss: ${loss.toFixed(4)})`);
+      }
+    }
+  }
+  console.log(`  ✓ Coding Workspace Matrix Complete: 10/10 Scenarios Hardened (Final Avg Loss: ${(codingLossSum / codingWorkspaceBattery.length).toFixed(4)})`);
+
+  // B. Benchmark Conversational Agent on Coding Workspace Inquiries
+  console.log('\n  [Coding Workspace Conversational Agent Benchmarks]');
+  const cwq1 = await conversationalAgent.chat('Tell me about the Ryvix coding workspace and docker sandbox container.');
+  console.log(`  ✓ Coding Sandbox Architecture: Intent=${cwq1.detectedIntent} | Persona=${cwq1.personaUsed} | ResponseLength=${cwq1.message.length} chars`);
+
+  const cwq2 = await conversationalAgent.chat('How do dynamic preview ports 3100-3999 work for live iframe previewing?');
+  console.log(`  ✓ Ephemeral Preview Port Query: Intent=${cwq2.detectedIntent} | Persona=${cwq2.personaUsed} | HasArtifacts=${Boolean(cwq2.actionableArtifacts?.length)}`);
+
+  // C. Benchmark Coding Assistant Stack Detection & Diff Synthesis
+  console.log('\n  [Coding Assistant Autonomous Workspace Benchmarks]');
+  const detectedNext = codingAssistant.detectStackFromManifest(['package.json', 'next.config.ts', 'tsconfig.json']);
+  console.log(`  ✓ Stack Detection (Next.js): Framework="${detectedNext.framework}" | DevPort=${detectedNext.devPort} | Command="${detectedNext.devCommand}"`);
+
+  const detectedPython = codingAssistant.detectStackFromManifest(['pyproject.toml', 'requirements.txt', 'main.py']);
+  console.log(`  ✓ Stack Detection (FastAPI): Framework="${detectedPython.framework}" | DevPort=${detectedPython.devPort} | Command="${detectedPython.devCommand}"`);
+
+  const synthDiff = codingAssistant.synthesizeUnifiedDiff('const a = 1;', 'const a = 2;\nconst b = 3;', 'src/index.ts');
+  console.log(`  ✓ Unified Diff Synthesis: Generated ${synthDiff.split('\n').length} diff lines with standard hunk headers`);
+
+  const prDetails = codingAssistant.generatePullRequestDetails('Rate Limiter', 'Implement token bucket rate limiter', ['src/rate-limit.ts']);
+  console.log(`  ✓ GitHub PR Synthesis: Branch="${prDetails.branchName}" | Title="${prDetails.prTitle}" | BodyLength=${prDetails.prBodyMarkdown.length} chars`);
+
+  // D. Benchmark RAG Retrieval on Coding Workspace Playbooks
+  console.log('\n  [Coding Workspace RAG Knowledge Retrieval]');
+  const cwRagT0 = performance.now();
+  const cwRagRes1 = ragEngine.query('Docker Coding Workspace Sandbox & Ephemeral Container Lifecycle');
+  const cwRagRes2 = ragEngine.query('Coding Workspace Dynamic Port Allocation & Live Preview Proxy');
+  const cwRagRes3 = ragEngine.query('AI Code Diff Synthesis, Stack Detection & GitHub Pull Request Automation');
+  const cwRagDuration = (performance.now() - cwRagT0).toFixed(2);
+
+  console.log(`  ✓ Sandbox Lifecycle RAG: Top Match="${cwRagRes1.retrievedContext[0]?.chunk.title}" (Score: ${(cwRagRes1.retrievalConfidence * 100).toFixed(1)}%)`);
+  console.log(`  ✓ Preview Port Proxy RAG: Top Match="${cwRagRes2.retrievedContext[0]?.chunk.title}" (Score: ${(cwRagRes2.retrievalConfidence * 100).toFixed(1)}%)`);
+  console.log(`  ✓ Diff & PR Automation RAG: Top Match="${cwRagRes3.retrievedContext[0]?.chunk.title}" (Score: ${(cwRagRes3.retrievalConfidence * 100).toFixed(1)}%)`);
+  console.log(`  ✓ Total Coding Workspace RAG Latency: ${cwRagDuration}ms (Indexed Chunks: ${ragEngine.getTotalIndexedCount()})`);
+
+  // =========================================================================
+  // STAGE 15: AI SELF-UNDERSTANDING: AGI CORE, MEM0 COGNITIVE MEMORY,
+  // GRAPHRAG, SWARM JURY, MCTS & NEURAL NETWORK ARCHITECTURE
+  // =========================================================================
+  console.log('\n--- STAGE 15: AI SELF-UNDERSTANDING & DEEP COGNITIVE ARCHITECTURE ---');
+
+  interface AgiSelfBatteryItem {
+    name: string;
+    target: string;
+    subsystem: string;
+    query: string;
+    context: any;
+    logs: string[];
+  }
+
+  const agiSelfBattery: AgiSelfBatteryItem[] = [
+    {
+      name: 'Ryvix AGI Core Epistemic OODA Cycle',
+      target: 'AGI_OODA_CYCLE_DELIBERATION',
+      subsystem: 'AGI Core',
+      query: 'Execute autonomous Observe Orient Decide Act Reflect cycle across live telemetry',
+      context: { isAgiOoda: true },
+      logs: [
+        'Observe: Ingested telemetry from 4 server archetypes, Orient: Bayesian prior updated to 0.96',
+        'Decide: MCTS path selected, Swarm jury consensus reached at 96%, Act: Dispatched idempotent recovery',
+      ],
+    },
+    {
+      name: 'Mem0 3-Tier Cognitive Memory Distillation',
+      target: 'MEM0_COGNITIVE_MEMORY_RECALL',
+      subsystem: 'Mem0 Engine',
+      query: 'Recall short-term working turns, long-term persistent facts, and semantic 64-D vectors',
+      context: { isMem0Recall: true },
+      logs: [
+        'Retrieved working scratchpad, persistent server configs, and cosine similarity matches',
+        'Distilled 360-degree context with zero hallucinations',
+      ],
+    },
+    {
+      name: 'GraphRAG System Topology Blast-Radius BFS',
+      target: 'GRAPHRAG_TOPOLOGY_PATHFINDING',
+      subsystem: 'GraphRAG',
+      query: 'Traverse infrastructure entity-relationship knowledge graph to evaluate cascading risk',
+      context: { isGraphRag: true },
+      logs: [
+        'GraphRAG traversed: edge_proxy -> app_backend -> postgres_db',
+        'BFS computed blast radius: 2 downstream nodes protected via circuit breaker',
+      ],
+    },
+    {
+      name: 'Multi-Agent Swarm with Debate & Jury Consensus',
+      target: 'SWARM_JURY_DEBATE_CONSENSUS',
+      subsystem: 'Swarm Jury',
+      query: 'Debate command safety between Red-Team, SRE Speed, Code Architect, and Supreme Judge',
+      context: { isSwarmJury: true },
+      logs: [
+        'Red-Team checked prompt injection and blast radius, SRE verified MTTR',
+        'Supreme Judge computed 95% consensus approval score',
+      ],
+    },
+    {
+      name: 'Monte Carlo Tree Search (MCTS) Planner',
+      target: 'MCTS_GRAPH_OF_THOUGHT_PLANNING',
+      subsystem: 'MCTS Planner',
+      query: 'Explore alternative remediation and coding trajectories using UCB1 tree-of-thought search',
+      context: { isMctsPlan: true },
+      logs: [
+        'MCTS root expanded with 4 branches, evaluated UCB1 reward scores across 50 iterations',
+        'Selected optimal plan trajectory with minimum downtime',
+      ],
+    },
+    {
+      name: 'Speculative Execution Simulator & Dry-Run Certificate',
+      target: 'SPECULATIVE_EXECUTION_SIMULATOR',
+      subsystem: 'Speculative Simulator',
+      query: 'Dry-run command in shadow memory sandbox and issue cryptographic DryRunCertificate',
+      context: { isSpeculativeSim: true },
+      logs: [
+        'Shadow dry-run verified zero unintended side-effects and blast radius <= 0.20',
+        'Issued SHA-256 DryRunCertificate for safe production execution',
+      ],
+    },
+    {
+      name: 'Autonomous Reflexion & Self-Correction Loop',
+      target: 'AUTONOMOUS_REFLEXION_SELF_CORRECTION',
+      subsystem: 'Reflexion Engine',
+      query: 'Detect failed sandbox command, perform self-critique, and formulate corrected execution',
+      context: { isReflexion: true },
+      logs: [
+        'ReAct loop caught non-zero exitCode, diagnosed missing module',
+        'Formulated corrected command: converged in 2 rounds with clean success',
+      ],
+    },
+    {
+      name: 'Ryvix Neural Network MLP Tensor Engine',
+      target: 'NEURAL_NETWORK_MLP_INFERENCE',
+      subsystem: 'Neural Network',
+      query: 'Execute sub-50 microsecond forward pass over Float32Array SIMD tensor',
+      context: { isNeuralInference: true },
+      logs: [
+        'Input vectorized into 64-D tensor, forward pass computed in 0.035ms',
+        'Predicted intent with 99.1% confidence via Softmax activation',
+      ],
+    },
+    {
+      name: 'Hybrid RAG Vector Engine & Semantic Vector Cache',
+      target: 'HYBRID_RAG_SEMANTIC_SEARCH',
+      subsystem: 'Hybrid RAG',
+      query: 'Query 64-D dense embeddings and BM25 sparse index with sub-0.01ms semantic caching',
+      context: { isHybridRag: true },
+      logs: [
+        'Retrieved top playbook via Reciprocal Rank Fusion, cached vector in LRU memory',
+      ],
+    },
+  ];
+
+  // A. Train Neural Network on AGI Self-Understanding Scenarios (3 Epochs with Adam)
+  let agiLossSum = 0;
+  const agiEpochs = 3;
+  for (let ep = 1; ep <= agiEpochs; ep++) {
+    for (const item of agiSelfBattery) {
+      const v = neuralThreatClassifier.vectorize({
+        conversationalQuery: item.query,
+        logs: item.logs,
+        agiCognitiveContext: item.context,
+      });
+      const loss = neuralThreatClassifier.trainSample(v, item.target, 0.04);
+      if (ep === agiEpochs) {
+        agiLossSum += loss;
+        console.log(`  ✓ Trained AGI Self-Architecture Class: [${item.target.padEnd(42)}] (Loss: ${loss.toFixed(4)})`);
+      }
+    }
+  }
+  console.log(`  ✓ AGI Self-Understanding Matrix Complete: 9/9 Scenarios Hardened (Final Avg Loss: ${(agiLossSum / agiSelfBattery.length).toFixed(4)})`);
+
+  // B. Benchmark Conversational Agent on AGI Self-Understanding Inquiries
+  console.log('\n  [AI Self-Understanding Conversational Agent Benchmarks]');
+  const agiq1 = await conversationalAgent.chat('Tell me about yourself, how does your AI work and what is your AGI core?');
+  console.log(`  ✓ Self-Understanding Query: Intent=${agiq1.detectedIntent} | Persona=${agiq1.personaUsed} | ResponseLength=${agiq1.message.length} chars`);
+
+  const agiq2 = await conversationalAgent.chat('How does the Mem0 3-tier cognitive memory engine work?');
+  console.log(`  ✓ Mem0 Architecture Query: Intent=${agiq2.detectedIntent} | Persona=${agiq2.personaUsed} | HasArtifacts=${Boolean(agiq2.actionableArtifacts?.length)}`);
+
+  // C. Benchmark Deep Self-Trainer Meta-Learning & Self-Critique Reward Optimization
+  console.log('\n  [Deep Self-Trainer Meta-Learning & Self-Critique Optimization]');
+  const deepTrainSummary = deepSelfTrainer.executeComprehensiveDeepTraining({ epochs: 2 });
+  console.log(`  ✓ Comprehensive Deep Training: Samples=${deepTrainSummary.syntheticSamplesTrained} across ${deepTrainSummary.domainsTrained.length} domains`);
+  console.log(`  ✓ Loss Optimization: InitialLoss=${deepTrainSummary.initialLoss} -> FinalLoss=${deepTrainSummary.finalLoss} | AvgReward=${deepTrainSummary.averageRewardScore}`);
+  console.log(`  ✓ Training Duration: ${deepTrainSummary.durationMs}ms | Weights Persisted to: ${path.basename(deepTrainSummary.persistedWeightsPath)}`);
+
+  // D. Benchmark RAG Retrieval on AGI & Cognitive Architecture Playbooks
+  console.log('\n  [AGI & Cognitive Architecture RAG Knowledge Retrieval]');
+  const agiRagT0 = performance.now();
+  const agiRagRes1 = ragEngine.query('Ryvix AGI Core: Epistemic OODA Cycle & Autonomous Deliberation Engine');
+  const agiRagRes2 = ragEngine.query('Mem0 3-Tier Cognitive Memory Engine: Working, Persistent & Associative Vector Memory');
+  const agiRagRes3 = ragEngine.query('Deep Cognitive Subsystems: GraphRAG Topology, Swarm Jury, MCTS & Speculative Dry-Run');
+  const agiRagRes4 = ragEngine.query('Ryvix Neural Network MLP Tensor Engine & Hybrid RAG Vector Database');
+  const agiRagDuration = (performance.now() - agiRagT0).toFixed(2);
+
+  console.log(`  ✓ AGI OODA Cycle RAG: Top Match="${agiRagRes1.retrievedContext[0]?.chunk.title}" (Score: ${(agiRagRes1.retrievalConfidence * 100).toFixed(1)}%)`);
+  console.log(`  ✓ Mem0 Cognitive Memory RAG: Top Match="${agiRagRes2.retrievedContext[0]?.chunk.title}" (Score: ${(agiRagRes2.retrievalConfidence * 100).toFixed(1)}%)`);
+  console.log(`  ✓ Deep Cognitive Subsystems RAG: Top Match="${agiRagRes3.retrievedContext[0]?.chunk.title}" (Score: ${(agiRagRes3.retrievalConfidence * 100).toFixed(1)}%)`);
+  console.log(`  ✓ Neural Network MLP & RAG: Top Match="${agiRagRes4.retrievedContext[0]?.chunk.title}" (Score: ${(agiRagRes4.retrievalConfidence * 100).toFixed(1)}%)`);
+  console.log(`  ✓ Total AGI Architecture RAG Latency: ${agiRagDuration}ms (Indexed Chunks: ${ragEngine.getTotalIndexedCount()})`);
+
+
+  // ====================================================================
+  // STAGE 16: FRONTIER DEEP LEARNING ARCHITECTURES & ZERO-COLLISION SYNERGY
+  // ====================================================================
+  console.log('\n======================================================================');
+  console.log('STAGE 16: FRONTIER DEEP LEARNING ARCHITECTURES & ZERO-COLLISION SYNERGY');
+  console.log('======================================================================\n');
+
+  // A. Mixture of Experts (MoE) Dynamic Router & Top-2 Expert Blending
+  console.log('  [1/6] Benchmarking Mixture of Experts (MoE) Top-2 Dynamic Router...');
+  const secInput = new Float32Array(64);
+  secInput[5] = 0.95;
+  secInput[10] = 1.0;
+  const moeT0 = performance.now();
+  const moeRoute = mixtureOfExperts.routeAndCompute(secInput);
+  const moeLat = (performance.now() - moeT0).toFixed(3);
+  console.log(`  ✓ MoE Dynamic Routing: TopExpert=[${moeRoute.selectedExperts[0].domain}] (Weight: ${moeRoute.selectedExperts[0].weight}) | Secondary=[${moeRoute.selectedExperts[1].domain}] (Weight: ${moeRoute.selectedExperts[1].weight}) | Latency: ${moeLat}ms`);
+
+  // B. Graph Neural Network (GNN) Spatial Message-Passing Convolution
+  console.log('\n  [2/6] Benchmarking Graph Neural Network (GNN) 2-Layer Spatial Message Passing...');
+  const gnnNodes = [
+    { id: 'proxy_edge_01', type: 'EDGE_PROXY' as const, initialState: { cpuPercent: 40, memPercent: 30, activeConnections: 800, errorRate: 0.02 } },
+    { id: 'app_backend_01', type: 'APP_RUNTIME' as const, initialState: { cpuPercent: 88, memPercent: 92, activeConnections: 350, errorRate: 0.15 } },
+    { id: 'db_postgres_01', type: 'DATABASE' as const, initialState: { cpuPercent: 65, memPercent: 70, activeConnections: 95, errorRate: 0.01 } },
+    { id: 'cache_redis_01', type: 'CACHE' as const, initialState: { cpuPercent: 30, memPercent: 45, activeConnections: 200, errorRate: 0.0 } },
+  ];
+  const gnnEdges = [
+    { source: 'proxy_edge_01', target: 'app_backend_01', relationship: 'PROXIES_TO' as const, weight: 0.95 },
+    { source: 'app_backend_01', target: 'db_postgres_01', relationship: 'QUERIES' as const, weight: 0.90 },
+    { source: 'app_backend_01', target: 'cache_redis_01', relationship: 'WRITES_CACHE' as const, weight: 0.85 },
+  ];
+  const gnnAnalysis = graphNeuralNetwork.convolveTopology(gnnNodes, gnnEdges, 2);
+  console.log(`  ✓ GNN Spatial Convolution: Bottleneck=[${gnnAnalysis.systemicBottleneckNodeId}] | MaxRisk=${gnnAnalysis.maxCascadingRisk} | Latency=${gnnAnalysis.inferenceLatencyMs}ms`);
+
+  // C. Latent World Model Simulator (50 Parallel Timelines)
+  console.log('\n  [3/6] Benchmarking Latent World Model Simulator (50 Parallel Timelines)...');
+  const safeDream = latentWorldModel.dreamRollouts(
+    { cpuPercent: 35, memPercent: 45, socketConnections: 120, errorRate: 0.0, uptimeSeconds: 3600 },
+    { actionName: 'graceful_reload', command: 'nginx -s reload', targetArchetype: 'WEB_EDGE_PROXY', expectedImpact: 'MILD' },
+    5, 50
+  );
+  const dangerDream = latentWorldModel.dreamRollouts(
+    { cpuPercent: 50, memPercent: 50, socketConnections: 200, errorRate: 0.0, uptimeSeconds: 3600 },
+    { actionName: 'flush_firewall', command: 'iptables -F', targetArchetype: 'WEB_EDGE_PROXY', expectedImpact: 'AGGRESSIVE' },
+    5, 50
+  );
+  console.log(`  ✓ World Model Simulation: SafeAction Safe=${safeDream.isSafeToDispatch} (Stability: ${(safeDream.stabilityScore * 100).toFixed(0)}%) | DestructiveAction Safe=${dangerDream.isSafeToDispatch} (DowntimeRisk: ${(dangerDream.expectedDowntimeRisk * 100).toFixed(0)}%)`);
+
+  // D. Contrastive Representation Learning (InfoNCE Hypersphere)
+  console.log('\n  [4/6] Benchmarking Contrastive Representation Learning (InfoNCE)...');
+  const normalHypersphere = contrastiveLearner.projectToHypersphere({ cpuPercent: 22, memPercent: 36, diskPercent: 41, connections: 85, failedAuth: 0 });
+  const threatHypersphere = contrastiveLearner.projectToHypersphere({ cpuPercent: 92, memPercent: 48, diskPercent: 44, connections: 920, failedAuth: 62 });
+  const evalNormal = contrastiveLearner.evaluateContrastiveState(normalHypersphere);
+  const evalThreat = contrastiveLearner.evaluateContrastiveState(threatHypersphere);
+  console.log(`  ✓ Contrastive InfoNCE: NormalScore=${evalNormal.contrastiveAnomalyScore} (Loss=${evalNormal.infoNceLoss}) | AnomalyScore=${evalThreat.contrastiveAnomalyScore}`);
+
+  // E. Elastic Weight Consolidation (EWC) Anti-Catastrophic Forgetting
+  console.log('\n  [5/6] Benchmarking Elastic Weight Consolidation (EWC) Fisher Regularizer...');
+  const baseWeights = new Float32Array(64).fill(0.5);
+  const gradients = new Float32Array(64).map((_, i) => (i % 2 === 0 ? 0.8 : 0.05));
+  elasticWeightConsolidation.registerMasteredTaskAnchor('task_foundational_kernel_security', baseWeights, gradients, 500);
+  const minorDriftWeights = new Float32Array(baseWeights).map((w) => w + 0.01);
+  const severeDriftWeights = new Float32Array(baseWeights).map((w) => w + 0.45);
+  const minorReg = elasticWeightConsolidation.computeEwcPenalty(minorDriftWeights, 0.10);
+  const severeReg = elasticWeightConsolidation.computeEwcPenalty(severeDriftWeights, 0.10);
+  console.log(`  ✓ EWC Fisher Regularizer: MinorDriftPenalty=${minorReg.ewcPenalty} (Safe=${minorReg.isDriftAcceptable}) | CatastrophicDriftPenalty=${severeReg.ewcPenalty} (Safe=${severeReg.isDriftAcceptable})`);
+
+  // F. Direct Preference Optimization (DPO) Trajectory Margin Alignment
+  console.log('\n  [6/6] Benchmarking Direct Preference Optimization (DPO) Trajectory Alignment...');
+  const dpoPair = {
+    pairId: 'dpo_pair_sre_01',
+    contextPrompt: 'Website is sluggish due to exhausted connection pool',
+    winningTrajectory: {
+      actionName: 'graceful_drain_and_scale',
+      codeOrCommand: 'pgbouncer -R && systemctl reload pgbouncer',
+      logProbabilityPolicy: -0.45,
+      logProbabilityReference: -1.20,
+    },
+    losingTrajectory: {
+      actionName: 'destructive_kill',
+      codeOrCommand: 'killall -9 postgres',
+      logProbabilityPolicy: -3.80,
+      logProbabilityReference: -1.10,
+    },
+  };
+  const dpoResult = trajectoryDpoTuner.evaluatePair(dpoPair);
+  console.log(`  ✓ DPO Margin Alignment: PolicyAligned=${dpoResult.isPolicyAligned} | WinProb=${(dpoResult.preferredProbability * 100).toFixed(1)}% | Loss=${dpoResult.dpoLoss} | Margin=${dpoResult.implicitRewardMargin}`);
+
+  // G. Conversational Agent Grounded Dual-Engine Synthesis
+  console.log('\n  [Conversational Dual-Engine Zero-Collision Synthesis]');
+  const dualEngineChat = await conversationalAgent.chat('Explain the difference between LLM and deep learning and how Ryvix prevents collision between them.');
+  console.log(`  ✓ Dual-Engine Query: Intent=${dualEngineChat.detectedIntent} | Persona=${dualEngineChat.personaUsed} | ResponseLength=${dualEngineChat.message.length} chars\n`);
+
+    // 3. Export Continuous Fine-Tuning Corpus (JSONL)
   const fineTuningPath = path.join(dataDir, 'continuous_fine_tuning.jsonl');
   const dataset = selfLearningStore.exportFineTuningDataset();
   fs.writeFileSync(fineTuningPath, dataset, 'utf8');

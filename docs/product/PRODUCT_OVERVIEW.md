@@ -34,3 +34,20 @@ Modern engineering teams spend significant time context-switching between code e
 - **Solo Developers & Founders**: Act as an autonomous virtual DevOps engineer and junior developer who can manage deployments, fix bugs, and keep servers online 24/7.
 - **Small & Medium Engineering Teams**: Eliminate alert fatigue, speed up routine maintenance, and provide safe, previewed frontend tweaks without manual staging setups.
 - **On-Call Site Reliability Engineers**: Triage production outages in seconds directly via WhatsApp during off-hours with one-click recovery approvals.
+
+---
+
+## 4. Key Platform Innovations
+
+### 1. Mem0 3-Tier Cognitive Memory Architecture
+- **Short-Term Session Memory**: Ephemeral sliding-window conversation turns and active tool scratchpads.
+- **Long-Term Knowledge Store**: Persistent retention of user preferences, repository tech stacks, and past incident solutions.
+- **Semantic Vector Associative Memory**: 64-dimensional Float32Array embeddings for sub-millisecond concept retrieval.
+
+### 2. 100% 6-Digit Email OTP Authentication
+- Complete deprecation of clickable verification links and magic-link redirect tokens.
+- Mandatory 6-digit numeric OTP for New Account Registration, Login, and Password Recovery.
+- High-performance Three.js cyberpunk interface with 3D moving blocks and glowing micro-animations.
+
+### 3. Single-Command Self-Training Pipeline
+- Deterministic sub-second training (`npm run train:all`) that updates pattern recognizers, neural weights, and knowledge runbooks in ~2.38s.

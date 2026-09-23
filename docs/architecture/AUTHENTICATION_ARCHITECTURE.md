@@ -1,165 +1,122 @@
-# Ryvix Authentication & Multi-Tenant Authorization Architecture
+# Ryvix Authentication & Multi-Tenant Authorization Architecture (100% 6-Digit Email OTP)
 
 ## 1. Executive Summary
 
 Ryvix enforces a deterministic, defense-in-depth authentication and authorization architecture. Authentication is managed securely via **Supabase Auth (GoTrue)** with `@supabase/ssr` cookie persistence, while authorization and tenant isolation are enforced at the database kernel level through **PostgreSQL Row Level Security (RLS)**.
 
+All legacy email-confirmation links, magic links, clickable confirmation URLs, and URL callback code exchanges have been completely removed. Ryvix requires **6-digit email OTP verification** across all three primary authentication flows:
+1. **Flow A —� New Account Creation (Sign Up)**
+2. **Flow B —� Existing Account Login**
+3. **Flow C —� Forgot Password / Password Recovery**
+
 ---
 
 ## 2. Authentication Lifecycle Overview
 
-```
+```text
 [ Unregistered User ]
        │
-       │  1. Registration (Email + Password + Full Name)
+       │  1. Registration (Full Name, Work Email, Password, Confirm Password)
        ▼
 [ Supabase Auth (auth.users) ]
        │
-       ├─▶ PostgreSQL Trigger (`handle_new_user`)
-       │     ├─ Idempotently provisions personal Tenant Organization (`public.organizations`)
-       │     ├─ Provisions User Profile with 'owner' role (`public.profiles`)
-       │     └─ Syncs membership record (`public.organization_members`)
+       ├──> PostgreSQL Trigger (handle_new_user)
+       │     ├──> Idempotently provisions personal Tenant Organization (public.organizations)
+       │     ├──> Provisions User Profile with 'owner' role (public.profiles)
+       │     └──> Syncs membership record (public.organization_members)
        │
-       │  2. Email Verification Dispatched
+       │  2. 6-Digit Email OTP Dispatched (type: 'signup')
        ▼
-[ Confirmation Link / Token ]
+[ 6-Digit Email OTP Screen ]
        │
-       │  3. User clicks link -> /auth/callback?code=...
+       │  3. User enters numeric code inside Ryvix UI
+       │  4. verifyOtp({ email, token, type: 'signup' })
        ▼
-[ Next.js Callback Route (`/auth/callback`) ]
+[ Account & Email Confirmed ]
        │
-       │  4. exchangeCodeForSession(code)
+       │  5. Redirects user cleanly to Login (no auto-bypass)
+       ▼
+[ Flow B: Standard 2-Step Login with Email OTP ]
+       │
+       │  6. Validates credentials + Dispatches 6-digit login OTP
+       │  7. verifyOtp({ email, token, type: 'email' })
        ▼
 [ Authenticated SSR Session ]
        │
-       │  5. Encrypted HTTP-Only Session Cookies (`@supabase/ssr`)
+       │  8. Encrypted HTTP-Only Session Cookies (@supabase/ssr)
        ▼
-[ Protected Workspace Console (`/`) ]
+[ Protected Workspace Console (/dashboard) ]
 ```
 
 ---
 
-## 3. Supported Authentication Flows
+## 3. The Three Distinct Authentication Flows
 
-### 3.1 First-Time Registration (Sign Up)
+### Flow A —� New Account Creation (Sign Up)
 - **Endpoint**: `/login` (Tab: "Create Account")
 - **Fields**: Full Name, Work Email, Password (min 6 chars), Confirm Password.
 - **API Call**: `supabase.auth.signUp({ email, password, options: { data: { full_name } } })`.
-- **Behavior**:
-  - Validates matching passwords and length policies client-side.
-  - Passes user metadata to Supabase Auth.
-  - Automatically invokes the `on_auth_user_created` trigger in PostgreSQL.
-  - Displays explicit verification instructions to the user.
+- **OTP Verification**: `supabase.auth.verifyOtp({ email, token, type: 'signup' })`.
+- **Post-Verification**:
+  - Supabase Auth marks user's `email_confirmed_at` timestamp.
+  - The UI presents a clean success message: *"Email verified successfully. Your Ryvix account has been created."*
+  - The user continues to Login. No unverified user can access the application.
 
-### 3.2 Standard Email + Password Sign In
+### Flow B —� Existing Account Login
 - **Endpoint**: `/login` (Tab: "Sign In")
-- **Fields**: Email Address, Password.
-- **API Call**: `supabase.auth.signInWithPassword({ email, password })`.
-- **Behavior**:
-  - Directly authenticates credentials against `auth.users`.
-  - Rejects unconfirmed emails if confirmation is enforced.
-  - Establishes encrypted session cookies and redirects directly to `/`.
+- **Step 1 (Credential Validation)**:
+  - User submits Email + Password.
+  - POST `/api/auth/login/step1` validates credentials using a stateless server client without emitting session cookies.
+  - On valid credentials, dispatches a 6-digit email OTP via `signInWithOtp({ email, options: { shouldCreateUser: false } })` and returns a signed, HTTP-only challenge cookie.
+  - On invalid credentials, immediately returns generic `401 Unauthorized: Invalid email or password.` (account enumeration prevented).
+- **Step 2 (Login OTP Verification)**:
+  - User enters 6-digit code on the interactive OTP screen.
+  - POST `/api/auth/login/step2` validates the challenge cookie and verifies the code via `supabase.auth.verifyOtp({ email, token, type: 'email' })`.
+  - On verification success, writes genuine encrypted `@supabase/ssr` HTTP-only session cookies and clears the challenge cookie.
+  - Direct access to `/dashboard` before Step 2 completion is strictly denied by server middleware.
 
-### 3.3 Passwordless Magic Link & OTP Login
-- **Endpoint**: `/login` (Option: "Or sign in with passwordless Magic Link / OTP")
-- **Fields**: Email Address.
-- **API Call**: `supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true, emailRedirectTo: "/auth/callback" } })`.
-- **Behavior**:
-  - Supabase dispatches a cryptographically signed confirmation link or 6-digit numeric OTP depending on email template configuration.
-  - Clicking the email confirmation link redirects to `/auth/callback?code=...`, establishing the session automatically.
-  - Alternatively, if the template provides numeric digits, the user can verify directly via `supabase.auth.verifyOtp()`.
-
-### 3.4 Forgot Password & Credential Recovery
-- **Endpoint**: `/login` (Mode: "Forgot password?") & `/auth/reset-password`
-- **Flow**:
-  1. User enters registered work email and submits.
-  2. Calls `supabase.auth.resetPasswordForEmail(email, { redirectTo: "/auth/callback?next=/auth/reset-password" })`.
-  3. Supabase dispatches password recovery email with a single-use cryptographically signed token.
-  4. User clicks link -> `/auth/callback` exchanges token for a recovery session and forwards to `/auth/reset-password`.
-  5. User provides new password and confirms.
-  6. Calls `supabase.auth.updateUser({ password })`.
-  7. Session is authenticated and redirects user to `/`.
-
----
-
-## 4. Session Handling & Route Protection Middleware
-
-Session state is validated on every incoming request in `web/middleware.ts` via `@supabase/ssr`:
-
-```typescript
-const isPublicAuthRoute = 
-  pathname.startsWith("/login") || 
-  pathname.startsWith("/auth/callback") || 
-  pathname.startsWith("/auth/reset-password");
-
-if (user && pathname.startsWith("/login")) {
-  return NextResponse.redirect("/");
-}
-
-if (!user && !isPublicAuthRoute) {
-  return NextResponse.redirect("/login");
-}
-```
-
-- **Token Refresh**: Expired JWT access tokens are automatically rotated using the refresh token during request execution.
-- **Cookie Security**: Cookies are written with `HttpOnly`, `SameSite=Lax`, and `Secure` attributes in production.
-- **Sign Out**: Handled via `web/app/auth/signout/route.ts` which invokes `supabase.auth.signOut()` and clears all session cookies before redirecting to `/login`.
+### Flow C —� Forgot Password & Recovery
+- **Endpoint**: `/login` (Mode: "Forgot password?")
+- **Recovery OTP Dispatch**:
+  - User enters registered email address.
+  - Calls `supabase.auth.resetPasswordForEmail(email)` without redirect URLs.
+  - Displays neutral message: *"If an account exists for this email, a verification code has been sent."*
+- **Recovery OTP Verification**:
+  - User enters 6-digit code into the recovery OTP screen.
+  - Calls `supabase.auth.verifyOtp({ email, token, type: 'recovery' })`.
+  - Establishes genuine temporary recovery session authorizing password changes.
+- **Password Reset**:
+  - User sets New Password and Confirm Password.
+  - Calls `supabase.auth.updateUser({ password })`.
+  - Signs out recovery session cleanly and redirects user to sign in with their new credentials.
 
 ---
 
-## 5. Multi-Tenant Provisioning & Database Trigger Architecture
+## 4. Legacy Architecture Removal & Security Boundaries
 
-Upon registration in `auth.users`, PostgreSQL trigger `on_auth_user_created` fires `public.handle_new_user()` (`SECURITY DEFINER`):
-
-```sql
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER SECURITY DEFINER SET search_path = public AS $$
-DECLARE
-    new_org_id UUID;
-    clean_name TEXT;
-    clean_slug TEXT;
-BEGIN
-    clean_name := COALESCE(NEW.raw_user_meta_data->>'full_name', SPLIT_PART(NEW.email, '@', 1), 'User');
-    clean_slug := 'org-' || SUBSTRING(REPLACE(NEW.id::text, '-', ''), 1, 12);
-
-    INSERT INTO public.organizations (name, slug)
-    VALUES (clean_name || '''s Workspace', clean_slug)
-    ON CONFLICT (slug) DO UPDATE SET updated_at = NOW()
-    RETURNING id INTO new_org_id;
-
-    IF new_org_id IS NULL THEN
-        SELECT id INTO new_org_id FROM public.organizations WHERE slug = clean_slug LIMIT 1;
-    END IF;
-
-    INSERT INTO public.profiles (id, organization_id, full_name, role)
-    VALUES (NEW.id, new_org_id, clean_name, 'owner')
-    ON CONFLICT (id) DO UPDATE SET full_name = EXCLUDED.full_name, updated_at = NOW();
-
-    INSERT INTO public.organization_members (organization_id, user_id, role)
-    VALUES (new_org_id, NEW.id, 'owner')
-    ON CONFLICT (organization_id, user_id) DO NOTHING;
-
-    RETURN NEW;
-EXCEPTION WHEN OTHERS THEN
-    RAISE WARNING 'handle_new_user exception: %', SQLERRM;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-```
-
+1. **Clickable Links Removed**: The legacy URL callback route `/auth/callback` has been completely deleted. Any access to `/auth/callback` returns 404 and is blocked from public bypass.
+2. **URL Tokens Eliminated**: Query parameters like `?code=`, `?token=`, and `#type=recovery` are completely ignored and cannot trigger session creation or bypass OTP screens.
+3. **Defense-in-Depth Route Middleware**:
+   - `web/utils/supabase/middleware.ts` guards all routes with `@supabase/ssr`.
+   - Public routes are strictly restricted to `/` (marketing landing), `/login`, and `/auth/reset-password`.
+   - `/dashboard`, `/servers`, `/tasks`, `/chat`, and all protected APIs require an authenticated Supabase session.
+4. **Brute Force & Rate Limiting**:
+   - 45-second cooldown timer enforced on all OTP resend actions.
+   - Server-side rate limit guards against rapid repeat dispatches.
+   - Challenge cookies are cryptographically signed with HMAC-SHA256 and expire in 10 minutes.
 ---
 
-## 6. Security Boundaries & Invariants
+## 6. Cyberpunk Visual Design & Dynamic 3D Animations
 
-1. **Zero Plaintext Passwords**:
-   - Plaintext passwords are never stored in application tables, logged to console, passed into AI prompts, or included in telemetry rollups.
-   - All password hashing and verification is handled strictly inside Supabase Auth's isolated `auth.users` vault.
-2. **Service Role Boundary**:
-   - `SUPABASE_SERVICE_ROLE_KEY` is strictly confined to server-side backend workers and repository queries.
-   - It is NEVER exposed to the frontend browser, NEVER prefixed with `NEXT_PUBLIC_`, and NEVER shared with AI models or customer server connectors.
-3. **AI Layer Isolation**:
-   - `@ryvix/ai` has ZERO direct database access, zero Supabase credentials, and zero connection strings.
-   - All interactions flow through typed backend tool gates with deterministic RBAC and human approval thresholds.
-4. **Complete Table RLS Coverage**:
-   - 100% of tables (all 35 across Phase 1 and Phase 2 migrations) have Row Level Security enabled.
-   - Access to resources, tasks, servers, and repositories is strictly constrained by organization membership.
+The authentication console (`/login`) incorporates an interactive, high-performance visual experience:
+
+1. **Interactive 3D Moving Blocks (`MovingBlocks3D`)**:
+   - Rendered using Three.js with dynamic client-side mounting (`next/dynamic` with `{ ssr: false }`).
+   - Floats glowing wireframe geometric blocks in 3D space with subtle mouse-driven parallax tracking.
+2. **Atmospheric Lighting & Grid Overlay**:
+   - Multi-point ambient and directional cyan/violet spotlights.
+   - High-tech cyber-grid canvas with subtle radial depth masking.
+3. **Card & Button Micro-Animations**:
+   - `.login-card-animated`: Smooth entrance translation with interactive cyan-indigo border glow pulsing (`animation: loginBorderGlow 6s ease-in-out infinite`).
+   - `.login-tab-btn`: Smooth active tab switching with hardware-accelerated cubic-bezier transitions.
+   - `.btn-login-submit`: Multi-stop gradient fill with animated hover arrow icon and click ripple effect.

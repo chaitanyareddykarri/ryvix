@@ -1,3 +1,20 @@
+import {
+  mixtureOfExperts,
+  graphNeuralNetwork,
+  latentWorldModel,
+  contrastiveLearner,
+  elasticWeightConsolidation,
+  trajectoryDpoTuner,
+  type MoERoutingResult,
+  type WorldModelRolloutForecast,
+  type ContrastiveEvaluationResult,
+  type EwcRegularizationResult
+} from './deep-learning';
+import { semanticCache, type CacheLookupResult } from './semantic-cache';
+import { systemTopologyGraph } from './graph-rag';
+import { swarmJury, type JuryVerdict } from './swarm-jury';
+import { speculativeSimulator, type DryRunCertificate } from './speculative-simulator';
+import { cognitiveMemory, type CognitiveMemoryRecallResult } from './memory';
 import { ragEngine, RagAugmentedResponse } from './rag-engine';
 import { riskAlertDispatcher, RiskAlertNotification } from './risk-alert-dispatcher';
 import { brainDeliberativeReasoner, BrainDialecticThoughtReport } from './brain-deliberative-reasoner';
@@ -88,6 +105,14 @@ export interface OodaCycleResult {
   displayThoughtStream?: string;
   developerAlert?: RiskAlertNotification | null;
   ragResponse?: RagAugmentedResponse;
+  moeRouting?: MoERoutingResult;
+  worldModelForecast?: WorldModelRolloutForecast;
+  contrastiveEval?: ContrastiveEvaluationResult;
+  ewcRegularization?: EwcRegularizationResult;
+  memoryRecall?: CognitiveMemoryRecallResult;
+  juryVerdict?: JuryVerdict;
+  dryRunCertificate?: DryRunCertificate;
+  cacheHit?: CacheLookupResult;
 }
 
 export interface AgiCognitiveState {
@@ -206,6 +231,65 @@ export class RyvixAgiCore {
     const lower = obsText.toLowerCase();
     const ctx = perception.environmentContext || {};
 
+    // 0a. Semantic Vector Cache Check (<0.01ms)
+    const cacheHit = semanticCache.get(obsText);
+
+    // 0b. GraphRAG Spatial Context Expansion
+    const topologyContext = systemTopologyGraph.formatTopologyContext(ctx.service || 'srv_prod_01');
+
+    // 0d. Contrastive Anomaly Representation Learning (InfoNCE)
+    const contrastiveHypersphere = contrastiveLearner.projectToHypersphere({
+      cpuPercent: ctx.cpuPercent || 25,
+      memPercent: ctx.memPercent || 40,
+      diskPercent: ctx.diskPercent || 35,
+      connections: ctx.connections || 120,
+      failedAuth: ctx.failedAuth || 0,
+    });
+    const contrastiveEval = contrastiveLearner.evaluateContrastiveState(contrastiveHypersphere);
+
+    // 0e. Mixture of Experts (MoE) Dynamic Gating
+    const inputVec = neuralThreatClassifier.vectorize({
+      conversationalQuery: obsText,
+      metrics: { cpuPercent: ctx.cpuPercent || 25, memPercent: ctx.memPercent || 40 },
+    });
+    const moeRouting = mixtureOfExperts.routeAndCompute(inputVec);
+
+    // 0f. Latent World Model Forward Rollout Simulation ("AI Dreaming")
+    const worldModelForecast = latentWorldModel.dreamRollouts(
+      {
+        cpuPercent: ctx.cpuPercent || 25,
+        memPercent: ctx.memPercent || 40,
+        socketConnections: ctx.connections || 120,
+        errorRate: ctx.errorRate || 0.0,
+        uptimeSeconds: 86400,
+      },
+      {
+        actionName: 'evaluate_state',
+        command: 'systemctl status node-app',
+        targetArchetype: 'APPLICATION_RUNTIME',
+        expectedImpact: 'MILD',
+      },
+      3,
+      25
+    );
+
+    // 0c. Mem0 Cognitive Memory Recall & Interaction Logging
+    const memoryRecall = cognitiveMemory.recall({
+      query: obsText,
+      sessionId: ctx.conversationId || ctx.sessionId || cycleId,
+      userId: ctx.userId || 'global',
+      maxShortTerm: 5,
+      maxLongTerm: 4,
+      maxSemantic: 3
+    });
+
+    cognitiveMemory.recordInteraction({
+      sessionId: ctx.conversationId || ctx.sessionId || cycleId,
+      userId: ctx.userId || 'global',
+      role: 'user',
+      content: obsText
+    });
+
     // 1. OBSERVE
     const observedFeatures: string[] = [
       `Source:${perception.source}`,
@@ -251,7 +335,7 @@ export class RyvixAgiCore {
     // 3. DECIDE
     this.cognitiveStatus = 'deciding';
     const actionPlan: string[] = [];
-    const safeguards = blast === 'critical' || (blast as string) === 'high';
+    let safeguards = blast === 'critical' || (blast as string) === 'high';
 
     if (domain === 'sre_outage') {
       actionPlan.push('Isolate failing upstream process', 'Trigger Option A warm restart', 'Verify TCP socket binding');
@@ -350,6 +434,23 @@ export class RyvixAgiCore {
     });
     const displayThoughtStream = brainDeliberativeReasoner.formatDisplayThoughtStream(thoughtReport);
 
+    // 4b. Deep AI Swarm Jury Deliberation & Speculative Simulation
+    let juryVerdict: JuryVerdict | undefined;
+    let dryRunCert: DryRunCertificate | undefined;
+
+    if (actionPlan.length > 0) {
+      dryRunCert = speculativeSimulator.simulate(actionPlan[0]);
+      juryVerdict = await swarmJury.deliberate({
+        action: actionPlan[0],
+        target: ctx.service || 'srv_prod_01',
+        command: actionPlan[0],
+        blastRadius: blast
+      });
+      if (juryVerdict.decision === 'REJECTED') {
+        safeguards = true;
+      }
+    }
+
     const result: OodaCycleResult = {
       cycleId,
       observe: {
@@ -377,7 +478,15 @@ export class RyvixAgiCore {
       },
       latencyMs,
       deliberativeThoughtReport: thoughtReport,
-      displayThoughtStream
+      displayThoughtStream,
+      memoryRecall,
+      juryVerdict,
+      dryRunCertificate: dryRunCert,
+      cacheHit: cacheHit.hit ? cacheHit : undefined,
+      moeRouting,
+      worldModelForecast,
+      contrastiveEval,
+      ewcRegularization: elasticWeightConsolidation.computeEwcPenalty(inputVec, 0.05)
     };
 
     

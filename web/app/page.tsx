@@ -113,45 +113,25 @@ export default async function LandingPage() {
           >
             <a
               href="#features"
-              style={{
-                fontSize: "0.88rem",
-                color: "var(--text-secondary)",
-                textDecoration: "none",
-                transition: "color 0.15s ease",
-              }}
+              className="nav-link-animated"
             >
               Platform
             </a>
             <a
               href="#architecture"
-              style={{
-                fontSize: "0.88rem",
-                color: "var(--text-secondary)",
-                textDecoration: "none",
-                transition: "color 0.15s ease",
-              }}
+              className="nav-link-animated"
             >
               Architecture
             </a>
             <a
               href="#metrics"
-              style={{
-                fontSize: "0.88rem",
-                color: "var(--text-secondary)",
-                textDecoration: "none",
-                transition: "color 0.15s ease",
-              }}
+              className="nav-link-animated"
             >
               Fleet &amp; SRE
             </a>
             <Link
               href="/dashboard"
-              style={{
-                fontSize: "0.88rem",
-                color: "var(--text-secondary)",
-                textDecoration: "none",
-                transition: "color 0.15s ease",
-              }}
+              className="nav-link-animated"
             >
               Console
             </Link>
@@ -206,17 +186,7 @@ export default async function LandingPage() {
                 </Link>
                 <Link
                   href="/login"
-                  style={{
-                    padding: "0.48rem 1.15rem",
-                    borderRadius: "9999px",
-                    fontSize: "0.85rem",
-                    fontWeight: 600,
-                    background: "linear-gradient(135deg, #6366f1 0%, #38bdf8 100%)",
-                    color: "#ffffff",
-                    textDecoration: "none",
-                    boxShadow: "0 0 20px rgba(99, 102, 241, 0.45)",
-                    transition: "transform 0.15s ease",
-                  }}
+                  className="btn-nav-pill"
                 >
                   Get Started &rarr;
                 </Link>
@@ -249,20 +219,7 @@ export default async function LandingPage() {
             {/* Announcement Pill Badge */}
             <Link
               href="/login"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.6rem",
-                padding: "0.35rem 0.95rem",
-                borderRadius: "9999px",
-                background: "rgba(99, 102, 241, 0.12)",
-                border: "1px solid rgba(99, 102, 241, 0.3)",
-                color: "#a5b4fc",
-                fontSize: "0.82rem",
-                fontWeight: 500,
-                textDecoration: "none",
-                marginBottom: "1.75rem",
-              }}
+              className="badge-interactive-float" style={{ marginBottom: "1.75rem" }}
             >
               <span
                 style={{
@@ -274,7 +231,7 @@ export default async function LandingPage() {
                 }}
               />
               <span>Ryvix v2.0 Autonomous Platform · Neural SRE</span>
-              <span style={{ color: "#6366f1" }}>&rarr;</span>
+              <span className="arrow-icon" style={{ color: "#818cf8" }}>&rarr;</span>
             </Link>
 
             {/* Main Editorial Headline */}
@@ -315,43 +272,37 @@ export default async function LandingPage() {
                 marginBottom: "3rem",
               }}
             >
-              <Link
-                href="/login"
-                style={{
-                  padding: "0.85rem 1.85rem",
-                  borderRadius: "9999px",
-                  fontSize: "0.95rem",
-                  fontWeight: 600,
-                  background: "linear-gradient(135deg, #6366f1 0%, #06b6d4 100%)",
-                  color: "#ffffff",
-                  textDecoration: "none",
-                  boxShadow: "0 0 30px rgba(99, 102, 241, 0.45)",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                }}
-              >
-                Get Started Free &rarr;
-              </Link>
-              <Link
-                href="/login"
-                style={{
-                  padding: "0.85rem 1.65rem",
-                  borderRadius: "9999px",
-                  fontSize: "0.95rem",
-                  fontWeight: 600,
-                  background: "rgba(15, 23, 42, 0.75)",
-                  border: "1px solid var(--border-subtle)",
-                  color: "#f1f5f9",
-                  textDecoration: "none",
-                  backdropFilter: "blur(12px)",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                }}
-              >
-                Sign In to Platform
-              </Link>
+              {user ? (
+                <>
+                  <Link
+                    href="/dashboard"
+                    className="btn-shimmer"
+                  >
+                    Open Console &amp; Workspace <span className="arrow-icon">&rarr;</span>
+                  </Link>
+                  <Link
+                    href="/servers"
+                    className="btn-glass"
+                  >
+                    Manage Servers Fleet
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="btn-shimmer"
+                  >
+                    Get Started Free <span className="arrow-icon">&rarr;</span>
+                  </Link>
+                  <Link
+                    href="/login"
+                    className="btn-glass"
+                  >
+                    Sign In to Platform
+                  </Link>
+                </>
+              )}
             </div>
 
             {/* Quick Metrics Strip */}
@@ -459,14 +410,7 @@ export default async function LandingPage() {
         >
           {/* Card 1: Neural SRE Engine */}
           <div
-            className="glass-panel"
-            style={{
-              padding: "2rem",
-              borderRadius: "14px",
-              border: "1px solid var(--border-subtle)",
-              background: "rgba(15, 23, 42, 0.65)",
-              transition: "transform 0.2s ease, border-color 0.2s ease",
-            }}
+            className="glass-panel feature-card-hover" style={{ padding: "2rem", borderRadius: "14px", border: "1px solid var(--border-subtle)", background: "rgba(15, 23, 42, 0.65)" }}
           >
             <div
               style={{
@@ -496,13 +440,7 @@ export default async function LandingPage() {
 
           {/* Card 2: Tri-Pathway Server Connectors */}
           <div
-            className="glass-panel"
-            style={{
-              padding: "2rem",
-              borderRadius: "14px",
-              border: "1px solid var(--border-subtle)",
-              background: "rgba(15, 23, 42, 0.65)",
-            }}
+            className="glass-panel feature-card-hover" style={{ padding: "2rem", borderRadius: "14px", border: "1px solid var(--border-subtle)", background: "rgba(15, 23, 42, 0.65)" }}
           >
             <div
               style={{
@@ -532,13 +470,7 @@ export default async function LandingPage() {
 
           {/* Card 3: Autonomous Coding Sandbox */}
           <div
-            className="glass-panel"
-            style={{
-              padding: "2rem",
-              borderRadius: "14px",
-              border: "1px solid var(--border-subtle)",
-              background: "rgba(15, 23, 42, 0.65)",
-            }}
+            className="glass-panel feature-card-hover" style={{ padding: "2rem", borderRadius: "14px", border: "1px solid var(--border-subtle)", background: "rgba(15, 23, 42, 0.65)" }}
           >
             <div
               style={{
@@ -568,13 +500,7 @@ export default async function LandingPage() {
 
           {/* Card 4: Supabase RLS Multi-Tenant Core */}
           <div
-            className="glass-panel"
-            style={{
-              padding: "2rem",
-              borderRadius: "14px",
-              border: "1px solid var(--border-subtle)",
-              background: "rgba(15, 23, 42, 0.65)",
-            }}
+            className="glass-panel feature-card-hover" style={{ padding: "2rem", borderRadius: "14px", border: "1px solid var(--border-subtle)", background: "rgba(15, 23, 42, 0.65)" }}
           >
             <div
               style={{
@@ -656,36 +582,29 @@ export default async function LandingPage() {
               flexWrap: "wrap",
             }}
           >
-            <Link
-              href="/login"
-              style={{
-                padding: "0.9rem 2.2rem",
-                borderRadius: "9999px",
-                fontSize: "0.95rem",
-                fontWeight: 600,
-                background: "linear-gradient(135deg, #6366f1 0%, #38bdf8 100%)",
-                color: "#ffffff",
-                textDecoration: "none",
-                boxShadow: "0 0 25px rgba(99, 102, 241, 0.5)",
-              }}
-            >
-              Create Free Account &rarr;
-            </Link>
-            <Link
-              href="/login"
-              style={{
-                padding: "0.9rem 1.8rem",
-                borderRadius: "9999px",
-                fontSize: "0.95rem",
-                fontWeight: 600,
-                background: "rgba(15, 23, 42, 0.85)",
-                border: "1px solid var(--border-subtle)",
-                color: "#f1f5f9",
-                textDecoration: "none",
-              }}
-            >
-              Sign In to Console
-            </Link>
+            {user ? (
+              <Link
+                href="/dashboard"
+                className="btn-shimmer" style={{ padding: "0.9rem 2.4rem" }}
+              >
+                Go to Workspace Dashboard <span className="arrow-icon">&rarr;</span>
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="btn-shimmer" style={{ padding: "0.9rem 2.2rem" }}
+                >
+                  Create Free Account <span className="arrow-icon">&rarr;</span>
+                </Link>
+                <Link
+                  href="/login"
+                  className="btn-glass" style={{ padding: "0.9rem 1.8rem" }}
+                >
+                  Sign In to Console
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </section>

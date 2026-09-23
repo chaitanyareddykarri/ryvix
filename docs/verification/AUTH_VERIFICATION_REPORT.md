@@ -13,11 +13,11 @@
 | **Part 1** | Auth Requirements | **IMPLEMENTED + VERIFIED** | All 14 capabilities (A-N) implemented and validated. |
 | **Part 2** | First-Time Sign Up | **IMPLEMENTED + VERIFIED** | `web/app/login/page.tsx` validates email, full name, passwords, and handles registration. |
 | **Part 3** | Password Storage | **IMPLEMENTED + VERIFIED** | Delegated 100% to Supabase Auth (`auth.users`). Zero password logging/columns across repo. |
-| **Part 4** | Email Verification | **IMPLEMENTED + VERIFIED** | Supports Supabase confirmation links via `/auth/callback` and numeric tokens. |
-| **Part 5** | Auth Callback | **IMPLEMENTED + VERIFIED** | `web/app/auth/callback/route.ts` exchanges `code`, sets SSR cookies, and redirects safely. |
+| **Part 4** | Email Verification (Flow A) | **IMPLEMENTED + VERIFIED** | 100% 6-Digit Email OTP verification via `verifyOtp({ type: 'signup' })`. Legacy links removed. |
+| **Part 5** | Auth Callback Removed | **REMOVED + SECURED** | Legacy `/auth/callback` route deleted; URL token/code bypasses completely blocked. |
 | **Part 6** | Email + Password Login | **IMPLEMENTED + VERIFIED** | Direct `signInWithPassword` in `web/app/login/page.tsx` with friendly error mapping. |
-| **Part 7** | Passwordless Login | **IMPLEMENTED + VERIFIED** | Distinct secondary flow using `signInWithOtp` supporting links and OTP codes. |
-| **Part 8** | Forgot Password | **IMPLEMENTED + VERIFIED** | Dispatches recovery links via `resetPasswordForEmail` to `/auth/callback?next=/auth/reset-password`. |
+| **Part 7** | Existing Account Login (Flow B) | **IMPLEMENTED + VERIFIED** | 2-step verification: credentials verified, then 6-digit email OTP verified via `verifyOtp({ type: 'email' })`. |
+| **Part 8** | Forgot Password (Flow C) | **IMPLEMENTED + VERIFIED** | 6-digit recovery OTP dispatched and verified via `verifyOtp({ type: 'recovery' })` before password reset. |
 | **Part 9** | Reset Password Page | **IMPLEMENTED + VERIFIED** | `web/app/auth/reset-password/page.tsx` validates recovery session and calls `updateUser`. |
 | **Part 10** | Session Management | **IMPLEMENTED + VERIFIED** | `web/utils/supabase/middleware.ts` guards `/`, auto-rotates tokens, and protects routes. |
 | **Part 11** | Sign Out | **IMPLEMENTED + VERIFIED** | `web/app/auth/signout/route.ts` terminates session and clears cookies. |

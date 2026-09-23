@@ -147,3 +147,375 @@ body {
   70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
   100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
+/* ==============================================================================
+ * RYVIX INTERACTIVE BUTTON & MICRO-ANIMATION SUITE
+ * ============================================================================== */
+
+/* Shimmer Keyframe */
+@keyframes button-shimmer {
+  0% {
+    transform: translateX(-150%) skewX(-25deg);
+  }
+  20%, 100% {
+    transform: translateX(250%) skewX(-25deg);
+  }
+}
+
+/* Float Keyframe */
+@keyframes badge-gentle-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+/* Ambient Pulse Keyframe */
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 35px rgba(6, 182, 212, 0.7);
+  }
+}
+
+/* 1. Primary Shimmer CTA Button */
+.btn-shimmer {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.85rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #ffffff;
+  background: linear-gradient(135deg, #6366f1 0%, #06b6d4 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 25px rgba(99, 102, 241, 0.45);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  animation: button-shimmer 3.8s infinite cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+.btn-shimmer:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 10px 35px -5px rgba(99, 102, 241, 0.65), 0 0 20px rgba(6, 182, 212, 0.5);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.btn-shimmer:active {
+  transform: translateY(1px) scale(0.98);
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+}
+
+/* 2. Secondary Glass Interactive Button */
+.btn-glass {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.65rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #f1f5f9;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-glass:hover {
+  transform: translateY(-2px);
+  background: rgba(30, 41, 59, 0.85);
+  border-color: rgba(99, 102, 241, 0.45);
+  color: #ffffff;
+  box-shadow: 0 8px 25px -4px rgba(0, 0, 0, 0.5), 0 0 15px rgba(99, 102, 241, 0.25);
+}
+
+.btn-glass:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+/* 3. Navbar Nav Pill Button */
+.btn-nav-pill {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.48rem 1.15rem;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #ffffff;
+  background: linear-gradient(135deg, #6366f1 0%, #38bdf8 100%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 0 18px rgba(99, 102, 241, 0.4);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-nav-pill:hover {
+  transform: translateY(-1px) scale(1.03);
+  box-shadow: 0 0 26px rgba(99, 102, 241, 0.65);
+}
+
+.btn-nav-pill:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+/* 4. Interactive Navigation Text Links */
+.nav-link-animated {
+  position: relative;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding: 0.3rem 0;
+  transition: color 0.2s ease;
+}
+
+.nav-link-animated::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #38bdf8, #818cf8);
+  border-radius: 2px;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateX(-50%);
+}
+
+.nav-link-animated:hover {
+  color: #ffffff;
+}
+
+.nav-link-animated:hover::after {
+  width: 100%;
+}
+
+/* 5. Floating Announcement Badge */
+.badge-interactive-float {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 1.05rem;
+  border-radius: 9999px;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.32);
+  color: #a5b4fc;
+  font-size: 0.82rem;
+  font-weight: 500;
+  text-decoration: none;
+  animation: badge-gentle-float 3.5s ease-in-out infinite;
+  transition: all 0.22s ease;
+}
+
+.badge-interactive-float:hover {
+  background: rgba(99, 102, 241, 0.22);
+  border-color: rgba(99, 102, 241, 0.6);
+  color: #ffffff;
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.35);
+  animation-play-state: paused;
+  transform: translateY(-2px);
+}
+
+/* 6. Arrow Hover Slide */
+.arrow-icon {
+  display: inline-block;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-shimmer:hover .arrow-icon,
+.btn-glass:hover .arrow-icon,
+.btn-nav-pill:hover .arrow-icon,
+.badge-interactive-float:hover .arrow-icon {
+  transform: translateX(4px);
+}
+
+/* 7. Interactive Feature Cards */
+.feature-card-hover {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.feature-card-hover:hover {
+  transform: translateY(-5px);
+  border-color: rgba(99, 102, 241, 0.45);
+  box-shadow: 0 16px 35px -10px rgba(0, 0, 0, 0.6), 0 0 25px rgba(99, 102, 241, 0.18);
+}
+
+/* ==============================================================================
+ * RYVIX LOGIN PAGE ANIMATIONS & INTERACTIVE BUTTONS
+ * ============================================================================== */
+
+@keyframes loginCardEntrance {
+  0% {
+    opacity: 0;
+    transform: translateY(24px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes loginBorderGlow {
+  0%, 100% {
+    border-color: rgba(99, 102, 241, 0.35);
+    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 30px rgba(99, 102, 241, 0.2);
+  }
+  50% {
+    border-color: rgba(6, 182, 212, 0.55);
+    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 45px rgba(6, 182, 212, 0.3);
+  }
+}
+
+.login-card-animated {
+  animation: loginCardEntrance 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards, loginBorderGlow 6s ease-in-out infinite 0.6s;
+}
+
+.login-tab-btn {
+  position: relative;
+  flex: 1;
+  padding: 0.65rem 1rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.login-tab-btn.active {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.45) 0%, rgba(6, 182, 212, 0.35) 100%);
+  color: #ffffff;
+  border-color: rgba(99, 102, 241, 0.55);
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transform: scale(1.02);
+}
+
+.login-tab-btn:not(.active) {
+  background: transparent;
+  color: #94a3b8;
+}
+
+.login-tab-btn:not(.active):hover {
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.06);
+  transform: translateY(-1px);
+}
+
+@keyframes buttonPulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 25px rgba(6, 182, 212, 0.45), 0 4px 15px rgba(99, 102, 241, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 42px rgba(6, 182, 212, 0.75), 0 6px 22px rgba(99, 102, 241, 0.55);
+  }
+}
+
+.btn-login-submit {
+  position: relative;
+  width: 100%;
+  padding: 0.92rem 1.5rem;
+  border-radius: 10px;
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(135deg, #06b6d4 0%, #6366f1 50%, #8b5cf6 100%);
+  background-size: 200% 200%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 25px rgba(6, 182, 212, 0.45), 0 4px 15px rgba(99, 102, 241, 0.35);
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  animation: buttonPulseGlow 3.5s ease-in-out infinite;
+}
+
+.btn-login-submit::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: translateX(-150%) skewX(-25deg);
+  pointer-events: none;
+}
+
+.btn-login-submit:hover:not(:disabled)::before {
+  animation: button-shimmer 1.8s infinite;
+}
+
+.btn-login-submit:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.015);
+  box-shadow: 0 10px 30px -5px rgba(6, 182, 212, 0.65), 0 0 35px rgba(99, 102, 241, 0.65);
+  border-color: rgba(255, 255, 255, 0.5);
+  background-position: right center;
+}
+
+.btn-login-submit:active:not(:disabled) {
+  transform: translateY(0) scale(0.985);
+}
+
+.btn-login-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  animation: none;
+  box-shadow: none;
+  filter: grayscale(40%);
+}
+
+.login-input-field {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  color: #f8fafc;
+  font-size: 0.92rem;
+  outline: none;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.login-input-field:focus {
+  border-color: #06b6d4;
+  background: rgba(15, 23, 42, 0.95);
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.25), 0 0 20px rgba(6, 182, 212, 0.15);
+}
+
+.login-input-field:hover:not(:focus) {
+  border-color: rgba(99, 102, 241, 0.45);
+}

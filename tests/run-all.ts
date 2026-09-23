@@ -1,3 +1,7 @@
+import { testFrontierDeepLearning } from './frontier-deep-learning.test';
+import { testAiSelfUnderstandingAndCodingSpace } from './ai-self-understanding-and-coding-space.test';
+import { testDeepCognitiveArchitecture } from './deep-cognitive-architecture.test';
+import { testCognitiveMemory } from './cognitive-memory.test';
 import { testAIUnderstandingRefinementPlanning } from './ai-understanding-refinement-planning.test';
 import { testWebChatStreaming } from './web-chat-streaming.test';
 import { testNetworkServerControl } from './network-server-control.test';
@@ -80,7 +84,11 @@ async function runAllTests() {
     { name: 'Customer Infrastructure Health, Website Telemetry & Onboarding AGI', fn: testCustomerInfrastructureHealth as any },
     { name: 'Customer Server & Website Health Query Agent (22 Scenarios)', fn: testCustomerServerHealthAgent as any },
     { name: 'AI Understanding, Requirement Refinement, LLM Planning & Evaluation (15 Scenarios)', fn: testAIUnderstandingRefinementPlanning },
-{ name: 'GRAND FINALE: Master End-to-End Total Project Integration', fn: testTotalProjectIntegration },
+    { name: 'Mem0 3-Tier Cognitive Memory Architecture (Short, Long, Semantic)', fn: testCognitiveMemory },
+        { name: 'Deep Cognitive Autonomous Architecture (8 Advanced AI Subsystems)', fn: testDeepCognitiveArchitecture },
+        { name: 'AI Deep Self-Understanding, Coding Spaces & AGI Core Architecture', fn: testAiSelfUnderstandingAndCodingSpace },
+    { name: 'Frontier Deep Learning Architectures & Zero-Collision Synergy', fn: testFrontierDeepLearning },
+    { name: 'GRAND FINALE: Master End-to-End Total Project Integration', fn: testTotalProjectIntegration },
 
   ];
 

@@ -88,6 +88,47 @@ export class PredictiveResourceForecaster {
 
     return 'Evaluate service connection pooling.';
   }
+  public forecastFleet(
+    metrics: Array<{ metricName: string; samples: MetricSample[] }>
+  ): FleetForecastReport {
+    const evaluations: ForecastEvaluation[] = [];
+    const urgentActions: string[] = [];
+    let highestRiskMetric: string | null = null;
+    let minTte = Infinity;
+
+    for (const item of metrics) {
+      if (item.samples && item.samples.length >= 2) {
+        const evaluation = this.forecastExhaustion(item.metricName, item.samples);
+        evaluations.push(evaluation);
+
+        if (evaluation.isExhaustionImminent && evaluation.timeToExhaustionMinutes !== null) {
+          urgentActions.push(`[${evaluation.metricName}] ${evaluation.recommendedPreemptiveAction}`);
+          if (evaluation.timeToExhaustionMinutes < minTte) {
+            minTte = evaluation.timeToExhaustionMinutes;
+            highestRiskMetric = evaluation.metricName;
+          }
+        }
+      }
+    }
+
+    return {
+      timestamp: new Date().toISOString(),
+      totalMetricsAnalyzed: evaluations.length,
+      imminentExhaustionCount: urgentActions.length,
+      highestRiskMetric,
+      evaluations: evaluations.sort((a, b) => (a.timeToExhaustionMinutes ?? 9999) - (b.timeToExhaustionMinutes ?? 9999)),
+      recommendedPreemptiveActions: urgentActions
+    };
+  }
+}
+
+export interface FleetForecastReport {
+  timestamp: string;
+  totalMetricsAnalyzed: number;
+  imminentExhaustionCount: number;
+  highestRiskMetric: string | null;
+  evaluations: ForecastEvaluation[];
+  recommendedPreemptiveActions: string[];
 }
 
 export const predictiveResourceForecaster = new PredictiveResourceForecaster();
