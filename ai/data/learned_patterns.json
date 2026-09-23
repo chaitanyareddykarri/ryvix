@@ -1,7 +1,7 @@
 [
   {
-    "fingerprint": "3117c1c01e3c61a1",
-    "patternSignature": "ZERO_DAY_ANOMALY: unmapped binary heap corruption payload detected by kernel eBPF probe",
+    "fingerprint": "8e9742ef3db04322",
+    "patternSignature": "ZERO_DAY_ANOMALY: unmapped binary heap corruption exploit pattern",
     "threatType": "ZERO_DAY_ANOMALY",
     "diagnosis": "Novel heuristic exploit diagnosed via LLM escalation.",
     "remediationAction": "Isolate compromised process and apply dynamic network containment.",
@@ -13,7 +13,7 @@
     },
     "confidence": 0.95,
     "timesEncountered": 2,
-    "firstLearnedAt": "2026-09-23T04:39:21.308Z",
-    "lastEncounteredAt": "2026-09-23T04:39:21.310Z"
+    "firstLearnedAt": "2026-09-23T05:12:18.891Z",
+    "lastEncounteredAt": "2026-09-23T05:12:18.892Z"
   }
 ]

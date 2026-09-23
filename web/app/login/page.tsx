@@ -236,40 +236,28 @@ export default function LoginPage() {
     setSuccessMessage("");
 
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email: cleanEmail,
-        password: password,
-        options: {
-          data: {
-            full_name: cleanName,
-          },
-        },
+      const res = await fetch("/api/auth/signup/step1", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: cleanEmail,
+          password,
+          fullName: cleanName,
+        }),
       });
 
-      if (error) {
-        const msg = error.message.toLowerCase();
-        if (msg.includes("already registered") || msg.includes("already exists") || msg.includes("user_already_exists")) {
-          setErrorMessage("An account with this email already exists. Please sign in instead.");
-        } else {
-          setErrorMessage(error.message);
-        }
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setErrorMessage(data.error || "Failed to create account. Please try again.");
         return;
       }
 
-      if (data.user) {
-        // If user already exists and confirmed
-        if (Array.isArray(data.user.identities) && data.user.identities.length === 0) {
-          setErrorMessage("An account with this email already exists. Please sign in instead.");
-          return;
-        }
-
-        setMaskedEmail(maskEmail(cleanEmail));
-        setOtp("");
-        setResendCountdown(45);
-        setMode("signup-otp");
-      }
-    } catch (err: unknown) {
-      setErrorMessage(err instanceof Error ? err.message : "Registration failed.");
+      setMaskedEmail(data.maskedEmail || maskEmail(cleanEmail));
+      setOtp("");
+      setResendCountdown(45);
+      setMode("signup-otp");
+    } catch {
+      setErrorMessage("Registration request failed. Please check your network and try again.");
     } finally {
       setLoading(false);
     }
@@ -288,24 +276,21 @@ export default function LoginPage() {
     setErrorMessage("");
 
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        email: email.trim().toLowerCase(),
-        token: cleanOtp,
-        type: "signup",
+      const res = await fetch("/api/auth/signup/step2", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          token: cleanOtp,
+        }),
       });
 
-      if (error) {
-        const msg = error.message.toLowerCase();
-        if (msg.includes("expired")) {
-          setErrorMessage("This verification code has expired. Please request a new code.");
-        } else {
-          setErrorMessage("The verification code is incorrect. Please try again.");
-        }
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setErrorMessage(data.error || "The verification code is incorrect. Please try again.");
         return;
       }
 
-      // Do not automatically bypass normal login flow: sign out any session
-      await supabase.auth.signOut();
       setMode("signup-success");
     } catch {
       setErrorMessage("Verification failed. Please try again.");
@@ -320,20 +305,24 @@ export default function LoginPage() {
     setErrorMessage("");
 
     try {
-      const { error } = await supabase.auth.resend({
-        type: "signup",
-        email: email.trim().toLowerCase(),
+      const res = await fetch("/api/auth/signup/resend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+        }),
       });
 
-      if (error) {
-        setErrorMessage(error.message || "Failed to resend code.");
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setErrorMessage(data.error || "Failed to resend code.");
         return;
       }
 
       setResendCountdown(45);
-      setSuccessMessage("A fresh 6-digit code has been sent to your email.");
+      setSuccessMessage("A fresh 6-digit verification code has been dispatched to your email.");
     } catch {
-      setErrorMessage("Failed to resend code.");
+      setErrorMessage("Failed to resend code. Please try again.");
     } finally {
       setLoading(false);
     }

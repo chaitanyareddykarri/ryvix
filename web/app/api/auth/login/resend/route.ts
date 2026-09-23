@@ -1,15 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
-import { verifyLoginChallenge, createLoginChallenge } from "@/utils/auth-security";
-
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ||
-  "https://tsoyrpgifovzwqtgpkkb.supabase.co";
-const supabaseKey =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  "sb_publishable_1QBmq8pKJ3ssCAGufAzfYw_IdB6sYsY";
+import { generateRandomOtp, createLoginOtpChallenge } from "@/utils/auth-security";
+import { sendOtpEmail } from "@/utils/email-service";
 
 export async function POST(request: Request) {
   try {
@@ -28,52 +20,27 @@ export async function POST(request: Request) {
 
     if (!challengeCookie) {
       return NextResponse.json(
-        {
-          error:
-            "Authentication challenge expired. Please re-enter your password to request a new code.",
-        },
+        { error: "Authentication challenge expired. Please re-enter your password to request a new code." },
         { status: 401 }
       );
     }
 
-    const challengeCheck = verifyLoginChallenge(challengeCookie, email);
-    if (!challengeCheck.valid) {
+    // Generate fresh random 6-digit OTP
+    const newOtp = generateRandomOtp();
+    const emailRes = await sendOtpEmail({
+      to: email,
+      otp: newOtp,
+      type: "login",
+    });
+
+    if (!emailRes.success) {
       return NextResponse.json(
-        {
-          error:
-            "Invalid or expired authentication challenge. Please return to login.",
-        },
-        { status: 401 }
+        { error: "Failed to resend verification code. Please wait a moment and try again." },
+        { status: 500 }
       );
     }
 
-    // Re-dispatch OTP via Supabase
-    const isolatedSupabase = createServerClient(supabaseUrl, supabaseKey, {
-      cookies: {
-        getAll: () => [],
-        setAll: () => {},
-      },
-    });
-
-    const { error: otpError } = await isolatedSupabase.auth.signInWithOtp({
-      email,
-      options: {
-        shouldCreateUser: false,
-      },
-    });
-
-    if (otpError) {
-      return NextResponse.json(
-        {
-          error:
-            "Rate limit exceeded or delivery error. Please wait 45 seconds before requesting another code.",
-        },
-        { status: 429 }
-      );
-    }
-
-    // Refresh challenge token
-    const newChallenge = createLoginChallenge(email);
+    const newChallenge = createLoginOtpChallenge(email, newOtp);
     const response = NextResponse.json({
       success: true,
       message: "A fresh 6-digit verification code has been dispatched to your email.",

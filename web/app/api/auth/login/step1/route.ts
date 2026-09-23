@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { maskEmail, createLoginChallenge } from "@/utils/auth-security";
+import { maskEmail, generateRandomOtp, createLoginOtpChallenge } from "@/utils/auth-security";
+import { sendOtpEmail } from "@/utils/email-service";
 
 const supabaseUrl =
   process.env.NEXT_PUBLIC_SUPABASE_URL ||
@@ -39,7 +40,6 @@ export async function POST(request: Request) {
       });
 
     if (authError || !authData.user) {
-      // Neutral error for account enumeration protection
       return NextResponse.json(
         { error: "Invalid email or password." },
         { status: 401 }
@@ -49,28 +49,27 @@ export async function POST(request: Request) {
     // 3. Immediately invalidate temporary server session
     try {
       await isolatedSupabase.auth.signOut();
-    } catch {
-      // Discard server tokens
-    }
+    } catch {}
 
-    // 4. Dispatch genuine 6-digit email OTP via Supabase Auth
-    const { error: otpError } = await isolatedSupabase.auth.signInWithOtp({
-      email,
-      options: {
-        shouldCreateUser: false,
-      },
+    // 4. Generate genuine cryptographically random 6-digit OTP and send via Resend
+    const randomOtp = generateRandomOtp();
+    const emailRes = await sendOtpEmail({
+      to: email,
+      otp: randomOtp,
+      type: "login",
+      fullName: authData.user.user_metadata?.full_name,
     });
 
-    if (otpError) {
-      console.error("[Login Step 1 OTP dispatch error]:", otpError);
+    if (!emailRes.success) {
+      console.error("[Login Step 1 OTP dispatch error]:", emailRes.error);
       return NextResponse.json(
         { error: "Unable to dispatch verification code. Please try again." },
         { status: 500 }
       );
     }
 
-    // 5. Generate secure HMAC challenge proof
-    const challengeToken = createLoginChallenge(email);
+    // 5. Generate secure encrypted challenge proof with OTP
+    const challengeToken = createLoginOtpChallenge(email, randomOtp);
     const masked = maskEmail(email);
 
     const response = NextResponse.json({
