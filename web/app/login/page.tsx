@@ -9,14 +9,14 @@ import { maskEmail } from "@/utils/auth-security";
 
 type AuthMode =
   | "signin"
-  | "login-otp"
   | "signup"
   | "signup-otp"
-  | "signup-success"
   | "forgot"
   | "recovery-otp"
   | "reset-password"
   | "reset-success";
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LoginPage() {
   const [mode, setMode] = useState<AuthMode>("signin");
@@ -46,7 +46,7 @@ export default function LoginPage() {
     // 1. Listen for Supabase recovery auth events
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event) => {
       if (event === "PASSWORD_RECOVERY") {
         setMode("reset-password");
         setErrorMessage("");
@@ -91,13 +91,21 @@ export default function LoginPage() {
   }
 
   // ==========================================
-  // FLOW B: EXISTING ACCOUNT LOGIN (STEP 1 & 2)
+  // RETURNING USER: SIGN IN FLOW
+  // Email + Password -> signInWithPassword -> Session -> /dashboard
   // ==========================================
   async function handlePasswordSignIn(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
+
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail || !password) {
       setErrorMessage("Please enter both email and password.");
+      return;
+    }
+
+    if (!EMAIL_REGEX.test(cleanEmail)) {
+      setErrorMessage("Please enter a valid email address.");
       return;
     }
 
@@ -107,107 +115,48 @@ export default function LoginPage() {
     setInfoMessage("");
 
     try {
-      // Step 1: Server-side credential validation
-      const res = await fetch("/api/auth/login/step1", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: cleanEmail, password }),
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password,
       });
 
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        setErrorMessage(data.error || "Invalid email or password.");
+      if (error) {
+        console.warn("[Sign In Result]:", error.message, "status:", error.status);
+        const msg = error.message.toLowerCase();
+        if (msg.includes("invalid login credentials") || msg.includes("invalid email or password")) {
+          setErrorMessage("Invalid email or password.");
+        } else if (msg.includes("email not confirmed")) {
+          setErrorMessage("Please verify your email address before signing in.");
+        } else if (msg.includes("rate limit") || msg.includes("too many requests")) {
+          setErrorMessage("Too many attempts. Please wait a moment and try again.");
+        } else {
+          setErrorMessage(error.message || "Sign-in failed. Please try again.");
+        }
         return;
       }
 
-      // Credentials valid -> move to 6-digit Login OTP Screen
-      setMaskedEmail(data.maskedEmail || maskEmail(cleanEmail));
-      setOtp("");
-      setResendCountdown(45);
-      setMode("login-otp");
-    } catch {
-      setErrorMessage("Sign-in failed. Please check your network and try again.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleLoginOtpSubmit(e?: React.FormEvent | string) {
-    if (typeof e !== "string" && e) e.preventDefault();
-    const cleanOtp = typeof e === "string" ? e : otp.trim();
-
-    if (!cleanOtp || cleanOtp.length !== 6) {
-      setErrorMessage("Please enter the complete 6-digit code.");
-      return;
-    }
-
-    setLoading(true);
-    setErrorMessage("");
-    setSuccessMessage("");
-
-    try {
-      // Step 2: Server-side OTP verification with genuine session cookie establishment
-      const res = await fetch("/api/auth/login/step2", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-          token: cleanOtp,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        setErrorMessage(data.error || "The verification code is incorrect. Please try again.");
-        return;
+      if (data.session) {
+        setSuccessMessage("Authentication successful! Entering workspace...");
+        setTimeout(() => {
+          window.location.href = "/dashboard";
+        }, 500);
       }
-
-      setSuccessMessage("Authentication verified! Redirecting to workspace...");
-      setTimeout(() => {
-        window.location.href = data.redirect || "/dashboard";
-      }, 700);
-    } catch {
-      setErrorMessage("Verification failed. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleResendLoginOtp() {
-    if (resendCountdown > 0) return;
-    setLoading(true);
-    setErrorMessage("");
-    setSuccessMessage("");
-
-    try {
-      const res = await fetch("/api/auth/login/resend", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim().toLowerCase() }),
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        setErrorMessage(data.error || "Failed to resend code.");
-        return;
-      }
-
-      setResendCountdown(45);
-      setSuccessMessage("A fresh 6-digit code has been sent to your email.");
-    } catch {
-      setErrorMessage("Failed to resend code. Please try again.");
+    } catch (err: unknown) {
+      console.error("[Sign In Exception]:", err);
+      setErrorMessage("Sign-in failed. Please check your network connection and try again.");
     } finally {
       setLoading(false);
     }
   }
 
   // ==========================================
-  // FLOW A: NEW ACCOUNT CREATION (SIGNUP)
+  // NEW USER: CREATE ACCOUNT FLOW
+  // Full Name, Email, Password -> Step 1 -> 6-Digit Email OTP
   // ==========================================
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
+
     const cleanEmail = email.trim().toLowerCase();
     const cleanName = fullName.trim();
 
@@ -217,12 +166,22 @@ export default function LoginPage() {
     }
 
     if (!cleanEmail) {
-      setErrorMessage("Email is required.");
+      setErrorMessage("Email address is required.");
+      return;
+    }
+
+    if (!EMAIL_REGEX.test(cleanEmail)) {
+      setErrorMessage("Please enter a valid email address.");
       return;
     }
 
     if (password.length < 6) {
       setErrorMessage("Password must be at least 6 characters long.");
+      return;
+    }
+
+    if (!confirmPassword) {
+      setErrorMessage("Please confirm your password.");
       return;
     }
 
@@ -234,6 +193,7 @@ export default function LoginPage() {
     setLoading(true);
     setErrorMessage("");
     setSuccessMessage("");
+    setInfoMessage("");
 
     try {
       const res = await fetch("/api/auth/signup/step1", {
@@ -248,32 +208,42 @@ export default function LoginPage() {
 
       const data = await res.json();
       if (!res.ok || !data.success) {
+        console.warn("[Signup Step 1 Notice]:", data);
         setErrorMessage(data.error || "Failed to create account. Please try again.");
         return;
       }
 
+      // Account created & OTP dispatched -> transition to 6-digit OTP verification screen
       setMaskedEmail(data.maskedEmail || maskEmail(cleanEmail));
       setOtp("");
       setResendCountdown(45);
       setMode("signup-otp");
-    } catch {
+    } catch (err: unknown) {
+      console.error("[Signup Step 1 Exception]:", err);
       setErrorMessage("Registration request failed. Please check your network and try again.");
     } finally {
       setLoading(false);
     }
   }
 
+  // ==========================================
+  // NEW USER: OTP VERIFICATION
+  // User enters 6-digit OTP -> Verify -> Provision -> Session -> /dashboard
+  // ==========================================
   async function handleSignupOtpSubmit(e?: React.FormEvent | string) {
     if (typeof e !== "string" && e) e.preventDefault();
+    if (loading) return;
+
     const cleanOtp = typeof e === "string" ? e : otp.trim();
 
     if (!cleanOtp || cleanOtp.length !== 6) {
-      setErrorMessage("Please enter the complete 6-digit code.");
+      setErrorMessage("Please enter the complete 6-digit verification code.");
       return;
     }
 
     setLoading(true);
     setErrorMessage("");
+    setSuccessMessage("");
 
     try {
       const res = await fetch("/api/auth/signup/step2", {
@@ -287,12 +257,17 @@ export default function LoginPage() {
 
       const data = await res.json();
       if (!res.ok || !data.success) {
+        console.warn("[Signup Step 2 Notice]:", data);
         setErrorMessage(data.error || "The verification code is incorrect. Please try again.");
         return;
       }
 
-      setMode("signup-success");
-    } catch {
+      setSuccessMessage("Email verified successfully! Setting up your workspace...");
+      setTimeout(() => {
+        window.location.href = data.redirect || "/dashboard";
+      }, 700);
+    } catch (err: unknown) {
+      console.error("[Signup Step 2 Exception]:", err);
       setErrorMessage("Verification failed. Please try again.");
     } finally {
       setLoading(false);
@@ -300,9 +275,10 @@ export default function LoginPage() {
   }
 
   async function handleResendSignupOtp() {
-    if (resendCountdown > 0) return;
+    if (resendCountdown > 0 || loading) return;
     setLoading(true);
     setErrorMessage("");
+    setSuccessMessage("");
 
     try {
       const res = await fetch("/api/auth/signup/resend", {
@@ -315,7 +291,7 @@ export default function LoginPage() {
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        setErrorMessage(data.error || "Failed to resend code.");
+        setErrorMessage(data.error || "Failed to resend code. Please try again.");
         return;
       }
 
@@ -328,14 +304,32 @@ export default function LoginPage() {
     }
   }
 
+  // Change Email Action: returns to signup form with safe fields preserved
+  function handleChangeEmail() {
+    setMode("signup");
+    setOtp("");
+    setPassword("");
+    setConfirmPassword("");
+    setErrorMessage("");
+    setSuccessMessage("");
+    setInfoMessage("");
+  }
+
   // ==========================================
-  // FLOW C: FORGOT PASSWORD & RECOVERY
+  // FORGOT PASSWORD & RECOVERY FLOW
   // ==========================================
   async function handleForgotPassword(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
+
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail) {
       setErrorMessage("Please enter your email address.");
+      return;
+    }
+
+    if (!EMAIL_REGEX.test(cleanEmail)) {
+      setErrorMessage("Please enter a valid email address.");
       return;
     }
 
@@ -346,9 +340,8 @@ export default function LoginPage() {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail);
 
-      // Account enumeration protection: always show neutral confirmation message
       if (error && !error.message.toLowerCase().includes("rate limit")) {
-        console.warn("[Recovery Notice]:", error.message);
+        console.warn("[Password Recovery Notice]:", error.message);
       }
 
       setMaskedEmail(maskEmail(cleanEmail));
@@ -369,6 +362,8 @@ export default function LoginPage() {
 
   async function handleRecoveryOtpSubmit(e?: React.FormEvent | string) {
     if (typeof e !== "string" && e) e.preventDefault();
+    if (loading) return;
+
     const cleanOtp = typeof e === "string" ? e : otp.trim();
 
     if (!cleanOtp || cleanOtp.length !== 6) {
@@ -397,7 +392,6 @@ export default function LoginPage() {
         return;
       }
 
-      // Verified recovery authorization established
       setMode("reset-password");
       setSuccessMessage("Identity verified! Please set your new password below.");
     } catch {
@@ -408,7 +402,7 @@ export default function LoginPage() {
   }
 
   async function handleResendRecoveryOtp() {
-    if (resendCountdown > 0) return;
+    if (resendCountdown > 0 || loading) return;
     setLoading(true);
     setErrorMessage("");
 
@@ -425,6 +419,8 @@ export default function LoginPage() {
 
   async function handleResetPassword(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
+
     if (!newPassword || !confirmNewPassword) {
       setErrorMessage("Please complete both password fields.");
       return;
@@ -454,7 +450,6 @@ export default function LoginPage() {
         return;
       }
 
-      // Sign out recovery session so user logs in cleanly with new credentials
       await supabase.auth.signOut();
       setMode("reset-success");
     } catch (err: unknown) {
@@ -597,7 +592,7 @@ export default function LoginPage() {
               gap: "0.5rem",
             }}
           >
-            <span>ℹ</span>
+            <span>ℹ️</span>
             <span>{infoMessage}</span>
           </div>
         )}
@@ -623,36 +618,47 @@ export default function LoginPage() {
         )}
 
         {/* ======================================================== */}
-        {/* VIEW 1: SIGN IN (EMAIL + PASSWORD)                       */}
+        {/* AUTHORITATIVE TAB SWITCHER (SIGN IN vs CREATE ACCOUNT)   */}
+        {/* ======================================================== */}
+        {(mode === "signin" || mode === "signup") && (
+          <div
+            style={{
+              display: "flex",
+              background: "rgba(10, 15, 29, 0.75)",
+              padding: "0.3rem",
+              borderRadius: "10px",
+              marginBottom: "1.5rem",
+              border: "1px solid rgba(99, 102, 241, 0.25)",
+            }}
+          >
+            <button
+              type="button"
+              id="tab-btn-signin"
+              onClick={() => switchMode("signin")}
+              className={`login-tab-btn ${mode === "signin" ? "active" : ""}`}
+              style={{ flex: 1 }}
+              disabled={loading}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              id="tab-btn-signup"
+              onClick={() => switchMode("signup")}
+              className={`login-tab-btn ${mode === "signup" ? "active" : ""}`}
+              style={{ flex: 1 }}
+              disabled={loading}
+            >
+              Create Account
+            </button>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* VIEW 1: SIGN IN (RETURNING USER: EMAIL + PASSWORD)       */}
         {/* ======================================================== */}
         {mode === "signin" && (
           <div>
-            <div
-              style={{
-                display: "flex",
-                background: "rgba(10, 15, 29, 0.75)",
-                padding: "0.3rem",
-                borderRadius: "10px",
-                marginBottom: "1.5rem",
-                border: "1px solid rgba(99, 102, 241, 0.25)",
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => switchMode("signin")}
-                className="login-tab-btn active"
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                onClick={() => switchMode("signup")}
-                className="login-tab-btn"
-              >
-                Create Account
-              </button>
-            </div>
-
             <form onSubmit={handlePasswordSignIn}>
               <div style={{ marginBottom: "1.1rem" }}>
                 <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, marginBottom: "0.4rem", color: "#cbd5e1" }}>
@@ -719,7 +725,7 @@ export default function LoginPage() {
                     }}
                     aria-label="Toggle password visibility"
                   >
-                    {showPassword ? "🙈" : "👁"}
+                    {showPassword ? "🙈" : "👁️"}
                   </button>
                 </div>
               </div>
@@ -729,7 +735,7 @@ export default function LoginPage() {
                 disabled={loading || !email.trim() || !password}
                 className="btn-login-submit"
               >
-                <span>{loading ? "Validating Credentials..." : "Sign In"}</span>
+                <span>{loading ? "Signing in..." : "Sign In"}</span>
                 {!loading && <span className="arrow-icon" style={{ fontSize: "1.1rem" }}>&rarr;</span>}
               </button>
             </form>
@@ -748,118 +754,10 @@ export default function LoginPage() {
         )}
 
         {/* ======================================================== */}
-        {/* VIEW 2: LOGIN 2FA EMAIL OTP VERIFICATION                  */}
-        {/* ======================================================== */}
-        {mode === "login-otp" && (
-          <div>
-            <div style={{ textAlign: "center", marginBottom: "1.25rem" }}>
-              <div
-                style={{
-                  width: "48px",
-                  height: "48px",
-                  borderRadius: "50%",
-                  background: "rgba(6, 182, 212, 0.15)",
-                  border: "1px solid rgba(6, 182, 212, 0.4)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: "0 auto 0.75rem",
-                  fontSize: "1.3rem",
-                }}
-              >
-                🔒
-              </div>
-              <h2 style={{ fontSize: "1.3rem", fontWeight: 700, color: "#f8fafc", marginBottom: "0.4rem" }}>
-                Verify your login
-              </h2>
-              <p style={{ color: "#94a3b8", fontSize: "0.85rem", lineHeight: 1.4 }}>
-                We sent a 6-digit verification code to:
-                <br />
-                <strong style={{ color: "#38bdf8", fontFamily: "var(--font-mono)" }}>
-                  {maskedEmail || email}
-                </strong>
-              </p>
-            </div>
-
-            <form onSubmit={handleLoginOtpSubmit}>
-              <OtpInput6
-                value={otp}
-                onChange={setOtp}
-                onComplete={(val) => handleLoginOtpSubmit(val)}
-                disabled={loading}
-              />
-
-              <button
-                type="submit"
-                disabled={loading || otp.length !== 6}
-                className="btn-primary btn-shimmer"
-                style={{ width: "100%", padding: "0.85rem", fontSize: "0.95rem", fontWeight: 700, marginBottom: "1.25rem" }}
-              >
-                {loading ? "Verifying Code..." : "Verify & Continue →"}
-              </button>
-            </form>
-
-            <div style={{ textAlign: "center", fontSize: "0.82rem", color: "#94a3b8" }}>
-              Didn&apos;t receive the code?{" "}
-              {resendCountdown > 0 ? (
-                <span style={{ color: "#64748b", fontWeight: 600 }}>
-                  Resend Code in {resendCountdown}s
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleResendLoginOtp}
-                  disabled={loading}
-                  style={{ background: "none", border: "none", color: "#38bdf8", fontWeight: 600, cursor: "pointer", padding: 0 }}
-                >
-                  Resend Code
-                </button>
-              )}
-            </div>
-
-            <div style={{ textAlign: "center", marginTop: "1.25rem", borderTop: "1px solid rgba(255, 255, 255, 0.08)", paddingTop: "1rem" }}>
-              <button
-                type="button"
-                onClick={() => switchMode("signin")}
-                style={{ background: "none", border: "none", color: "#94a3b8", fontSize: "0.8rem", cursor: "pointer" }}
-              >
-                ← Back to Sign In
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ======================================================== */}
-        {/* VIEW 3: NEW ACCOUNT CREATION (SIGNUP)                    */}
+        {/* VIEW 2: CREATE ACCOUNT (NEW USER SIGNUP FORM)            */}
         {/* ======================================================== */}
         {mode === "signup" && (
           <div>
-            <div
-              style={{
-                display: "flex",
-                background: "rgba(10, 15, 29, 0.75)",
-                padding: "0.3rem",
-                borderRadius: "10px",
-                marginBottom: "1.5rem",
-                border: "1px solid rgba(99, 102, 241, 0.25)",
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => switchMode("signin")}
-                className="login-tab-btn active"
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                onClick={() => switchMode("signup")}
-                className="login-tab-btn"
-              >
-                Create Account
-              </button>
-            </div>
-
             <form onSubmit={handleSignUp}>
               <div style={{ marginBottom: "1rem" }}>
                 <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, marginBottom: "0.4rem", color: "#cbd5e1" }}>
@@ -926,7 +824,7 @@ export default function LoginPage() {
                     }}
                     aria-label="Toggle password visibility"
                   >
-                    {showPassword ? "🙈" : "👁"}
+                    {showPassword ? "🙈" : "👁️"}
                   </button>
                 </div>
               </div>
@@ -964,7 +862,7 @@ export default function LoginPage() {
                     }}
                     aria-label="Toggle confirm password visibility"
                   >
-                    {showConfirmPassword ? "🙈" : "👁"}
+                    {showConfirmPassword ? "🙈" : "👁️"}
                   </button>
                 </div>
               </div>
@@ -993,7 +891,7 @@ export default function LoginPage() {
         )}
 
         {/* ======================================================== */}
-        {/* VIEW 4: SIGNUP EMAIL OTP VERIFICATION                     */}
+        {/* VIEW 3: SIGNUP NUMERIC 6-DIGIT EMAIL OTP VERIFICATION   */}
         {/* ======================================================== */}
         {mode === "signup-otp" && (
           <div>
@@ -1012,7 +910,7 @@ export default function LoginPage() {
                   fontSize: "1.3rem",
                 }}
               >
-                ✉
+                ✉️
               </div>
               <h2 style={{ fontSize: "1.3rem", fontWeight: 700, color: "#f8fafc", marginBottom: "0.4rem" }}>
                 Verify your email
@@ -1040,81 +938,54 @@ export default function LoginPage() {
                 className="btn-primary btn-shimmer"
                 style={{ width: "100%", padding: "0.85rem", fontSize: "0.95rem", fontWeight: 700, marginBottom: "1.25rem" }}
               >
-                {loading ? "Verifying Code..." : "Verify Email →"}
+                {loading ? "Verifying Email..." : "Verify Email →"}
               </button>
             </form>
 
-            <div style={{ textAlign: "center", fontSize: "0.82rem", color: "#94a3b8" }}>
-              Didn&apos;t receive the code?{" "}
-              {resendCountdown > 0 ? (
-                <span style={{ color: "#64748b", fontWeight: 600 }}>
-                  Resend Code in {resendCountdown}s
-                </span>
-              ) : (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.82rem", color: "#94a3b8", padding: "0 0.5rem" }}>
+              <div>
+                {resendCountdown > 0 ? (
+                  <span style={{ color: "#64748b", fontWeight: 600 }}>
+                    Resend Code in {resendCountdown}s
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleResendSignupOtp}
+                    disabled={loading}
+                    style={{ background: "none", border: "none", color: "#38bdf8", fontWeight: 600, cursor: "pointer", padding: 0 }}
+                  >
+                    Resend Code
+                  </button>
+                )}
+              </div>
+
+              <div>
                 <button
                   type="button"
-                  onClick={handleResendSignupOtp}
+                  onClick={handleChangeEmail}
                   disabled={loading}
-                  style={{ background: "none", border: "none", color: "#38bdf8", fontWeight: 600, cursor: "pointer", padding: 0 }}
+                  style={{ background: "none", border: "none", color: "#94a3b8", textDecoration: "underline", cursor: "pointer", padding: 0 }}
                 >
-                  Resend Code
+                  Change Email
                 </button>
-              )}
+              </div>
             </div>
 
             <div style={{ textAlign: "center", marginTop: "1.25rem", borderTop: "1px solid rgba(255, 255, 255, 0.08)", paddingTop: "1rem" }}>
               <button
                 type="button"
-                onClick={() => switchMode("signup")}
+                onClick={() => switchMode("signin")}
                 style={{ background: "none", border: "none", color: "#94a3b8", fontSize: "0.8rem", cursor: "pointer" }}
               >
-                ← Back to Sign Up
+                ← Back to Sign In
               </button>
             </div>
           </div>
         )}
 
         {/* ======================================================== */}
-        {/* VIEW 5: SIGNUP SUCCESS STATE                             */}
-        {/* ======================================================== */}
-        {mode === "signup-success" && (
-          <div style={{ textAlign: "center", padding: "1rem 0" }}>
-            <div
-              style={{
-                width: "60px",
-                height: "60px",
-                borderRadius: "50%",
-                background: "rgba(16, 185, 129, 0.2)",
-                border: "2px solid #10b981",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                margin: "0 auto 1.25rem",
-                fontSize: "1.75rem",
-                color: "#34d399",
-              }}
-            >
-              ✓
-            </div>
-            <h2 style={{ fontSize: "1.35rem", fontWeight: 700, color: "#f8fafc", marginBottom: "0.5rem" }}>
-              Email verified successfully.
-            </h2>
-            <p style={{ color: "#94a3b8", fontSize: "0.9rem", marginBottom: "1.75rem" }}>
-              Your Ryvix account has been created.
-            </p>
-            <button
-              type="button"
-              onClick={() => switchMode("signin")}
-              className="btn-primary btn-shimmer"
-              style={{ width: "100%", padding: "0.85rem", fontSize: "0.95rem", fontWeight: 700 }}
-            >
-              Continue to Login →
-            </button>
-          </div>
-        )}
-
-        {/* ======================================================== */}
-        {/* VIEW 6: FORGOT PASSWORD (EMAIL INPUT)                    */}
+        {/* VIEW 4: FORGOT PASSWORD (EMAIL INPUT)                    */}
         {/* ======================================================== */}
         {mode === "forgot" && (
           <div>
@@ -1168,7 +1039,7 @@ export default function LoginPage() {
         )}
 
         {/* ======================================================== */}
-        {/* VIEW 7: RECOVERY OTP VERIFICATION                        */}
+        {/* VIEW 5: RECOVERY OTP VERIFICATION                        */}
         {/* ======================================================== */}
         {mode === "recovery-otp" && (
           <div>
@@ -1187,13 +1058,13 @@ export default function LoginPage() {
                   fontSize: "1.3rem",
                 }}
               >
-                🛡
+                🔑
               </div>
               <h2 style={{ fontSize: "1.3rem", fontWeight: 700, color: "#f8fafc", marginBottom: "0.4rem" }}>
-                Verify your identity
+                Enter Recovery Code
               </h2>
               <p style={{ color: "#94a3b8", fontSize: "0.85rem", lineHeight: 1.4 }}>
-                We sent a 6-digit verification code to:
+                Enter the 6-digit recovery code sent to:
                 <br />
                 <strong style={{ color: "#c084fc", fontFamily: "var(--font-mono)" }}>
                   {maskedEmail || email}
@@ -1250,7 +1121,7 @@ export default function LoginPage() {
         )}
 
         {/* ======================================================== */}
-        {/* VIEW 8: RESET PASSWORD (NEW PASSWORD INPUT)               */}
+        {/* VIEW 6: RESET PASSWORD (NEW PASSWORD INPUT)               */}
         {/* ======================================================== */}
         {mode === "reset-password" && (
           <div>
@@ -1297,7 +1168,7 @@ export default function LoginPage() {
                     }}
                     aria-label="Toggle new password visibility"
                   >
-                    {showPassword ? "🙈" : "👁"}
+                    {showPassword ? "🙈" : "👁️"}
                   </button>
                 </div>
               </div>
@@ -1335,7 +1206,7 @@ export default function LoginPage() {
                     }}
                     aria-label="Toggle confirm password visibility"
                   >
-                    {showConfirmPassword ? "🙈" : "👁"}
+                    {showConfirmPassword ? "🙈" : "👁️"}
                   </button>
                 </div>
               </div>
@@ -1353,7 +1224,7 @@ export default function LoginPage() {
         )}
 
         {/* ======================================================== */}
-        {/* VIEW 9: RESET SUCCESS STATE                              */}
+        {/* VIEW 7: RESET SUCCESS STATE                              */}
         {/* ======================================================== */}
         {mode === "reset-success" && (
           <div style={{ textAlign: "center", padding: "1rem 0" }}>

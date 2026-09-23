@@ -7,6 +7,8 @@ function getDbUrl(): string {
   return process.env.DATABASE_URL || "";
 }
 
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
@@ -14,20 +16,7 @@ export async function POST(request: Request) {
     const password = body.password;
     const fullName = body.fullName?.trim() || "";
 
-    if (!email || !password) {
-      return NextResponse.json(
-        { error: "Email and password are required." },
-        { status: 400 }
-      );
-    }
-
-    if (password.length < 6) {
-      return NextResponse.json(
-        { error: "Password must be at least 6 characters long." },
-        { status: 400 }
-      );
-    }
-
+    // 1. Rigorous field validation
     if (!fullName) {
       return NextResponse.json(
         { error: "Full name is required." },
@@ -35,7 +24,28 @@ export async function POST(request: Request) {
       );
     }
 
-    // 1. Check if user already exists in auth.users
+    if (!email) {
+      return NextResponse.json(
+        { error: "Email address is required." },
+        { status: 400 }
+      );
+    }
+
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        { error: "Please provide a valid email address." },
+        { status: 400 }
+      );
+    }
+
+    if (!password || password.length < 6) {
+      return NextResponse.json(
+        { error: "Password must be at least 6 characters long." },
+        { status: 400 }
+      );
+    }
+
+    // 2. Pre-check if user already exists in auth.users
     const dbUrl = getDbUrl();
     if (dbUrl) {
       const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
@@ -45,21 +55,21 @@ export async function POST(request: Request) {
         if (checkRes.rowCount && checkRes.rowCount > 0) {
           await client.end();
           return NextResponse.json(
-            { error: "An account with this email already exists. Please sign in instead." },
+            { error: "An account already exists with this email. Please sign in instead." },
             { status: 400 }
           );
         }
       } catch (dbErr: any) {
-        console.warn("[Signup Step 1] Database pre-check warning:", dbErr.message);
+        console.warn("[Signup Step 1] Database check warning:", dbErr.message);
       } finally {
         try { await client.end(); } catch {}
       }
     }
 
-    // 2. Generate a genuine cryptographically random 6-digit OTP
+    // 3. Generate a genuine cryptographically random 6-digit OTP
     const randomOtp = generateRandomOtp();
 
-    // 3. Dispatch OTP email directly via Resend
+    // 4. Dispatch OTP email directly via Resend
     const emailRes = await sendOtpEmail({
       to: email,
       otp: randomOtp,
@@ -68,14 +78,19 @@ export async function POST(request: Request) {
     });
 
     if (!emailRes.success) {
-      console.error("[Signup Step 1] Email dispatch failed:", emailRes.error);
+      console.error("[Signup Step 1] Email dispatch failed:", {
+        to: email,
+        error: emailRes.error,
+        timestamp: new Date().toISOString(),
+      });
+
       return NextResponse.json(
-        { error: "Failed to send verification email. Please check your email address or try again." },
+        { error: "Email verification could not be delivered to this address. Please verify your email or try again." },
         { status: 500 }
       );
     }
 
-    // 4. Create encrypted challenge token
+    // 5. Create encrypted challenge token with 10 min TTL
     const challengeToken = createSignupChallenge({
       email,
       fullName,
@@ -89,7 +104,7 @@ export async function POST(request: Request) {
       maskedEmail: maskEmail(email),
     });
 
-    // 5. Store challenge in HTTP-only cookie (10 min TTL)
+    // 6. Store challenge in HTTP-only cookie
     response.cookies.set("ryvix_signup_challenge", challengeToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -102,7 +117,7 @@ export async function POST(request: Request) {
   } catch (err: unknown) {
     console.error("[Signup Step 1 Fatal Error]:", err);
     return NextResponse.json(
-      { error: "An unexpected error occurred during signup. Please try again." },
+      { error: "An unexpected error occurred during account creation. Please try again." },
       { status: 500 }
     );
   }

@@ -1,122 +1,183 @@
-# Ryvix Authentication & Multi-Tenant Authorization Architecture (100% 6-Digit Email OTP)
+# Ryvix Authentication & Multi-Tenant Authorization Architecture
 
 ## 1. Executive Summary
 
 Ryvix enforces a deterministic, defense-in-depth authentication and authorization architecture. Authentication is managed securely via **Supabase Auth (GoTrue)** with `@supabase/ssr` cookie persistence, while authorization and tenant isolation are enforced at the database kernel level through **PostgreSQL Row Level Security (RLS)**.
 
-All legacy email-confirmation links, magic links, clickable confirmation URLs, and URL callback code exchanges have been completely removed. Ryvix requires **6-digit email OTP verification** across all three primary authentication flows:
-1. **Flow A —� New Account Creation (Sign Up)**
-2. **Flow B —� Existing Account Login**
-3. **Flow C —� Forgot Password / Password Recovery**
+All legacy email-confirmation links, magic links, clickable confirmation URLs, and URL callback code exchanges have been removed. Ryvix implements dedicated, secure authentication flows:
+1. **Flow A — New Account Creation (Sign Up)**: Full Name, Email, Password -> 6-digit numeric Email OTP -> Verification -> Database Trigger Provisioning -> Direct Dashboard Redirect.
+2. **Flow B — Returning User Sign In**: Email + Password -> Direct `signInWithPassword()` -> Secure SSR Session Cookies -> Dashboard.
+3. **Flow C — Forgot Password / Recovery**: Email -> 6-digit Recovery Code -> New Password -> Return to Sign In.
 
 ---
 
 ## 2. Authentication Lifecycle Overview
 
+### Flow A: New User Onboarding
 ```text
-[ Unregistered User ]
+[ New User: Create Account ]
        │
-       │  1. Registration (Full Name, Work Email, Password, Confirm Password)
+       │  1. Input: Full Name, Email, Password, Confirm Password
+       │  2. Strict Validation (Email regex, Password length >= 6, Match check)
        ▼
-[ Supabase Auth (auth.users) ]
+[ Signup Step 1 API (/api/auth/signup/step1) ]
        │
-       ├──> PostgreSQL Trigger (handle_new_user)
-       │     ├──> Idempotently provisions personal Tenant Organization (public.organizations)
-       │     ├──> Provisions User Profile with 'owner' role (public.profiles)
-       │     └──> Syncs membership record (public.organization_members)
-       │
-       │  2. 6-Digit Email OTP Dispatched (type: 'signup')
+       │  3. Pre-checks duplicate email in auth.users
+       │  4. Generates genuine cryptographically random 6-digit OTP
+       │  5. Dispatches branded transactional email via Resend API
+       │  6. Sets AES-256-GCM encrypted challenge cookie (ryvix_signup_challenge, 10 min TTL)
        ▼
-[ 6-Digit Email OTP Screen ]
+[ Dedicated 6-Digit Email OTP Screen ]
        │
-       │  3. User enters numeric code inside Ryvix UI
-       │  4. verifyOtp({ email, token, type: 'signup' })
+       │  7. User enters 6-digit numeric OTP code
+       │  8. Live 45s resend rate-limit countdown
+       │  9. "Change Email" option to correct typos without losing name
        ▼
-[ Account & Email Confirmed ]
+[ Signup Step 2 API (/api/auth/signup/step2) ]
        │
-       │  5. Redirects user cleanly to Login (no auto-bypass)
+       │  10. Decrypts & validates OTP from challenge cookie
+       │  11. Inserts confirmed user into auth.users (email_confirmed_at: NOW())
+       │  12. PostgreSQL Trigger (handle_new_user):
+       │        ├── Provisions personal Tenant Organization (public.organizations)
+       │        ├── Provisions User Profile with 'owner' role (public.profiles)
+       │        └── Syncs membership record (public.organization_members)
+       │  13. Establishes genuine Supabase session cookies (sb-*-auth-token)
        ▼
-[ Flow B: Standard 2-Step Login with Email OTP ]
+[ Protected Ryvix Dashboard (/dashboard) ]
+```
+
+### Flow B: Returning User Sign In
+```text
+[ Returning User: Sign In ]
        │
-       │  6. Validates credentials + Dispatches 6-digit login OTP
-       │  7. verifyOtp({ email, token, type: 'email' })
+       │  1. Input: Email, Password
        ▼
-[ Authenticated SSR Session ]
+[ Supabase Auth (signInWithPassword) ]
        │
-       │  8. Encrypted HTTP-Only Session Cookies (@supabase/ssr)
+       │  2. Validates credentials securely against auth.users bcrypt hash
+       │  3. Issues JWT Access Token (1 hour) & Refresh Token (7 days)
+       │  4. Stores session tokens in HTTP-only cookies via @supabase/ssr
        ▼
-[ Protected Workspace Console (/dashboard) ]
+[ Protected Ryvix Dashboard (/dashboard) ]
+```
+
+### Flow C: Forgot Password & Recovery
+```text
+[ Forgot Password Screen ]
+       │
+       │  1. Input: Email
+       │  2. supabase.auth.resetPasswordForEmail()
+       ▼
+[ 6-Digit Recovery Verification ]
+       │
+       │  3. User enters 6-digit recovery code from email
+       │  4. supabase.auth.verifyOtp({ email, token, type: 'recovery' })
+       ▼
+[ Reset Password Screen ]
+       │
+       │  5. Input: New Password & Confirm Password (min 6 chars)
+       │  6. supabase.auth.updateUser({ password: newPassword })
+       │  7. Signs out recovery session cleanly
+       ▼
+[ Return to Sign In Screen with Success Notice ]
 ```
 
 ---
 
-## 3. The Three Distinct Authentication Flows
+## 3. UI State Machine & Authoritative Auth Mode
 
-### Flow A —� New Account Creation (Sign Up)
-- **Endpoint**: `/login` (Tab: "Create Account")
-- **Fields**: Full Name, Work Email, Password (min 6 chars), Confirm Password.
-- **API Call**: `supabase.auth.signUp({ email, password, options: { data: { full_name } } })`.
-- **OTP Verification**: `supabase.auth.verifyOtp({ email, token, type: 'signup' })`.
-- **Post-Verification**:
-  - Supabase Auth marks user's `email_confirmed_at` timestamp.
-  - The UI presents a clean success message: *"Email verified successfully. Your Ryvix account has been created."*
-  - The user continues to Login. No unverified user can access the application.
+The frontend at `web/app/login/page.tsx` implements a single source-of-truth state machine:
 
-### Flow B —� Existing Account Login
-- **Endpoint**: `/login` (Tab: "Sign In")
-- **Step 1 (Credential Validation)**:
-  - User submits Email + Password.
-  - POST `/api/auth/login/step1` validates credentials using a stateless server client without emitting session cookies.
-  - On valid credentials, dispatches a 6-digit email OTP via `signInWithOtp({ email, options: { shouldCreateUser: false } })` and returns a signed, HTTP-only challenge cookie.
-  - On invalid credentials, immediately returns generic `401 Unauthorized: Invalid email or password.` (account enumeration prevented).
-- **Step 2 (Login OTP Verification)**:
-  - User enters 6-digit code on the interactive OTP screen.
-  - POST `/api/auth/login/step2` validates the challenge cookie and verifies the code via `supabase.auth.verifyOtp({ email, token, type: 'email' })`.
-  - On verification success, writes genuine encrypted `@supabase/ssr` HTTP-only session cookies and clears the challenge cookie.
-  - Direct access to `/dashboard` before Step 2 completion is strictly denied by server middleware.
+```typescript
+type AuthMode =
+  | "signin"
+  | "signup"
+  | "signup-otp"
+  | "forgot"
+  | "recovery-otp"
+  | "reset-password"
+  | "reset-success";
+```
 
-### Flow C —� Forgot Password & Recovery
-- **Endpoint**: `/login` (Mode: "Forgot password?")
-- **Recovery OTP Dispatch**:
-  - User enters registered email address.
-  - Calls `supabase.auth.resetPasswordForEmail(email)` without redirect URLs.
-  - Displays neutral message: *"If an account exists for this email, a verification code has been sent."*
-- **Recovery OTP Verification**:
-  - User enters 6-digit code into the recovery OTP screen.
-  - Calls `supabase.auth.verifyOtp({ email, token, type: 'recovery' })`.
-  - Establishes genuine temporary recovery session authorizing password changes.
-- **Password Reset**:
-  - User sets New Password and Confirm Password.
-  - Calls `supabase.auth.updateUser({ password })`.
-  - Signs out recovery session cleanly and redirects user to sign in with their new credentials.
+### Tab Switcher Synchronization
+The Sign In and Create Account tabs are rendered as a single unified component that derives active styling directly from `mode`:
+- When `mode === "signin"`: The **Sign In** tab is active; only the login form is rendered.
+- When `mode === "signup"`: The **Create Account** tab is active; only the registration form is rendered.
+- When `mode === "signup-otp"`: The dedicated 6-digit OTP verification card is rendered with action buttons:
+  - **Verify Email →**: Submits OTP and provisions the workspace.
+  - **Resend Code**: Live 45-second rate-limiting countdown.
+  - **Change Email**: Returns to the signup form preserving Full Name and Email while safely wiping sensitive password fields.
+  - **← Back to Sign In**: Switches back to the login view.
 
 ---
 
-## 4. Legacy Architecture Removal & Security Boundaries
+## 4. Password Security & Storage Architecture
 
-1. **Clickable Links Removed**: The legacy URL callback route `/auth/callback` has been completely deleted. Any access to `/auth/callback` returns 404 and is blocked from public bypass.
-2. **URL Tokens Eliminated**: Query parameters like `?code=`, `?token=`, and `#type=recovery` are completely ignored and cannot trigger session creation or bypass OTP screens.
-3. **Defense-in-Depth Route Middleware**:
-   - `web/utils/supabase/middleware.ts` guards all routes with `@supabase/ssr`.
-   - Public routes are strictly restricted to `/` (marketing landing), `/login`, and `/auth/reset-password`.
-   - `/dashboard`, `/servers`, `/tasks`, `/chat`, and all protected APIs require an authenticated Supabase session.
-4. **Brute Force & Rate Limiting**:
-   - 45-second cooldown timer enforced on all OTP resend actions.
-   - Server-side rate limit guards against rapid repeat dispatches.
-   - Challenge cookies are cryptographically signed with HMAC-SHA256 and expire in 10 minutes.
+1. **Zero Application Password Storage**: Ryvix application tables (`public.*`) never store plaintext passwords or password hashes.
+2. **Supabase Auth Managed**: All passwords reside strictly within `auth.users`, hashed with Blowfish crypt (`bf` / bcrypt) with individual salts.
+3. **No Password Logging**: Application logs, server error handlers, and client diagnostics are strictly forbidden from logging passwords or credentials.
+
 ---
 
-## 6. Cyberpunk Visual Design & Dynamic 3D Animations
+## 5. Database Provisioning Trigger (`handle_new_user`)
 
-The authentication console (`/login`) incorporates an interactive, high-performance visual experience:
+When a user is confirmed in `auth.users`, the PostgreSQL trigger `on_auth_user_created` fires `AFTER INSERT`:
 
-1. **Interactive 3D Moving Blocks (`MovingBlocks3D`)**:
-   - Rendered using Three.js with dynamic client-side mounting (`next/dynamic` with `{ ssr: false }`).
-   - Floats glowing wireframe geometric blocks in 3D space with subtle mouse-driven parallax tracking.
-2. **Atmospheric Lighting & Grid Overlay**:
-   - Multi-point ambient and directional cyan/violet spotlights.
-   - High-tech cyber-grid canvas with subtle radial depth masking.
-3. **Card & Button Micro-Animations**:
-   - `.login-card-animated`: Smooth entrance translation with interactive cyan-indigo border glow pulsing (`animation: loginBorderGlow 6s ease-in-out infinite`).
-   - `.login-tab-btn`: Smooth active tab switching with hardware-accelerated cubic-bezier transitions.
-   - `.btn-login-submit`: Multi-stop gradient fill with animated hover arrow icon and click ripple effect.
+```sql
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    new_org_id UUID;
+    clean_name TEXT;
+    clean_slug TEXT;
+BEGIN
+    clean_name := COALESCE(NEW.raw_user_meta_data->>'full_name', SPLIT_PART(NEW.email, '@', 1), 'User');
+    clean_slug := 'org-' || SUBSTRING(REPLACE(NEW.id::text, '-', ''), 1, 12);
+
+    -- 1. Idempotently create personal workspace organization
+    INSERT INTO public.organizations (name, slug)
+    VALUES (clean_name || '''s Workspace', clean_slug)
+    ON CONFLICT (slug) DO UPDATE SET updated_at = NOW()
+    RETURNING id INTO new_org_id;
+
+    -- 2. Idempotently create profile
+    INSERT INTO public.profiles (id, organization_id, full_name, role)
+    VALUES (NEW.id, new_org_id, clean_name, 'owner')
+    ON CONFLICT (id) DO UPDATE SET full_name = EXCLUDED.full_name, updated_at = NOW();
+
+    -- 3. Link organization membership
+    INSERT INTO public.organization_members (organization_id, user_id, role)
+    VALUES (new_org_id, NEW.id, 'owner')
+    ON CONFLICT (organization_id, user_id) DO NOTHING;
+
+    RETURN NEW;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE WARNING 'handle_new_user error: %', SQLERRM;
+        RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+---
+
+## 6. Session Handling & SSR Cookie Persistence
+
+1. **Tokens**:
+   - **Access Token (JWT)**: 3,600 seconds (1 hour).
+   - **Refresh Token**: 604,800 seconds (7 days rolling).
+2. **Next.js Middleware (`web/middleware.ts`)**:
+   - Runs `updateSession(request)` on every route request.
+   - Evaluates `supabase.auth.getUser()`.
+   - Automatically rotates tokens seamlessly when nearing expiry.
+   - Redirects unauthenticated requests away from protected routes (`/dashboard`, `/servers`, `/tasks`, `/chat`) to `/login`.
+   - Redirects authenticated users away from `/login` directly to `/dashboard`.
+
+---
+
+## 7. Email Dispatch & SMTP Provider
+
+- **Transactional Email Provider**: Direct integration with Resend API (`RESEND_API_KEY`).
+- **Templates**: Branded cyber-themed HTML template containing a high-visibility numeric 6-digit OTP box.
+- **Rate Limiting**: 45-second client-side and server-side cooldown on OTP resend requests.
+- **Fail-safe Logging**: Detailed error tracking on the server (status codes, provider error payloads) without exposing internal technical details to the browser.

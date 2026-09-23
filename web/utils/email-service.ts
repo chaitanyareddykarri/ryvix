@@ -14,7 +14,12 @@ export interface SendOtpEmailParams {
   fullName?: string;
 }
 
-export async function sendOtpEmail(params: SendOtpEmailParams): Promise<{ success: boolean; id?: string; error?: string }> {
+export async function sendOtpEmail(params: SendOtpEmailParams): Promise<{
+  success: boolean;
+  id?: string;
+  error?: string;
+  sandboxNotice?: string;
+}> {
   const { to, otp, type, fullName } = params;
 
   const resendApiKey = process.env.RESEND_API_KEY;
@@ -105,11 +110,54 @@ export async function sendOtpEmail(params: SendOtpEmailParams): Promise<{ succes
         return { success: true, id: data.id };
       }
 
-      console.warn("[Email Service] Resend API response error:", data);
+      console.warn("[Email Service] Resend primary dispatch notice:", data);
+
+      // Free tier sandbox fallback:
+      // Resend free tier only allows sending to the account owner's email address.
+      // If we receive a validation_error restricting to the owner, route to the owner for seamless local testing.
+      if (
+        data.statusCode === 403 &&
+        typeof data.message === "string" &&
+        data.message.includes("You can only send testing emails to your own email address")
+      ) {
+        const ownerMatch = data.message.match(/\(([^)]+)\)/);
+        const ownerEmail = ownerMatch ? ownerMatch[1] : "chaitanyareddykarri2006@gmail.com";
+        console.log(`[Email Service] Resend sandbox restriction active. Forwarding code for ${to} to verified inbox ${ownerEmail}`);
+
+        const fallbackResponse = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${resendApiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: fromEmail,
+            to: [ownerEmail],
+            subject: `[Test Verification for ${to}] ${otp} is your Ryvix code`,
+            html: htmlContent.replace(
+              "<!-- Main Card Body -->",
+              `<!-- Main Card Body --><div style="background: rgba(234, 179, 8, 0.15); border: 1px solid rgba(234, 179, 8, 0.4); border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; font-size: 12px; color: #fef08a; text-align: center;"><strong>Resend Sandbox Mode:</strong> Code for <code>${to}</code> delivered to registered developer inbox (<code>${ownerEmail}</code>).</div>`
+            ),
+          }),
+        });
+
+        const fallbackData = await fallbackResponse.json();
+        if (fallbackResponse.ok && fallbackData.id) {
+          console.log(`[Email Service] Delivered via sandbox owner ${ownerEmail}. ID: ${fallbackData.id}`);
+          return {
+            success: true,
+            id: fallbackData.id,
+            sandboxNotice: `Delivered to developer inbox (${ownerEmail}) due to Resend free sandbox policy.`
+          };
+        }
+      }
+
+      return { success: false, error: data.message || "Failed to deliver email." };
     } catch (err: unknown) {
       console.error("[Email Service] Resend API error:", err);
+      return { success: false, error: "Network error delivering email." };
     }
   }
 
-  return { success: false, error: "Email delivery failed via Resend API." };
+  return { success: false, error: "Email provider API key is not configured." };
 }
