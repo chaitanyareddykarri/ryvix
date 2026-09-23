@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import MovingBlocks3D from "@/components/MovingBlocks3D";
+import ConnectRepositoryModal from "@/components/ConnectRepositoryModal";
+import ConnectServerModal from "@/components/ConnectServerModal";
 
 interface ConnectedServer {
   id: string;
@@ -49,6 +51,8 @@ export default function DashboardPage() {
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
   const [showWebsiteModal, setShowWebsiteModal] = useState<boolean>(false);
+  const [showRepoModal, setShowRepoModal] = useState<boolean>(false);
+  const [showServerModal, setShowServerModal] = useState<boolean>(false);
   const [statusMessage, setStatusMessage] = useState<string>("");
 
   const suggestedChanges = [
@@ -366,18 +370,36 @@ export default function DashboardPage() {
                       paddingTop: "0.3rem",
                     }}
                   >
-                    <Link
-                      href="/servers"
+                    <div
+                      onClick={() => {
+                        setShowWebsiteModal(false);
+                        setShowRepoModal(true);
+                      }}
                       style={{
-                        display: "block",
+                        padding: "0.4rem 0.6rem",
+                        fontSize: "0.78rem",
+                        color: "#38bdf8",
+                        cursor: "pointer",
+                        fontWeight: 600,
+                      }}
+                    >
+                      🐙 Connect GitHub Repository &rarr;
+                    </div>
+                    <div
+                      onClick={() => {
+                        setShowWebsiteModal(false);
+                        setShowServerModal(true);
+                      }}
+                      style={{
                         padding: "0.4rem 0.6rem",
                         fontSize: "0.78rem",
                         color: "#818cf8",
-                        textDecoration: "none",
+                        cursor: "pointer",
+                        fontWeight: 600,
                       }}
                     >
-                      + Connect New Website or Server &rarr;
-                    </Link>
+                      🖥️ Connect Customer Server Node &rarr;
+                    </div>
                   </div>
                 </div>
               )}
@@ -428,6 +450,23 @@ export default function DashboardPage() {
             >
               My Websites
             </button>
+            <Link
+              href="/observability"
+              style={{
+                padding: "0.38rem 1rem",
+                borderRadius: "9999px",
+                fontSize: "0.82rem",
+                fontWeight: 500,
+                border: "none",
+                textDecoration: "none",
+                color: "var(--text-secondary)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.35rem",
+              }}
+            >
+              <span>📡</span> Observability
+            </Link>
             <Link
               href="/chat"
               style={{
@@ -1152,6 +1191,21 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+      {/* Customer Modals */}
+      <ConnectRepositoryModal
+        isOpen={showRepoModal}
+        onClose={() => setShowRepoModal(false)}
+        onConnected={(repo) => {
+          setSelectedWebsite(repo.full_name || repo.name);
+        }}
+      />
+      <ConnectServerModal
+        isOpen={showServerModal}
+        onClose={() => setShowServerModal(false)}
+        onConnected={(srv) => {
+          setServers((prev) => [srv, ...prev]);
+        }}
+      />
     </div>
   );
 }
