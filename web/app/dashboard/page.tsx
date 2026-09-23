@@ -892,7 +892,7 @@ export default function DashboardPage() {
             className="desktop-only-flex"
           >
             <span>AI WORKSPACE</span>
-            <span>//</span>
+            <span>{"//"}</span>
             <span style={{ color: "#F5F7FA" }}>{activeTab}</span>
           </div>
 
