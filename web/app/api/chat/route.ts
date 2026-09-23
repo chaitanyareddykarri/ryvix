@@ -23,10 +23,13 @@ interface ChatRequestBody {
 
 export async function POST(request: NextRequest) {
   try {
-    const body: ChatRequestBody = await request.json();
-    const { prompt, conversationId = `conv_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, stream = true } = body;
+    const body: any = await request.json().catch(() => ({}));
+    const rawPrompt = body.prompt || body.message || body.query || "";
+    const prompt = typeof rawPrompt === "string" ? rawPrompt.trim() : "";
+    const conversationId = body.conversationId || `conv_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const stream = body.stream ?? true;
 
-    if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
+    if (!prompt) {
       return NextResponse.json(
         { error: "Prompt is required and must be a non-empty string." },
         { status: 400 }

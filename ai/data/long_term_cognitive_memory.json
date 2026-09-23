@@ -11,9 +11,9 @@
       "supabase",
       "security"
     ],
-    "accessCount": 199,
+    "accessCount": 213,
     "createdAt": "2026-09-23T03:41:05.079Z",
-    "lastAccessedAt": "2026-09-23T05:59:03.629Z"
+    "lastAccessedAt": "2026-09-23T06:37:01.892Z"
   },
   {
     "id": "fact_seed_tech_stack_rk56",
@@ -28,9 +28,9 @@
       "css",
       "typescript"
     ],
-    "accessCount": 199,
+    "accessCount": 213,
     "createdAt": "2026-09-23T03:41:05.079Z",
-    "lastAccessedAt": "2026-09-23T05:59:03.629Z"
+    "lastAccessedAt": "2026-09-23T06:37:01.892Z"
   },
   {
     "id": "fact_seed_historical_incident_z524",
@@ -44,9 +44,9 @@
       "eaddrinuse",
       "build"
     ],
-    "accessCount": 172,
+    "accessCount": 184,
     "createdAt": "2026-09-23T03:41:05.079Z",
-    "lastAccessedAt": "2026-09-23T05:59:03.629Z"
+    "lastAccessedAt": "2026-09-23T06:37:01.892Z"
   },
   {
     "id": "fact_seed_user_preference_d9n2",
@@ -61,9 +61,9 @@
       "animations",
       "preferences"
     ],
-    "accessCount": 171,
+    "accessCount": 183,
     "createdAt": "2026-09-23T03:41:05.079Z",
-    "lastAccessedAt": "2026-09-23T05:59:03.629Z"
+    "lastAccessedAt": "2026-09-23T06:37:01.892Z"
   },
   {
     "id": "fact_1790134865124_lruv6",
@@ -709,5 +709,48 @@
     ],
     "createdAt": "2026-09-23T05:59:03.629Z",
     "lastAccessedAt": "2026-09-23T05:59:03.630Z"
+  },
+  {
+    "id": "fact_1790145421890_ptg7v",
+    "entityId": "usr_tester_osc4",
+    "category": "USER_PREFERENCE",
+    "fact": "User prefers TypeScript and Vanilla CSS with dark mode aesthetics",
+    "confidence": 0.98,
+    "accessCount": 3,
+    "tags": [
+      "typescript",
+      "css",
+      "darkmode"
+    ],
+    "createdAt": "2026-09-23T06:37:01.890Z",
+    "lastAccessedAt": "2026-09-23T06:37:01.892Z"
+  },
+  {
+    "id": "fact_1790145421891_p7jxx",
+    "entityId": "usr_tester_osc4",
+    "category": "USER_PREFERENCE",
+    "fact": "User preference: I prefer to use PostgreSQL on port 5432 and always use 6-digit OTP for logins",
+    "confidence": 0.85,
+    "accessCount": 4,
+    "tags": [
+      "user_stated",
+      "preference"
+    ],
+    "createdAt": "2026-09-23T06:37:01.891Z",
+    "lastAccessedAt": "2026-09-23T06:37:01.892Z"
+  },
+  {
+    "id": "fact_1790145421892_j6vq6",
+    "entityId": "usr_tester_osc4",
+    "category": "TECH_STACK",
+    "fact": "Tech stack specification: We are using Next",
+    "confidence": 0.9,
+    "accessCount": 3,
+    "tags": [
+      "tech_stack",
+      "infrastructure"
+    ],
+    "createdAt": "2026-09-23T06:37:01.892Z",
+    "lastAccessedAt": "2026-09-23T06:37:01.892Z"
   }
 ]
