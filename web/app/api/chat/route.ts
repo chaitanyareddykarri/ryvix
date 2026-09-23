@@ -5,6 +5,7 @@ import {
   customerHealthQueryAgent,
   requirementRefiner,
   cognitiveMemory,
+  modelGateway,
   type OodaCycleResult,
   type CodeSynthesisResult
 } from "@ryvix/services";
@@ -122,6 +123,7 @@ ${refinedRequirement.clarificationPrompt}`,
 
     // 4. Formulate Comprehensive Assistant Response
     let assistantResponse = "";
+    let lastLlmRes: any = null;
     if (healthAgentResult.isOutOfScope) {
       assistantResponse = healthAgentResult.response;
     } else if (healthAgentResult.isActionRequest) {
@@ -178,8 +180,7 @@ ${refinedRequirement.clarificationPrompt}`,
         "*Staff SRE Assessment: Server srv_prod_01 is operating with optimal compute margins. No memory leaks, zombie processes, or thermal throttling detected.*"
       ].join("\n");
     } else if (
-      /website health|how is my website|website slow|502 error|throwing 502|port 3000|backend process/i.test(prompt) ||
-      topRagChunk?.chunkId === "runbook_customer_server_and_website_health_triage"
+      /website health|how is my website|website slow|502 error|throwing 502|port 3000|backend process/i.test(prompt)
     ) {
       assistantResponse = [
         "# 🌐 Website Health, Port & Reverse Proxy Diagnostic",
@@ -231,8 +232,7 @@ ${refinedRequirement.clarificationPrompt}`,
         "*Staff SRE Verdict: Your latest GitHub deployment completed successfully with zero downtime. Production is currently serving traffic from commit dbaf461.*"
       ].join("\n");
     } else if (
-      topRagChunk?.chunkId === "runbook_ryvix_platform_overview_and_website_architecture" ||
-      /what is ryvix|about ryvix|what can this website|about this website|how does this work|talk to ur back end|talk to your backend|how chat talks|platform overview|know about/i.test(prompt)
+            /what is ryvix|about ryvix|what can this website|about this website|how does this work|talk to ur back end|talk to your backend|how chat talks|platform overview|know about/i.test(prompt)
     ) {
       assistantResponse = [
         "# Welcome to Ryvix — Autonomous Cloud Infrastructure, AI SRE & Self-Healing Platform",
@@ -255,11 +255,31 @@ ${refinedRequirement.clarificationPrompt}`,
         "- **Zero-Call Embedded Intelligence**: Ryvix runs an embedded Float32Array neural network and local vector RAG engine with sub-millisecond execution (<0.05ms) requiring ZERO external API calls or internet dependencies.",
         "- **Hybrid LLM Gateway**: If an `ANTHROPIC_API_KEY` (Claude 3.5 Sonnet) or `OPENAI_API_KEY` (GPT-4o) is configured, Ryvix transparently routes dialectic co-thinking to cloud LLMs while keeping all sensitive execution and telemetry strictly local."
       ].join("\n");
-    } else if (topRagChunk) {
-      assistantResponse = `I investigated your issue using authoritative operational runbooks (**${topRagChunk.title}**).\n\n${ooda.deliberativeThoughtReport?.llmDialecticDebate.synthesisConsensus || ooda.orient.neuralHypothesis}\n\n**Verified Remediation Command:**\n\`\`\`bash\n${verifiedCommand}\n\`\`\`\n\n*Retrieval Confidence: ${((ooda.ragResponse?.retrievalConfidence ?? 0.8) * 100).toFixed(1)}% | Retrieval Latency: ${(ooda.ragResponse?.latencyMs ?? 0.1).toFixed(2)}ms*`;
     } else {
-      assistantResponse = ooda.deliberativeThoughtReport?.llmDialecticDebate.synthesisConsensus ||
-        `I analyzed your prompt through the Ryvix AGI cognitive engine (OODA Cycle ${ooda.cycleId}). Strategic Directive: ${ooda.decide.actionPlan[0] || "continue_normal_monitoring"}.`;
+      try {
+        const systemPrompt = "You are Ryvix, the autonomous software engineer and cloud SRE assistant. You have expert knowledge of software engineering, Next.js, TypeScript, Linux system operations, networking, cloud infrastructure, and security. Answer the user's prompt directly, fluently, and helpfully using GitHub-flavored Markdown. Be concise, technical, and accurate.";
+
+        let userPrompt = prompt;
+        if (topRagChunk && (ooda.ragResponse?.retrievalConfidence ?? 0) > 0.75) {
+          userPrompt = `${prompt}\n\n[Context from System Runbook: ${topRagChunk.title}]\nVerified Remediation Command: ${verifiedCommand}`;
+        }
+
+        const llmRes = await modelGateway.complete([
+
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ]);
+        lastLlmRes = llmRes;
+        assistantResponse = llmRes.content;
+      } catch (llmErr: any) {
+        console.warn("[Chat API] Fallback to cognitive consensus:", llmErr.message);
+        if (topRagChunk) {
+          assistantResponse = `I investigated your issue using authoritative operational runbooks (**${topRagChunk.title}**).\n\n${ooda.deliberativeThoughtReport?.llmDialecticDebate.synthesisConsensus || ooda.orient.neuralHypothesis}\n\n**Verified Remediation Command:**\n\`\`\`bash\n${verifiedCommand}\n\`\`\`\n\n*Retrieval Confidence: ${((ooda.ragResponse?.retrievalConfidence ?? 0.8) * 100).toFixed(1)}% | Retrieval Latency: ${(ooda.ragResponse?.latencyMs ?? 0.1).toFixed(2)}ms*`;
+        } else {
+          assistantResponse = ooda.deliberativeThoughtReport?.llmDialecticDebate.synthesisConsensus ||
+            `I analyzed your prompt through the Ryvix AGI cognitive engine (OODA Cycle ${ooda.cycleId}). Strategic Directive: ${ooda.decide.actionPlan[0] || "continue_normal_monitoring"}.`;
+        }
+      }
     }
 
 
@@ -290,7 +310,9 @@ ${refinedRequirement.clarificationPrompt}`,
         metrics: {
           totalDurationMs: Date.now() - startTime,
           system1LatencyMs: ooda.deliberativeThoughtReport?.system1Reflex.reflexLatencyMs || 0.1,
-          system2LatencyMs: ooda.deliberativeThoughtReport?.totalCognitiveLatencyMs || 0.3
+          system2LatencyMs: ooda.deliberativeThoughtReport?.totalCognitiveLatencyMs || 0.3,
+          providerUsed: lastLlmRes?.providerUsed,
+          failedProviders: lastLlmRes?.failedProviders
         }
       });
     }

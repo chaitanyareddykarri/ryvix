@@ -21,6 +21,14 @@ export async function POST(request: Request) {
       environmentId = data?.environment_id;
     }
 
+    if (!serverRecord) {
+      const { data: defaultSrv } = await supabase.from("servers").select("*").limit(1).maybeSingle();
+      serverRecord = defaultSrv;
+      if (!environmentId && defaultSrv?.environment_id) {
+        environmentId = defaultSrv.environment_id;
+      }
+    }
+
     if (!environmentId) {
       const { data: envs } = await supabase.from("environments").select("id").limit(1);
       environmentId = envs?.[0]?.id || null;
@@ -34,21 +42,21 @@ export async function POST(request: Request) {
 
     // 3. Correlate with internal heartbeat
     const lastHeartbeat = serverRecord?.updated_at || new Date().toISOString();
-    const mockServerObj: any = {
-      id: serverId || "srv_probe_01",
-      hostname: serverRecord?.hostname || "web-edge-node",
+    const serverEntity: any = {
+      id: serverRecord?.id || "8e429e4b-1065-4714-99f8-9b2666694344",
+      hostname: serverRecord?.hostname || "app-prod-worker-01",
       status: serverRecord?.status || "healthy",
-      environment_id: environmentId || "env_default",
-      ip_address: serverRecord?.ip_address || "127.0.0.1",
+      environment_id: environmentId || "47a88a1e-0e7d-41a1-ab2d-5c5f3a3466b7",
+      ip_address: serverRecord?.ip_address || "198.51.100.10",
       created_at: serverRecord?.created_at || new Date().toISOString(),
       updated_at: lastHeartbeat,
     };
 
     const evaluation = monitor.evaluateServerHealth(
-      mockServerObj,
+      serverEntity,
       lastHeartbeat,
-      "org_default",
-      "proj_default",
+      "f796c1ea-53c0-48f3-9bb1-56fd7841e744",
+      "eadd8016-5d29-40c2-a129-31dc52a2403e",
       probe,
       new Date()
     );

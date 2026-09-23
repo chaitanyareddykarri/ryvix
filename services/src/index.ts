@@ -217,3 +217,12 @@ export {
   DirectPreferenceOptimizationTuner,
   type DpoOptimizationResult,
 } from '@ryvix/ai';
+
+export {
+  modelGateway,
+  ModelGateway,
+  type LLMMessage,
+  type ProviderDefinition,
+  type LLMCompletionResult,
+  type LLMResponse,
+} from '@ryvix/ai';

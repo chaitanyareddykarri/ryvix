@@ -433,6 +433,7 @@ export interface WorkspaceSession {
   preview_port: number | null;
   allocated_cpu: number;
   allocated_ram_mb: number;
+  workspace_path?: string;
   created_at: string;
   expires_at: string;
 }

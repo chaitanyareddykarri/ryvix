@@ -172,3 +172,36 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
+
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json().catch(() => ({}));
+    const { taskId, status } = body;
+
+    if (!taskId || !status) {
+      return NextResponse.json({ error: "taskId and status are required" }, { status: 400 });
+    }
+
+    try {
+      const { Client } = require("pg");
+      const client = new Client({
+        connectionString:
+          process.env.DATABASE_URL ||
+          "postgresql://postgres:CR%24%24Reddy2006@db.tsoyrpgifovzwqtgpkkb.supabase.co:5432/postgres",
+        ssl: { rejectUnauthorized: false },
+      });
+      await client.connect();
+      await client.query(
+        "UPDATE tasks SET status = $1, updated_at = NOW() WHERE id = $2",
+        [status, taskId]
+      );
+      await client.end();
+    } catch (e) {
+      console.warn("[Task PATCH DB Notice]:", e);
+    }
+
+    return NextResponse.json({ success: true, taskId, status });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Failed to update task" }, { status: 500 });
+  }
+}

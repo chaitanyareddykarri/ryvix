@@ -143,5 +143,19 @@ export async function testServerConnectorPipeline() {
   assert.equal(recoveredTelemetry.services.find((s) => s.name === 'nginx')?.status, 'active');
 
   console.log('  ✓ Phase 4: Automated Self-Healing & Service Restoration PASSED.');
-  console.log('✓ Path 2: Server Connectors & Autonomous Host Daemons (Phases 1-4) ALL TESTS PASSED!\n');
+
+  // =========================================================================
+  // PHASE 5: NATIVE STANDALONE GO AGENT (ryvix-agent) REAL TELEMETRY VERIFICATION
+  // =========================================================================
+  console.log('  -> Testing Phase 5: Native Standalone Go Agent (ryvix-agent) & /proc Telemetry...');
+
+  const nativeTelemetry = await agent.emitNativeTelemetry();
+  assert.ok(nativeTelemetry.serverId, 'Native telemetry must have valid serverId');
+  assert.ok(nativeTelemetry.hostname, 'Native telemetry must have valid hostname');
+  assert.ok(nativeTelemetry.metrics.cpuCores > 0, 'Must report positive CPU cores from hardware');
+  assert.ok(nativeTelemetry.metrics.memoryTotalMb > 0, 'Must report total memory from host');
+  assert.ok(nativeTelemetry.metrics.diskTotalGb > 0, 'Must report disk capacity from host');
+
+  console.log(`  ✓ Phase 5: Native Go Agent execution verified (Cores: ${nativeTelemetry.metrics.cpuCores}, RAM: ${nativeTelemetry.metrics.memoryTotalMb}MB, OS: ${nativeTelemetry.osType}).`);
+  console.log('✓ Path 2: Server Connectors & Autonomous Host Daemons (Phases 1-5) ALL TESTS PASSED!\n');
 }

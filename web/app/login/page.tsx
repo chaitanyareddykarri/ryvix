@@ -671,7 +671,7 @@ export default function LoginPage() {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="developer@company.com"
+                  placeholder="you@company.com"
                   className="login-input-field"
                   disabled={loading}
                 />
@@ -785,7 +785,7 @@ export default function LoginPage() {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="developer@company.com"
+                  placeholder="you@company.com"
                   className="login-input-field"
                   disabled={loading}
                 />
@@ -1010,7 +1010,7 @@ export default function LoginPage() {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="developer@company.com"
+                  placeholder="you@company.com"
                   className="login-input-field"
                   disabled={loading}
                 />

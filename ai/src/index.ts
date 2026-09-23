@@ -21,3 +21,5 @@ export * from './predictive-forecast';
 
 // Frontier Deep Learning Architectures
 export * from './deep-learning';
+
+export * from './model-gateway';

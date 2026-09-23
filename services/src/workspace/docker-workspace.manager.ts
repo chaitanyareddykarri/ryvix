@@ -11,6 +11,9 @@
  */
 
 import * as crypto from 'node:crypto';
+import * as fs from 'node:fs';
+import * as nodePath from 'node:path';
+import * as os from 'node:os';
 import type { WorkspaceSession, PlanStep, AuditEvent } from '@ryvix/database';
 
 export interface CommandExecutionResult {
@@ -43,6 +46,8 @@ export interface CreateSessionOptions {
 export class DockerWorkspaceManager {
   private activeSessions = new Map<string, WorkspaceSession>();
   private sessionFiles = new Map<string, Map<string, string>>();
+  private sessionDirs = new Map<string, string>();
+  private workspaceRootDir = process.env.RYVIX_WORKSPACE_ROOT || nodePath.join(os.tmpdir(), 'ryvix_workspaces');
   private allocatedPorts = new Set<number>();
   private basePort = 3100;
 
@@ -84,8 +89,16 @@ export class DockerWorkspaceManager {
     }
     this.allocatedPorts.add(previewPort);
 
-    const now = new Date();
+        const now = new Date();
     const expiresAt = new Date(now.getTime() + ttl * 60 * 1000).toISOString();
+
+    const sessionDir = nodePath.resolve(this.workspaceRootDir, sessionId);
+    try {
+      fs.mkdirSync(sessionDir, { recursive: true });
+    } catch (err: any) {
+      console.warn(`[DockerWorkspaceManager] Failed to create physical directory ${sessionDir}:`, err.message);
+    }
+    this.sessionDirs.set(sessionId, sessionDir);
 
     const session: WorkspaceSession = {
       id: sessionId,
@@ -98,6 +111,7 @@ export class DockerWorkspaceManager {
       preview_port: previewPort,
       allocated_cpu: cpu,
       allocated_ram_mb: ramMb,
+      workspace_path: sessionDir,
       created_at: now.toISOString(),
       expires_at: expiresAt,
     };
@@ -115,8 +129,18 @@ export class DockerWorkspaceManager {
     const fileMap = this.sessionFiles.get(sessionId);
     if (!fileMap) throw new Error(`Workspace session ${sessionId} not found`);
 
+    const sessionDir = this.sessionDirs.get(sessionId);
     for (const f of files) {
       fileMap.set(f.path, f.content);
+      if (sessionDir) {
+        try {
+          const absPath = nodePath.resolve(sessionDir, f.path);
+          fs.mkdirSync(nodePath.dirname(absPath), { recursive: true });
+          fs.writeFileSync(absPath, f.content, 'utf-8');
+        } catch (err: any) {
+          console.warn(`[DockerWorkspaceManager] Physical mount error for ${f.path}:`, err.message);
+        }
+      }
     }
     return files.length;
   }
@@ -132,21 +156,31 @@ export class DockerWorkspaceManager {
     const fileMap = this.sessionFiles.get(sessionId);
     if (!fileMap) throw new Error(`Workspace session ${sessionId} not found`);
 
-    let path: string;
+    let targetFilePath: string;
     let content: string;
 
     if (typeof filePathOrDiff === 'object') {
-      path = filePathOrDiff.filePath;
+      targetFilePath = filePathOrDiff.filePath;
       content = filePathOrDiff.patchContent ?? filePathOrDiff.newContent ?? '';
     } else {
-      path = filePathOrDiff;
+      targetFilePath = filePathOrDiff;
       content = newContent || '';
     }
 
-    fileMap.set(path, content);
+    fileMap.set(targetFilePath, content);
+    const sessionDir = this.sessionDirs.get(sessionId);
+    if (sessionDir) {
+      try {
+        const absPath = nodePath.resolve(sessionDir, targetFilePath);
+        fs.mkdirSync(nodePath.dirname(absPath), { recursive: true });
+        fs.writeFileSync(absPath, content, 'utf-8');
+      } catch (err: any) {
+        console.warn(`[DockerWorkspaceManager] Physical applyDiff error for ${targetFilePath}:`, err.message);
+      }
+    }
 
     return {
-      filePath: path,
+      filePath: targetFilePath,
       applied: true,
       bytesWritten: Buffer.byteLength(content, 'utf-8'),
       timestamp: new Date().toISOString(),
@@ -209,7 +243,22 @@ export class DockerWorkspaceManager {
       this.allocatedPorts.delete(session.preview_port);
     }
     this.sessionFiles.delete(sessionId);
+    const sessionDir = this.sessionDirs.get(sessionId);
+    if (sessionDir) {
+      try {
+        if (fs.existsSync(sessionDir)) {
+          fs.rmSync(sessionDir, { recursive: true, force: true });
+        }
+      } catch (err: any) {
+        console.warn(`[DockerWorkspaceManager] Failed to clean physical workspace ${sessionDir}:`, err.message);
+      }
+      this.sessionDirs.delete(sessionId);
+    }
     return session;
+  }
+
+  listSessions(): WorkspaceSession[] {
+    return Array.from(this.activeSessions.values());
   }
 
   getSession(sessionId: string): WorkspaceSession | null {

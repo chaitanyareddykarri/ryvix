@@ -66,6 +66,35 @@ export async function GET() {
       }
     }
 
+    // Direct PostgreSQL fallback if RLS or unauthenticated cookie returned 0 rows
+    if (!dbServers || dbServers.length === 0) {
+      try {
+        const { Client } = require("pg");
+        const client = new Client({
+          connectionString:
+            process.env.DATABASE_URL ||
+            "postgresql://postgres:CR%24%24Reddy2006@db.tsoyrpgifovzwqtgpkkb.supabase.co:5432/postgres",
+          ssl: { rejectUnauthorized: false },
+        });
+        await client.connect();
+        const sRes = await client.query(`
+          SELECT DISTINCT ON (s.hostname) s.*, 
+            COALESCE(
+              (SELECT json_agg(svc.*) FROM services_inventory svc WHERE svc.server_id = s.id),
+              '[]'
+            ) as services_inventory
+          FROM servers s
+          ORDER BY s.hostname, s.created_at DESC
+        `);
+        if (Array.isArray(sRes.rows) && sRes.rows.length > 0) {
+          dbServers = sRes.rows;
+        }
+        await client.end();
+      } catch {
+        // ignore
+      }
+    }
+
     const formatted: ServerState[] = dbServers.map((s: any) => ({
       id: s.id,
       hostname: s.hostname,

@@ -2,28 +2,30 @@ import assert from 'node:assert/strict';
 import { ModelGateway, generateTaskPlan } from '../ai/src/orchestrator';
 
 export async function testAIModelGateway() {
-  console.log('[TEST] Running Multi-Provider LLM Gateway & Rate-Limit Failover Test...');
+  console.log('[TEST] Running Multi-Provider LLM Gateway and Rate-Limit Failover Test...');
 
   const gateway = new ModelGateway();
 
   // =========================================================================
   // 1. PROVIDER CHAIN INITIALIZATION
   // =========================================================================
-  console.log('  -> 1. Testing Default Provider Hierarchy & Priority...');
+  console.log('  -> 1. Testing Default Provider Hierarchy and Priority...');
   const providers = gateway.getProviders();
-  assert.equal(providers.length, 4, 'Must initialize 4 multi-tier providers');
+  assert.equal(providers.length, 6, 'Must initialize 6 multi-tier providers');
 
-  assert.equal(providers[0].id, 'groq', 'Primary provider should be Groq (fastest free tier)');
-  assert.equal(providers[1].id, 'huggingface', 'Secondary provider should be Hugging Face');
-  assert.equal(providers[2].id, 'gemini', 'Tertiary provider should be Google Gemini');
-  assert.equal(providers[3].id, 'ollama', 'Fourth provider should be Local Ollama');
+  assert.equal(providers[0].id, 'groq', 'Primary provider should be Groq (ultra-fast live inference)');
+  assert.equal(providers[1].id, 'openai', 'Secondary provider should be OpenAI (GPT-4o-mini)');
+  assert.equal(providers[2].id, 'claude', 'Tertiary provider should be Anthropic Claude (3.5 Sonnet)');
+  assert.equal(providers[3].id, 'gemini', 'Fourth provider should be Google Gemini');
+  assert.equal(providers[4].id, 'huggingface', 'Fifth provider should be Hugging Face Serverless');
+  assert.equal(providers[5].id, 'ollama', 'Sixth provider should be Local Ollama');
 
-  console.log('  ✓ Provider hierarchy verified: Groq -> Hugging Face -> Gemini -> Ollama.');
+  console.log('  ✓ Provider hierarchy verified: Groq -> OpenAI -> Claude -> Gemini -> Hugging Face -> Ollama.');
 
   // =========================================================================
-  // 2. RATE LIMIT (HTTP 429) & DYNAMIC FAILOVER TEST
+  // 2. RATE LIMIT (HTTP 429) and DYNAMIC FAILOVER TEST
   // =========================================================================
-  console.log('  -> 2. Testing Automatic 429 Rate-Limit Detection & Switching...');
+  console.log('  -> 2. Testing Automatic 429 Rate-Limit Detection and Switching...');
 
   // Simulate Groq hitting 429 Rate Limit (e.g. daily quota reached)
   const failoverRes = await gateway.complete(
@@ -42,21 +44,38 @@ export async function testAIModelGateway() {
   );
   assert.ok(failoverRes.content.length > 0, 'Completion must successfully return content via failover');
 
-  console.log(`  ✓ Rate-limit failover verified: Groq (429) -> switched successfully without user disruption.`);
+  console.log('  ✓ Rate-limit failover verified: Groq (429) -> switched to next provider successfully without user disruption.');
 
   // =========================================================================
-  // 3. MULTI-TIER EXHAUSTION & DETERMINISTIC LOCAL ENGINE FALLBACK
+  // 2b. ACTIVE COOLDOWN VERIFICATION (SUBSEQUENT CALL SKIPS RATE-LIMITED API)
   // =========================================================================
-  console.log('  -> 3. Testing Cascading Outage Resilience & Deterministic Fallback...');
+  console.log('  -> 2b. Testing Active 429 Cooldown (Auto-Skip Rate-Limited Provider)...');
+  const secondCallRes = await gateway.complete(
+    [{ role: 'user', content: 'Analyze database query latency spike' }]
+  );
+  assert.ok(
+    secondCallRes.failedProviders.some((p) => p.includes('groq (cooling down until')),
+    'Subsequent calls during cooldown must automatically skip Groq without wasting an API call'
+  );
+  console.log('  ✓ Cooldown skip verified: Rate-limited API bypassed during cooldown period.');
 
-  // Simulate all cloud providers experiencing outages (Groq 429, HF 503, Gemini 500)
-  const cascadeRes = await gateway.complete(
+  // =========================================================================
+  // 3. MULTI-TIER EXHAUSTION and DETERMINISTIC LOCAL ENGINE FALLBACK
+  // =========================================================================
+  console.log('  -> 3. Testing Cascading Outage Resilience and Deterministic Fallback...');
+
+  const freshGateway = new ModelGateway();
+
+  // Simulate all cloud providers experiencing outages (Groq 429, OpenAI 429, Claude 429, Gemini 429, HF 503)
+  const cascadeRes = await freshGateway.complete(
     [{ role: 'user', content: 'Fix crash in payment webhook endpoint' }],
     {
       mockProviderFailures: {
         groq: 429,
+        openai: 429,
+        claude: 429,
+        gemini: 429,
         huggingface: 503,
-        gemini: 500,
       },
     }
   );
@@ -89,6 +108,6 @@ export async function testAIModelGateway() {
   assert.ok(plan.steps[0].suggested_tool, 'Steps must propose suggested tool calls');
   assert.ok(plan.providerUsed, 'Plan must indicate provider used');
 
-  console.log(`  ✓ generateTaskPlan() created ${plan.steps.length} steps via provider '${plan.providerUsed}'.`);
-  console.log('✓ Multi-Provider LLM Gateway & Rate-Limit Failover Test PASSED!\n');
+  console.log('  ? generateTaskPlan() created steps successfully.');
+  console.log('✓ Multi-Provider LLM Gateway and Rate-Limit Failover Test PASSED!\n');
 }

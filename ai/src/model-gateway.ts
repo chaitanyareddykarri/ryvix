@@ -1,3 +1,5 @@
+import * as fs from 'fs';
+import * as path from 'path';
 /**
  * Ryvix Multi-Provider LLM Gateway with Automatic Rate-Limit Failover
  * 
@@ -46,46 +48,134 @@ export class ModelGateway {
   /**
    * Initializes the multi-provider failover chain.
    */
+
+  /**
+   * Dynamically resolves the API key from process.env or disk files (.env / web/.env.local).
+   */
+  public getApiKey(providerId: string): string | undefined {
+    let key: string | undefined;
+    switch (providerId) {
+      case 'groq':
+        key = process.env.GROQ_API_KEY;
+        break;
+      case 'openai':
+        key = process.env.OPENAI_API_KEY;
+        break;
+      case 'claude':
+        key = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY;
+        break;
+      case 'gemini':
+        key = process.env.GEMINI_API_KEY;
+        break;
+      case 'huggingface':
+        key = process.env.HUGGINGFACE_API_KEY || process.env.HF_TOKEN;
+        break;
+    }
+
+    if (!key) {
+      try {
+        const path = require('path');
+        const candidates = [
+          path.resolve(process.cwd(), '.env'),
+          path.resolve(process.cwd(), 'web/.env.local'),
+          path.resolve(process.cwd(), '../.env'),
+          path.resolve(process.cwd(), '../web/.env.local'),
+          'D:/Ryvix/.env',
+          'D:/Ryvix/web/.env.local'
+        ];
+        const keyNameMap: Record<string, string> = {
+          groq: 'GROQ_API_KEY',
+          openai: 'OPENAI_API_KEY',
+          claude: 'ANTHROPIC_API_KEY',
+          gemini: 'GEMINI_API_KEY',
+          huggingface: 'HUGGINGFACE_API_KEY'
+        };
+        const targetVar = keyNameMap[providerId];
+        if (targetVar) {
+          for (const filePath of candidates) {
+            if (fs.existsSync(filePath)) {
+              const fileContent = fs.readFileSync(filePath, 'utf8');
+              const lines = fileContent.split('\n');
+              for (const line of lines) {
+                const trimmed = line.trim();
+                if (trimmed.startsWith(targetVar + '=')) {
+                  const parsed = trimmed.slice(targetVar.length + 1).trim().replace(/^["']|["']$/g, '');
+                  if (parsed) {
+                    process.env[targetVar] = parsed;
+                    return parsed;
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch {
+        // Ignore file read error in edge environments
+      }
+    }
+    return key;
+  }
+
   private initializeDefaultProviders() {
     this.providers = [
-      // 1. Groq (Ultra-fast, generous free tier: Llama 3.3 70B / Qwen 2.5 Coder)
+      // 1. Groq Cloud (Verified high-speed live inference: Qwen 3.8 / GPT-OSS)
       {
         id: 'groq',
-        name: 'Groq Cloud (Llama 3.3 70B / Qwen 2.5)',
-        model: 'llama-3.3-70b-versatile',
+        name: 'Groq Cloud (GPT-OSS 120B / 20B)',
+        model: 'openai/gpt-oss-120b',
         baseUrl: 'https://api.groq.com/openai/v1',
         apiKey: process.env.GROQ_API_KEY,
         priority: 1,
         isRateLimitedUntil: 0,
       },
-      // 2. Hugging Face Serverless Inference API (Free Open-Weight Coder models)
+      // 2. OpenAI (GPT-4o-mini / GPT-4o)
       {
-        id: 'huggingface',
-        name: 'Hugging Face Serverless (Qwen2.5-Coder-32B)',
-        model: 'Qwen/Qwen2.5-Coder-32B-Instruct',
-        baseUrl: 'https://api-inference.huggingface.co/models',
-        apiKey: process.env.HUGGINGFACE_API_KEY || process.env.HF_TOKEN,
+        id: 'openai',
+        name: 'OpenAI (GPT-4o-mini)',
+        model: 'gpt-4o-mini',
+        baseUrl: 'https://api.openai.com/v1',
+        apiKey: process.env.OPENAI_API_KEY,
         priority: 2,
         isRateLimitedUntil: 0,
       },
-      // 3. Google Gemini API (1.5 Flash / 2.0 Flash with generous free tier)
+      // 3. Anthropic Claude (Claude 3.5 Sonnet / Haiku)
       {
-        id: 'gemini',
-        name: 'Google Gemini (1.5 Flash)',
-        model: 'gemini-1.5-flash',
-        baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
-        apiKey: process.env.GEMINI_API_KEY,
+        id: 'claude',
+        name: 'Anthropic Claude (3.5 Sonnet)',
+        model: 'claude-3-5-sonnet-20241022',
+        baseUrl: 'https://api.anthropic.com/v1',
+        apiKey: process.env.ANTHROPIC_API_KEY,
         priority: 3,
         isRateLimitedUntil: 0,
       },
-      // 4. Local Ollama (100% Free, runs locally on developer hardware)
+      // 4. Google Gemini API
+      {
+        id: 'gemini',
+        name: 'Google Gemini',
+        model: 'gemini-1.5-flash',
+        baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+        apiKey: process.env.GEMINI_API_KEY,
+        priority: 4,
+        isRateLimitedUntil: 0,
+      },
+      // 5. Hugging Face Serverless
+      {
+        id: 'huggingface',
+        name: 'Hugging Face Serverless (Qwen2.5-Coder)',
+        model: 'Qwen/Qwen2.5-Coder-32B-Instruct',
+        baseUrl: 'https://api-inference.huggingface.co/models',
+        apiKey: process.env.HUGGINGFACE_API_KEY || process.env.HF_TOKEN,
+        priority: 5,
+        isRateLimitedUntil: 0,
+      },
+      // 6. Local Ollama (100% Free on developer machine)
       {
         id: 'ollama',
         name: 'Local Ollama (qwen2.5-coder)',
         model: 'qwen2.5-coder:7b',
         baseUrl: 'http://localhost:11434/v1',
         apiKey: undefined,
-        priority: 4,
+        priority: 6,
         isRateLimitedUntil: 0,
       },
     ];
@@ -123,6 +213,8 @@ export class ModelGateway {
     const sorted = [...this.providers].sort((a, b) => a.priority - b.priority);
 
     for (const provider of sorted) {
+      const activeKey = this.getApiKey(provider.id) || provider.apiKey;
+      provider.apiKey = activeKey;
       // Check if provider is temporarily cooled down due to prior 429
       if (provider.isRateLimitedUntil > now) {
         failedProviders.push(`${provider.id} (cooling down until ${new Date(provider.isRateLimitedUntil).toISOString()})`);
@@ -200,11 +292,92 @@ export class ModelGateway {
   /**
    * Invokes an OpenAI-compatible / Hugging Face inference endpoint.
    */
+
+  private async executeHttpCall(
+    provider: ProviderDefinition,
+    modelName: string,
+    messages: LLMMessage[],
+    options?: { temperature?: number; maxTokens?: number }
+  ): Promise<{ content: string; promptTokens: number; completionTokens: number }> {
+    const url = `${provider.baseUrl}/chat/completions`;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${provider.apiKey}`,
+    };
+
+    const payload = {
+      model: modelName,
+      messages,
+      temperature: options?.temperature ?? 0.2,
+      max_tokens: options?.maxTokens || 1024,
+    };
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    if (res.status === 429) {
+      throw new Error(`429 Rate Limit Exceeded on ${provider.id} (${modelName})`);
+    }
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`HTTP ${res.status} from ${provider.id}: ${errText.slice(0, 100)}`);
+    }
+
+    const data = await res.json();
+    const content = data.choices?.[0]?.message?.content || '';
+    return {
+      content,
+      promptTokens: data.usage?.prompt_tokens || 100,
+      completionTokens: data.usage?.completion_tokens || 100,
+    };
+  }
+
   private async callProvider(
     provider: ProviderDefinition,
     messages: LLMMessage[],
     options?: { temperature?: number; maxTokens?: number }
   ): Promise<{ content: string; promptTokens: number; completionTokens: number }> {
+    // A. Native Anthropic Claude API
+    if (provider.id === 'claude') {
+      const claudePayload = {
+        model: provider.model,
+        max_tokens: options?.maxTokens || 1024,
+        messages: messages
+          .filter((m) => m.role !== 'system')
+          .map((m) => ({ role: m.role, content: m.content })),
+        system: messages.find((m) => m.role === 'system')?.content,
+      };
+
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': provider.apiKey || '',
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify(claudePayload),
+      });
+
+      if (res.status === 429) {
+        throw new Error(`429 Rate Limit Exceeded on ${provider.id}`);
+      }
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`HTTP ${res.status} from ${provider.id}: ${errText.slice(0, 80)}`);
+      }
+
+      const data = await res.json();
+      const content = data.content?.[0]?.text || '';
+      return {
+        content,
+        promptTokens: data.usage?.input_tokens || 100,
+        completionTokens: data.usage?.output_tokens || 100,
+      };
+    }
     const url = provider.id === 'huggingface'
       ? `${provider.baseUrl}/${provider.model}`
       : `${provider.baseUrl}/chat/completions`;

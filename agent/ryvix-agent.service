@@ -1,0 +1,26 @@
+[Unit]
+Description=Ryvix Autonomous Host Telemetry & Capability Daemon
+Documentation=https://docs.ryvix.dev/agent
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/ryvix-agent
+ExecStart=/opt/ryvix-agent/ryvix-agent \
+  -control-plane=https://app.ryvix.dev \
+  -interval=5s
+Restart=always
+RestartSec=5s
+LimitNOFILE=65536
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_SYS_PTRACE
+AmbientCapabilities=CAP_NET_ADMIN
+
+# Zero-trust sandboxing
+ProtectSystem=full
+ProtectHome=true
+NoNewPrivileges=false
+
+[Install]
+WantedBy=multi-user.target

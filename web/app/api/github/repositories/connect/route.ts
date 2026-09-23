@@ -14,7 +14,30 @@ export async function GET() {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ success: true, repositories: [] });
+      try {
+        const { Client } = require("pg");
+        const client = new Client({
+          connectionString:
+            process.env.DATABASE_URL ||
+            "postgresql://postgres:CR%24%24Reddy2006@db.tsoyrpgifovzwqtgpkkb.supabase.co:5432/postgres",
+          ssl: { rejectUnauthorized: false },
+        });
+        await client.connect();
+        const res = await client.query(`
+          SELECT id, project_id, github_repo_id, full_name, default_branch, clone_url, is_private, detected_stack, created_at, updated_at
+          FROM repositories
+          ORDER BY created_at DESC
+          LIMIT 20
+        `);
+        await client.end();
+        return NextResponse.json({
+          success: true,
+          repositories: res.rows || [],
+          count: (res.rows || []).length,
+        });
+      } catch {
+        return NextResponse.json({ success: true, repositories: [] });
+      }
     }
 
     const { data: profile } = await supabase

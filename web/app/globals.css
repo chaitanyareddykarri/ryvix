@@ -519,3 +519,69 @@ body {
 .login-input-field:hover:not(:focus) {
   border-color: rgba(99, 102, 241, 0.45);
 }
+
+
+/* =========================================================================
+   DASHBOARD MOBILE RESPONSIVE ADAPTATIONS (<768px)
+   ========================================================================= */
+@media (max-width: 768px) {
+  .dashboard-shell {
+    flex-direction: column !important;
+  }
+
+  .dashboard-sidebar {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 62px !important;
+    flex-direction: row !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+    border-right: none !important;
+    border-top: 1px solid #1D2732 !important;
+    padding: 0.2rem 0.5rem !important;
+    z-index: 99 !important;
+    background: rgba(8, 12, 17, 0.94) !important;
+    backdrop-filter: blur(14px) !important;
+    -webkit-backdrop-filter: blur(14px) !important;
+    overflow-x: auto !important;
+    gap: 0 !important;
+  }
+
+  .dashboard-sidebar-collapse-btn {
+    display: none !important;
+  }
+
+  .dashboard-sidebar-label {
+    display: none !important;
+  }
+
+  .dashboard-sidebar-badge {
+    display: none !important;
+  }
+
+  .dashboard-main-content {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+    padding-bottom: 85px !important;
+  }
+
+  .desktop-only-flex {
+    display: none !important;
+  }
+
+  .desktop-only {
+    display: none !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .desktop-only-flex {
+    display: flex !important;
+  }
+  .mobile-only {
+    display: none !important;
+  }
+}

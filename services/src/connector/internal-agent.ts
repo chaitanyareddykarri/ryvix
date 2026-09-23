@@ -11,6 +11,12 @@
  */
 
 import * as crypto from 'node:crypto';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execFileAsync = promisify(execFile);
 
 export interface SystemMetrics {
   cpuUsagePercent: number;
@@ -91,6 +97,42 @@ export class InternalAgent {
   /**
    * Generates a realistic telemetry heartbeat snapshot.
    */
+
+  /**
+   * Invokes the compiled native Go agent binary (ryvix-agent) to collect
+   * bare-metal /proc telemetry directly from the host operating system.
+   */
+  async emitNativeTelemetry(): Promise<HostTelemetryPayload> {
+    const isWindows = process.platform === 'win32';
+    const binaryName = isWindows ? 'ryvix-agent-windows-amd64.exe' : 'ryvix-agent';
+
+    const searchPaths = [
+      path.resolve(__dirname, '../../../agent/dist', binaryName),
+      path.resolve(process.cwd(), 'agent/dist', binaryName),
+      path.resolve(process.cwd(), '../agent/dist', binaryName),
+      '/opt/ryvix-agent/ryvix-agent',
+    ];
+
+    for (const binPath of searchPaths) {
+      if (fs.existsSync(binPath)) {
+        try {
+          const { stdout } = await execFileAsync(binPath, [
+            '-server-id', this.serverId,
+            '-hostname', this.hostname,
+            '-once',
+          ]);
+          const parsed = JSON.parse(stdout) as HostTelemetryPayload;
+          this.heartbeatCount = parsed.heartbeatSeq;
+          return parsed;
+        } catch {
+          // continue fallback
+        }
+      }
+    }
+
+    return this.emitTelemetry();
+  }
+
   emitTelemetry(options?: {
     cpuPercent?: number;
     memPercent?: number;
