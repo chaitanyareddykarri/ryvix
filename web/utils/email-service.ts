@@ -4,8 +4,10 @@
  * 
  * High-Reliability Transactional Email Dispatcher for Ryvix Authentication.
  * Dispatches genuine cryptographically random 6-digit OTP codes directly
- * via Resend API.
+ * via Gmail SMTP (or Resend API fallback) directly to ANY recipient email.
  */
+
+import nodemailer from "nodemailer";
 
 export interface SendOtpEmailParams {
   to: string;
@@ -18,12 +20,14 @@ export async function sendOtpEmail(params: SendOtpEmailParams): Promise<{
   success: boolean;
   id?: string;
   error?: string;
-  sandboxNotice?: string;
 }> {
   const { to, otp, type, fullName } = params;
 
-  const resendApiKey = process.env.RESEND_API_KEY;
-  const fromEmail = process.env.EMAIL_FROM || "onboarding@resend.dev";
+  const smtpUser = process.env.SMTP_USER || "chaitanyareddykarri2006@gmail.com";
+  const smtpPass = process.env.SMTP_PASSWORD || "psqhyadenvhrjmuk";
+  const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
+  const smtpPort = parseInt(process.env.SMTP_PORT || "465", 10);
+  const fromEmail = process.env.EMAIL_FROM || `"Ryvix Auth" <${smtpUser}>`;
 
   let title = "Your Ryvix Verification Code";
   let description = "Use the 6-digit verification code below to complete your authentication. This code will expire in 10 minutes.";
@@ -88,6 +92,36 @@ export async function sendOtpEmail(params: SendOtpEmailParams): Promise<{
 </html>
 `;
 
+  // 1. Primary: Direct Gmail SMTP Dispatch (Delivers directly to ANY email in the world)
+  if (smtpUser && smtpPass) {
+    try {
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpPort === 465,
+        auth: {
+          user: smtpUser,
+          pass: smtpPass,
+        },
+      });
+
+      const info = await transporter.sendMail({
+        from: fromEmail,
+        to: to,
+        subject: `${otp} is your Ryvix verification code`,
+        text: `Your Ryvix verification code is: ${otp}. It expires in 10 minutes.`,
+        html: htmlContent,
+      });
+
+      console.log(`[Email Service] Dispatched OTP directly to ${to} via Gmail SMTP. MessageID: ${info.messageId}`);
+      return { success: true, id: info.messageId };
+    } catch (smtpErr: any) {
+      console.error("[Email Service] Gmail SMTP dispatch error:", smtpErr.message);
+    }
+  }
+
+  // 2. Fallback: Resend API
+  const resendApiKey = process.env.RESEND_API_KEY;
   if (resendApiKey) {
     try {
       const response = await fetch("https://api.resend.com/emails", {
@@ -97,7 +131,7 @@ export async function sendOtpEmail(params: SendOtpEmailParams): Promise<{
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: fromEmail,
+          from: "onboarding@resend.dev",
           to: [to],
           subject: `${otp} is your Ryvix verification code`,
           html: htmlContent,
@@ -106,58 +140,13 @@ export async function sendOtpEmail(params: SendOtpEmailParams): Promise<{
 
       const data = await response.json();
       if (response.ok && data.id) {
-        console.log(`[Email Service] Dispatched OTP code to ${to} via Resend. ID: ${data.id}`);
+        console.log(`[Email Service] Dispatched OTP to ${to} via Resend API. ID: ${data.id}`);
         return { success: true, id: data.id };
       }
-
-      console.warn("[Email Service] Resend primary dispatch notice:", data);
-
-      // Free tier sandbox fallback:
-      // Resend free tier only allows sending to the account owner's email address.
-      // If we receive a validation_error restricting to the owner, route to the owner for seamless local testing.
-      if (
-        data.statusCode === 403 &&
-        typeof data.message === "string" &&
-        data.message.includes("You can only send testing emails to your own email address")
-      ) {
-        const ownerMatch = data.message.match(/\(([^)]+)\)/);
-        const ownerEmail = ownerMatch ? ownerMatch[1] : "chaitanyareddykarri2006@gmail.com";
-        console.log(`[Email Service] Resend sandbox restriction active. Forwarding code for ${to} to verified inbox ${ownerEmail}`);
-
-        const fallbackResponse = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${resendApiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: fromEmail,
-            to: [ownerEmail],
-            subject: `[Test Verification for ${to}] ${otp} is your Ryvix code`,
-            html: htmlContent.replace(
-              "<!-- Main Card Body -->",
-              `<!-- Main Card Body --><div style="background: rgba(234, 179, 8, 0.15); border: 1px solid rgba(234, 179, 8, 0.4); border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; font-size: 12px; color: #fef08a; text-align: center;"><strong>Resend Sandbox Mode:</strong> Code for <code>${to}</code> delivered to registered developer inbox (<code>${ownerEmail}</code>).</div>`
-            ),
-          }),
-        });
-
-        const fallbackData = await fallbackResponse.json();
-        if (fallbackResponse.ok && fallbackData.id) {
-          console.log(`[Email Service] Delivered via sandbox owner ${ownerEmail}. ID: ${fallbackData.id}`);
-          return {
-            success: true,
-            id: fallbackData.id,
-            sandboxNotice: `Delivered to developer inbox (${ownerEmail}) due to Resend free sandbox policy.`
-          };
-        }
-      }
-
-      return { success: false, error: data.message || "Failed to deliver email." };
-    } catch (err: unknown) {
-      console.error("[Email Service] Resend API error:", err);
-      return { success: false, error: "Network error delivering email." };
+    } catch (resendErr: any) {
+      console.error("[Email Service] Resend fallback error:", resendErr.message);
     }
   }
 
-  return { success: false, error: "Email provider API key is not configured." };
+  return { success: false, error: "Failed to dispatch email verification." };
 }
