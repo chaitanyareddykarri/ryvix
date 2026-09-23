@@ -117,10 +117,11 @@ export function verifySignupChallenge(
 /**
  * Creates an encrypted challenge cookie for 2FA Login with genuine random OTP.
  */
-export function createLoginOtpChallenge(email: string, otp: string): string {
+export function createLoginOtpChallenge(email: string, otp: string, password?: string): string {
   return encryptData({
     email: email.toLowerCase().trim(),
     otp: otp.trim(),
+    password: password || "",
     timestamp: Date.now(),
   });
 }
@@ -132,7 +133,7 @@ export function verifyLoginOtpChallenge(
   challenge: string,
   expectedEmail: string,
   submittedOtp: string
-): { valid: boolean; error?: string } {
+): { valid: boolean; error?: string; password?: string } {
   const data = decryptData(challenge);
   if (!data) {
     return { valid: false, error: "Invalid or tampered login session." };
@@ -150,7 +151,7 @@ export function verifyLoginOtpChallenge(
     return { valid: false, error: "The verification code is incorrect. Please try again." };
   }
 
-  return { valid: true };
+  return { valid: true, password: data.password };
 }
 
 // Backward-compatibility aliases

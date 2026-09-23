@@ -56,6 +56,31 @@ export async function POST(request: Request) {
       redirect: "/dashboard",
     });
 
+    if (challengeCheck.password) {
+      const supabase = createServerClient(supabaseUrl, supabaseKey, {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet: { name: string; value: string; options?: any }[]) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+              response.cookies.set(name, value, options);
+            });
+          },
+        },
+      });
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password: challengeCheck.password,
+      });
+
+      if (signInError) {
+        console.warn("[Login Step 2] Session establishment warning:", signInError.message);
+      }
+    }
+
     // 3. Clear challenge cookie
     response.cookies.delete("ryvix_login_challenge");
 

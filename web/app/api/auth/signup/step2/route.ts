@@ -70,7 +70,7 @@ export async function POST(request: Request) {
       if (existing.rowCount && existing.rowCount > 0) {
         newUserId = existing.rows[0].id;
       } else {
-        // Insert into auth.users with email_confirmed_at = NOW() (verified via OTP!)
+        // Insert into auth.users with all non-null GoTrue fields populated
         const insertUserRes = await client.query(`
           INSERT INTO auth.users (
             instance_id,
@@ -84,7 +84,15 @@ export async function POST(request: Request) {
             raw_user_meta_data,
             created_at,
             updated_at,
-            confirmation_token
+            confirmation_token,
+            recovery_token,
+            email_change_token_new,
+            email_change,
+            email_change_token_current,
+            reauthentication_token,
+            phone_change,
+            phone_change_token,
+            is_super_admin
           ) VALUES (
             '00000000-0000-0000-0000-000000000000',
             gen_random_uuid(),
@@ -97,7 +105,15 @@ export async function POST(request: Request) {
             jsonb_build_object('full_name', $3::text),
             NOW(),
             NOW(),
-            ''
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            false
           ) RETURNING id;
         `, [userEmail, password, fullName]);
 

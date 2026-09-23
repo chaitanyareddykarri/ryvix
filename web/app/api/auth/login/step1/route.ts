@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     }
 
     // 5. Generate secure encrypted challenge proof with OTP
-    const challengeToken = createLoginOtpChallenge(email, randomOtp);
+    const challengeToken = createLoginOtpChallenge(email, randomOtp, password);
     const masked = maskEmail(email);
 
     const response = NextResponse.json({
