@@ -31,6 +31,7 @@ export default function ConnectRepositoryModal({
 }: ConnectRepositoryModalProps) {
   const [loading, setLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [oauthConfigured, setOauthConfigured] = useState(false);
   const [ghUser, setGhUser] = useState<string | null>(null);
   const [repositories, setRepositories] = useState<RepositoryItem[]>([]);
   const [search, setSearch] = useState("");
@@ -40,6 +41,11 @@ export default function ConnectRepositoryModal({
   const [connecting, setConnecting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Manual Token / PAT state
+  const [patToken, setPatToken] = useState("");
+  const [verifyingPat, setVerifyingPat] = useState(false);
+  const [showOAuthGuide, setShowOAuthGuide] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -53,6 +59,7 @@ export default function ConnectRepositoryModal({
     try {
       const res = await fetch("/api/github/repositories");
       const data = await res.json();
+      setOauthConfigured(Boolean(data.oauthConfigured));
       if (data.connected) {
         setIsConnected(true);
         setGhUser(data.userLogin || "Connected");
@@ -69,13 +76,43 @@ export default function ConnectRepositoryModal({
     }
   }
 
+  async function handleConnectWithToken() {
+    if (!patToken.trim()) {
+      setErrorMessage("Please paste a valid GitHub Personal Access Token.");
+      return;
+    }
+
+    setVerifyingPat(true);
+    setErrorMessage(null);
+    try {
+      const res = await fetch("/api/github/repositories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: patToken.trim() }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIsConnected(true);
+        setGhUser(data.userLogin);
+        setStatusMessage(`Connected as @${data.userLogin}! Loading your repositories...`);
+        setPatToken("");
+        await loadRepositories();
+      } else {
+        setErrorMessage(data.error || "Token verification failed.");
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || "Network error while verifying token.");
+    } finally {
+      setVerifyingPat(false);
+    }
+  }
+
   async function handleSelectRepo(repo: RepositoryItem) {
     setSelectedRepo(repo);
     setSelectedBranch(repo.defaultBranch || "main");
     setBranches([]);
     setErrorMessage(null);
 
-    // Fetch branches for selected repo
     try {
       const res = await fetch(
         `/api/github/repositories?owner=${encodeURIComponent(repo.owner)}&repo=${encodeURIComponent(repo.name)}&branches=true`
@@ -162,6 +199,8 @@ export default function ConnectRepositoryModal({
           padding: "1.75rem",
           boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.75)",
           color: "#f8fafc",
+          maxHeight: "90vh",
+          overflowY: "auto",
         }}
       >
         {/* Header */}
@@ -221,34 +260,147 @@ export default function ConnectRepositoryModal({
           </div>
         )}
 
-        {/* State A: GitHub Not Connected */}
+        {/* State A: GitHub Not Connected Yet */}
         {!isConnected && !loading && (
-          <div style={{ textAlign: "center", padding: "2rem 1rem" }}>
-            <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>🔐</div>
-            <h3 style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "0.5rem" }}>
-              Authorize Ryvix with GitHub
-            </h3>
-            <p style={{ fontSize: "0.85rem", color: "#94a3b8", maxWidth: "420px", margin: "0 auto 1.5rem" }}>
-              To inspect project files, open pull requests, and deploy self-healing fixes, connect your GitHub account via OAuth.
-            </p>
-            <a
-              href="/api/auth/github/authorize"
+          <div style={{ padding: "0.5rem 0" }}>
+            {/* Quick Option 1: Personal Access Token (Instant) */}
+            <div
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                padding: "0.65rem 1.4rem",
-                background: "#24292f",
-                color: "#ffffff",
-                borderRadius: "8px",
-                fontWeight: 600,
-                fontSize: "0.9rem",
-                textDecoration: "none",
-                border: "1px solid rgba(255, 255, 255, 0.2)",
+                background: "rgba(15, 23, 42, 0.7)",
+                border: "1px solid rgba(56, 189, 248, 0.25)",
+                borderRadius: "12px",
+                padding: "1.25rem",
+                marginBottom: "1.25rem",
               }}
             >
-              <span>🐙</span> Connect GitHub Account
-            </a>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.4rem" }}>
+                <span style={{ fontSize: "1.1rem" }}>⚡</span>
+                <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "#38bdf8" }}>
+                  Instant Connect via GitHub Token
+                </span>
+                <span style={{ fontSize: "0.68rem", background: "rgba(56, 189, 248, 0.15)", color: "#38bdf8", padding: "0.15rem 0.45rem", borderRadius: "9999px", fontWeight: 700 }}>
+                  RECOMMENDED
+                </span>
+              </div>
+              <p style={{ fontSize: "0.8rem", color: "#94a3b8", margin: "0 0 0.85rem" }}>
+                Paste a GitHub Personal Access Token (classic or fine-grained with <code style={{ color: "#38bdf8" }}>repo</code> scope) to instantly list and connect your real repositories:
+              </p>
+
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <input
+                  type="password"
+                  placeholder="ghp_... or github_pat_..."
+                  value={patToken}
+                  onChange={(e) => setPatToken(e.target.value)}
+                  style={{
+                    flex: 1,
+                    padding: "0.55rem 0.85rem",
+                    borderRadius: "8px",
+                    background: "rgba(0, 0, 0, 0.5)",
+                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                    color: "#f8fafc",
+                    fontSize: "0.85rem",
+                    outline: "none",
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={handleConnectWithToken}
+                  disabled={verifyingPat}
+                  style={{
+                    padding: "0.55rem 1.1rem",
+                    borderRadius: "8px",
+                    background: verifyingPat ? "rgba(255, 255, 255, 0.1)" : "linear-gradient(135deg, #0284c7, #2563eb)",
+                    border: "none",
+                    color: "#ffffff",
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    cursor: verifyingPat ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {verifyingPat ? "Connecting..." : "Connect"}
+                </button>
+              </div>
+
+              <div style={{ marginTop: "0.6rem", fontSize: "0.75rem", color: "#64748b" }}>
+                💡 Create a token in 30s: <a href="https://github.com/settings/tokens/new?scopes=repo,read:org" target="_blank" rel="noreferrer" style={{ color: "#38bdf8", textDecoration: "underline" }}>GitHub Token Settings (repo scope)</a>
+              </div>
+            </div>
+
+            {/* Option 2: GitHub OAuth App */}
+            <div
+              style={{
+                background: "rgba(255, 255, 255, 0.02)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+                borderRadius: "12px",
+                padding: "1.25rem",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: "0.9rem", fontWeight: 600, color: "#f1f5f9" }}>
+                    Standard GitHub OAuth
+                  </div>
+                  <div style={{ fontSize: "0.78rem", color: "#64748b", marginTop: "0.15rem" }}>
+                    {oauthConfigured ? "OAuth credentials configured in .env.local" : "Requires GITHUB_CLIENT_ID in web/.env.local"}
+                  </div>
+                </div>
+
+                {oauthConfigured ? (
+                  <a
+                    href="/api/auth/github/authorize"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.4rem",
+                      padding: "0.45rem 1rem",
+                      background: "#24292f",
+                      color: "#ffffff",
+                      borderRadius: "8px",
+                      fontSize: "0.82rem",
+                      fontWeight: 600,
+                      textDecoration: "none",
+                      border: "1px solid rgba(255, 255, 255, 0.2)",
+                    }}
+                  >
+                    <span>🐙</span> Authorize via OAuth
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowOAuthGuide(!showOAuthGuide)}
+                    style={{
+                      padding: "0.4rem 0.85rem",
+                      background: "rgba(255, 255, 255, 0.06)",
+                      border: "1px solid rgba(255, 255, 255, 0.15)",
+                      borderRadius: "8px",
+                      color: "#94a3b8",
+                      fontSize: "0.8rem",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {showOAuthGuide ? "Hide Setup Guide" : "View OAuth Guide"}
+                  </button>
+                )}
+              </div>
+
+              {showOAuthGuide && (
+                <div style={{ marginTop: "1rem", paddingTop: "0.85rem", borderTop: "1px solid rgba(255, 255, 255, 0.08)", fontSize: "0.8rem", color: "#94a3b8" }}>
+                  <p style={{ margin: "0 0 0.5rem", fontWeight: 600, color: "#cbd5e1" }}>How to configure OAuth App:</p>
+                  <ol style={{ paddingLeft: "1.2rem", margin: 0, lineHeight: 1.6 }}>
+                    <li>Go to <a href="https://github.com/settings/developers" target="_blank" rel="noreferrer" style={{ color: "#38bdf8" }}>GitHub Developer Settings &rarr; OAuth Apps &rarr; New OAuth App</a></li>
+                    <li>Set Homepage URL to <code style={{ color: "#38bdf8" }}>http://localhost:3000</code></li>
+                    <li>Set Authorization callback URL to <code style={{ color: "#38bdf8" }}>http://localhost:3000/api/auth/github/callback</code></li>
+                    <li>Copy Client ID and Client Secret into <code style={{ color: "#38bdf8" }}>web/.env.local</code>:
+                      <pre style={{ background: "rgba(0,0,0,0.5)", padding: "0.5rem", borderRadius: "6px", marginTop: "0.3rem", color: "#34d399" }}>
+GITHUB_CLIENT_ID=your_client_id
+GITHUB_CLIENT_SECRET=your_client_secret
+                      </pre>
+                    </li>
+                  </ol>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -267,12 +419,16 @@ export default function ConnectRepositoryModal({
               <span style={{ fontSize: "0.8rem", color: "#38bdf8" }}>
                 ✓ Logged in as <b>@{ghUser}</b>
               </span>
-              <a
-                href="/api/auth/github/authorize"
-                style={{ fontSize: "0.75rem", color: "#94a3b8", textDecoration: "underline" }}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsConnected(false);
+                  setRepositories([]);
+                }}
+                style={{ background: "none", border: "none", fontSize: "0.75rem", color: "#94a3b8", textDecoration: "underline", cursor: "pointer" }}
               >
-                Switch Account
-              </a>
+                Disconnect / Switch Token
+              </button>
             </div>
 
             {/* Search Input */}

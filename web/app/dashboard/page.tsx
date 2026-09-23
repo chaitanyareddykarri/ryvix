@@ -8,6 +8,17 @@ import MovingBlocks3D from "@/components/MovingBlocks3D";
 import ConnectRepositoryModal from "@/components/ConnectRepositoryModal";
 import ConnectServerModal from "@/components/ConnectServerModal";
 
+interface ConnectedRepo {
+  id: string;
+  full_name: string;
+  default_branch: string;
+  detected_stack: string;
+  is_private: boolean;
+  clone_url: string;
+  status: string;
+  updated_at: string;
+}
+
 interface ConnectedServer {
   id: string;
   hostname: string;
@@ -42,6 +53,7 @@ export default function DashboardPage() {
 
   // Live Database Data
   const [servers, setServers] = useState<ConnectedServer[]>([]);
+  const [connectedRepos, setConnectedRepos] = useState<ConnectedRepo[]>([]);
   const [tasks, setTasks] = useState<DatabaseTask[]>([]);
   const [loadingData, setLoadingData] = useState<boolean>(true);
 
@@ -86,6 +98,19 @@ export default function DashboardPage() {
           if (Array.isArray(serverData.servers) && serverData.servers.length > 0) {
             setServers(serverData.servers);
           }
+        }
+
+        // Fetch Live Connected Repositories
+        try {
+          const repoResp = await fetch("/api/github/repositories/connect");
+          if (repoResp.ok) {
+            const repoData = await repoResp.json();
+            if (Array.isArray(repoData.repositories)) {
+              setConnectedRepos(repoData.repositories);
+            }
+          }
+        } catch (rErr) {
+          console.warn("Failed to load connected repositories:", rErr);
         }
 
         // Fetch Live Tasks from Database
@@ -536,8 +561,28 @@ export default function DashboardPage() {
             >
               <span>&lt;/&gt;</span> Advanced Details
             </button>
-            <Link
-              href="/servers"
+            <button
+              type="button"
+              onClick={() => setShowRepoModal(true)}
+              style={{
+                padding: "0.42rem 0.95rem",
+                borderRadius: "8px",
+                background: "rgba(56, 189, 248, 0.12)",
+                border: "1px solid rgba(56, 189, 248, 0.35)",
+                color: "#38bdf8",
+                fontSize: "0.82rem",
+                fontWeight: 600,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.35rem",
+              }}
+            >
+              <span>🐙</span> Connect GitHub
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowServerModal(true)}
               style={{
                 padding: "0.42rem 0.95rem",
                 borderRadius: "8px",
@@ -546,14 +591,14 @@ export default function DashboardPage() {
                 color: "#6ee7b7",
                 fontSize: "0.82rem",
                 fontWeight: 600,
-                textDecoration: "none",
+                cursor: "pointer",
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "0.35rem",
               }}
             >
-              <span>+</span> Connect Website
-            </Link>
+              <span>🖥️</span> Connect Server
+            </button>
             <button
               onClick={handleSignOut}
               title="Sign Out"
@@ -938,89 +983,277 @@ export default function DashboardPage() {
       {/* TAB 2: MY WEBSITES (REAL DATABASE NODES) */}
       {activeTab === "websites" && (
         <main style={{ flex: 1, maxWidth: "1000px", width: "100%", margin: "0 auto", padding: "3rem 1.5rem", position: "relative", zIndex: 10 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
+          {/* Top Title */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2.5rem", flexWrap: "wrap", gap: "1rem" }}>
             <div>
               <h2 style={{ fontSize: "1.8rem", fontWeight: 800 }}>Connected Websites &amp; Fleets</h2>
               <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>
-                Active infrastructure and repositories synchronized with your tenant organization.
+                Active infrastructure, repositories, and nodes synchronized with your organization.
               </p>
             </div>
-            <Link
-              href="/servers"
-              className="btn-shimmer"
-              style={{ padding: "0.6rem 1.2rem", fontSize: "0.85rem" }}
-            >
-              + Connect Node &rarr;
-            </Link>
+            <div style={{ display: "flex", gap: "0.75rem" }}>
+              <button
+                type="button"
+                onClick={() => setShowRepoModal(true)}
+                className="btn-secondary"
+                style={{ padding: "0.55rem 1rem", fontSize: "0.85rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+              >
+                <span>🐙</span> Connect GitHub Repo
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowServerModal(true)}
+                className="btn-shimmer"
+                style={{ padding: "0.55rem 1.1rem", fontSize: "0.85rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+              >
+                <span>🖥️</span> Connect Server Node &rarr;
+              </button>
+            </div>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            {servers.map((s) => (
+          {/* SECTION 1: CONNECTED GITHUB REPOSITORIES */}
+          <div style={{ marginBottom: "2.5rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <div>
+                <h3 style={{ fontSize: "1.15rem", fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <span>🐙</span> Connected GitHub Repositories
+                </h3>
+                <p style={{ color: "var(--text-secondary)", fontSize: "0.8rem", margin: "0.2rem 0 0" }}>
+                  Repositories Ryvix AI can inspect, generate diffs for, and create PRs against
+                </p>
+              </div>
+              <span style={{ fontSize: "0.75rem", color: "#38bdf8", background: "rgba(56, 189, 248, 0.1)", padding: "0.2rem 0.6rem", borderRadius: "9999px", fontWeight: 600 }}>
+                {connectedRepos.length} Repos Linked
+              </span>
+            </div>
+
+            {connectedRepos.length === 0 ? (
               <div
-                key={s.id}
-                className="glass-panel"
                 style={{
-                  padding: "1.25rem 1.5rem",
-                  borderRadius: "12px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  background: "rgba(15, 23, 42, 0.7)",
+                  background: "rgba(15, 23, 42, 0.6)",
+                  border: "1px dashed rgba(255, 255, 255, 0.15)",
+                  borderRadius: "14px",
+                  padding: "2.5rem 1.5rem",
+                  textAlign: "center",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🐙</div>
+                <h4 style={{ fontSize: "1rem", fontWeight: 600, color: "#f8fafc", margin: "0 0 0.35rem 0" }}>
+                  No GitHub Repositories Connected Yet
+                </h4>
+                <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", maxWidth: "420px", margin: "0 auto 1.25rem" }}>
+                  Connect your customer GitHub repository to let Ryvix inspect your codebase, recommend stack-aware architecture fixes, and deploy pull requests.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowRepoModal(true)}
+                  style={{
+                    padding: "0.55rem 1.25rem",
+                    borderRadius: "8px",
+                    background: "linear-gradient(135deg, #0284c7, #2563eb)",
+                    border: "none",
+                    color: "#ffffff",
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                  }}
+                >
+                  <span>🐙</span> Connect GitHub Repository
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                {connectedRepos.map((repo) => (
                   <div
+                    key={repo.id}
+                    className="glass-panel"
                     style={{
-                      width: "40px",
-                      height: "40px",
-                      borderRadius: "10px",
-                      background: "rgba(56, 189, 248, 0.12)",
+                      padding: "1rem 1.25rem",
+                      borderRadius: "12px",
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "center",
-                      color: "#38bdf8",
+                      justifyContent: "space-between",
+                      background: "rgba(15, 23, 42, 0.7)",
+                      border: "1px solid rgba(255, 255, 255, 0.08)",
                     }}
                   >
-                    🌐
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: "1rem" }}>{s.hostname}</div>
-                    <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-                      {s.ip} · {s.provider} · {s.os}
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
+                      <div
+                        style={{
+                          width: "36px",
+                          height: "36px",
+                          borderRadius: "8px",
+                          background: "rgba(56, 189, 248, 0.12)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#38bdf8",
+                          fontSize: "1.1rem",
+                        }}
+                      >
+                        📦
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#f8fafc" }}>
+                          {repo.full_name}
+                          {repo.is_private && (
+                            <span style={{ marginLeft: "0.5rem", fontSize: "0.7rem", color: "#fbbf24", background: "rgba(251, 191, 36, 0.1)", padding: "0.1rem 0.4rem", borderRadius: "4px" }}>
+                              🔒 Private
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginTop: "0.15rem" }}>
+                          Branch: <code style={{ color: "#38bdf8" }}>{repo.default_branch}</code> · Stack: <span style={{ color: "#a5b4fc" }}>{repo.detected_stack}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                      <button
+                        onClick={() => {
+                          setSelectedWebsite(repo.full_name);
+                          setWebsiteDomain("github.com/" + repo.full_name);
+                          setActiveTab("home");
+                        }}
+                        className="btn-secondary"
+                        style={{ padding: "0.35rem 0.75rem", fontSize: "0.78rem", cursor: "pointer" }}
+                      >
+                        Select for AI Tasks
+                      </button>
                     </div>
                   </div>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                  <span
-                    style={{
-                      padding: "0.25rem 0.65rem",
-                      borderRadius: "9999px",
-                      fontSize: "0.75rem",
-                      fontWeight: 600,
-                      background: s.status === "healthy" ? "rgba(16, 185, 129, 0.15)" : "rgba(245, 158, 11, 0.15)",
-                      color: s.status === "healthy" ? "#34d399" : "#fbbf24",
-                      border: s.status === "healthy" ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(245, 158, 11, 0.3)",
-                    }}
-                  >
-                    ● {s.status.toUpperCase()}
-                  </span>
-                  <button
-                    onClick={() => {
-                      setSelectedWebsite(s.hostname);
-                      setWebsiteDomain(s.ip);
-                      setActiveTab("home");
-                    }}
-                    className="btn-secondary"
-                    style={{ padding: "0.4rem 0.85rem", fontSize: "0.8rem" }}
-                  >
-                    Edit Site
-                  </button>
-                </div>
+                ))}
               </div>
-            ))}
+            )}
+          </div>
+
+          {/* SECTION 2: CONNECTED CUSTOMER SERVER NODES */}
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <div>
+                <h3 style={{ fontSize: "1.15rem", fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <span>🖥️</span> Connected Server Nodes &amp; Daemons
+                </h3>
+                <p style={{ color: "var(--text-secondary)", fontSize: "0.8rem", margin: "0.2rem 0 0" }}>
+                  Host machines with Ryvix internal daemon streaming telemetry and ready for self-healing
+                </p>
+              </div>
+              <span style={{ fontSize: "0.75rem", color: "#10b981", background: "rgba(16, 185, 129, 0.1)", padding: "0.2rem 0.6rem", borderRadius: "9999px", fontWeight: 600 }}>
+                {servers.length} Active Nodes
+              </span>
+            </div>
+
+            {servers.length === 0 ? (
+              <div
+                style={{
+                  background: "rgba(15, 23, 42, 0.6)",
+                  border: "1px dashed rgba(255, 255, 255, 0.15)",
+                  borderRadius: "14px",
+                  padding: "2.5rem 1.5rem",
+                  textAlign: "center",
+                }}
+              >
+                <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🖥️</div>
+                <h4 style={{ fontSize: "1rem", fontWeight: 600, color: "#f8fafc", margin: "0 0 0.35rem 0" }}>
+                  No Customer Servers Connected Yet
+                </h4>
+                <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", maxWidth: "440px", margin: "0 auto 1.25rem" }}>
+                  Enroll your Linux server using a single shell command. The Ryvix agent uses zero open inbound ports to stream telemetry and perform autonomous self-healing.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowServerModal(true)}
+                  style={{
+                    padding: "0.55rem 1.25rem",
+                    borderRadius: "8px",
+                    background: "linear-gradient(135deg, #059669, #10b981)",
+                    border: "none",
+                    color: "#ffffff",
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                  }}
+                >
+                  <span>🖥️</span> Connect Server Node
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                {servers.map((s) => (
+                  <div
+                    key={s.id}
+                    className="glass-panel"
+                    style={{
+                      padding: "1.25rem 1.5rem",
+                      borderRadius: "12px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      background: "rgba(15, 23, 42, 0.7)",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                      <div
+                        style={{
+                          width: "40px",
+                          height: "40px",
+                          borderRadius: "10px",
+                          background: "rgba(56, 189, 248, 0.12)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#38bdf8",
+                        }}
+                      >
+                        🌐
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: "1rem" }}>{s.hostname}</div>
+                        <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+                          {s.ip} · {s.provider} · {s.os}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                      <span
+                        style={{
+                          padding: "0.25rem 0.65rem",
+                          borderRadius: "9999px",
+                          fontSize: "0.75rem",
+                          fontWeight: 600,
+                          background: s.status === "healthy" ? "rgba(16, 185, 129, 0.15)" : "rgba(245, 158, 11, 0.15)",
+                          color: s.status === "healthy" ? "#34d399" : "#fbbf24",
+                          border: s.status === "healthy" ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(245, 158, 11, 0.3)",
+                        }}
+                      >
+                        ● {s.status.toUpperCase()}
+                      </span>
+                      <button
+                        onClick={() => {
+                          setSelectedWebsite(s.hostname);
+                          setWebsiteDomain(s.ip);
+                          setActiveTab("home");
+                        }}
+                        className="btn-secondary"
+                        style={{ padding: "0.4rem 0.85rem", fontSize: "0.8rem" }}
+                      >
+                        Edit Site
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </main>
       )}
+
+      {/* TAB 3: CHANGES (REAL DATABASE TASKS) */}
 
       {/* TAB 3: CHANGES (REAL DATABASE TASKS) */}
       {activeTab === "changes" && (

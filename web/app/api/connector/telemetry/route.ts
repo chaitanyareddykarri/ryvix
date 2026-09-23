@@ -10,10 +10,8 @@ export async function POST(request: Request) {
       serverId,
       connectorId,
       hostname,
+      sourceIp,
       metrics,
-      services,
-      containers,
-      heartbeatSeq,
     } = payload;
 
     if (!serverId && !connectorId) {
@@ -38,27 +36,26 @@ export async function POST(request: Request) {
         .eq("id", serverId);
     }
 
-    // 2. Insert Telemetry Metric Rollup
-    if (metrics) {
+    // 2. Insert Telemetry Metric Rollup matching exact schema
+    if (metrics && serverId) {
       const cpuPercent = metrics.cpuUsagePercent ?? metrics.cpuPercent ?? 15;
       const memPercent = metrics.memoryUsagePercent ?? metrics.memPercent ?? 45;
       const diskPercent = metrics.diskUsagePercent ?? metrics.diskPercent ?? 30;
+      const ramUsedMb = metrics.memoryUsedMb ?? Math.round(memPercent * 81.92);
 
       await supabase.from("telemetry_metric_rollups").insert({
-        server_id: serverId || null,
+        server_id: serverId,
         bucket_timestamp: nowIso,
-        cpu_usage_avg: cpuPercent,
-        cpu_usage_max: cpuPercent,
-        memory_usage_avg: memPercent,
-        memory_usage_max: memPercent,
-        disk_usage_avg: diskPercent,
-        disk_usage_max: diskPercent,
-        sample_count: 1,
+        cpu_avg: cpuPercent,
+        cpu_max: cpuPercent,
+        ram_used_mb: ramUsedMb,
+        ram_percent: memPercent,
+        disk_used_percent: diskPercent,
       });
 
       // 3. Security Engine Threat Analysis
       const securityAnalysis = LocalSecurityEngine.analyze({
-        serverId: serverId || "srv_node",
+        serverId: serverId,
         hostname: hostname || "customer-node",
         metrics: {
           cpuPercent,
@@ -71,37 +68,37 @@ export async function POST(request: Request) {
         recentLogs: Array.isArray(payload.recentLogs) ? payload.recentLogs : [],
       });
 
-      // If threat is high or critical, log a security event
+      // If threat is high or critical, log into public.security_events matching exact schema
       if (securityAnalysis.severity === "high" || securityAnalysis.severity === "critical") {
         await supabase.from("security_events").insert({
-          server_id: serverId || null,
+          server_id: serverId,
           event_type: securityAnalysis.threatType || "anomaly_detected",
           severity: securityAnalysis.severity,
-          source: hostname || "customer-connector",
-          evidence: {
+          source_ip: sourceIp || "198.51.100.99",
+          raw_evidence: {
             confidence: securityAnalysis.confidence,
             diagnosis: securityAnalysis.diagnosis,
             recommendedAction: securityAnalysis.recommendedAction,
             metricsSnapshot: metrics,
           },
           status: "active",
+          detected_at: nowIso,
         });
       }
     }
 
-    // 4. Check for Pending Authorized Commands in queue
+    // 4. Check for Pending Authorized Commands in queue matching exact schema
     let pendingCommands: any[] = [];
     if (connectorId) {
       const { data: commands } = await supabase
         .from("connector_commands")
-        .select("*")
+        .select("id, connector_id, command_name, parameters_hash, payload_encrypted, status")
         .eq("connector_id", connectorId)
         .eq("status", "pending")
         .limit(5);
 
       if (commands && commands.length > 0) {
         pendingCommands = commands;
-        // Mark as dispatched
         const ids = commands.map((c: any) => c.id);
         await supabase
           .from("connector_commands")

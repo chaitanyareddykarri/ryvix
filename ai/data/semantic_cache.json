@@ -1,6 +1,6 @@
 [
   {
-    "id": "cache_1790146588958_4e06l",
+    "id": "cache_1790147517377_yp2cc",
     "query": "why is website throwing 502 bad gateway error",
     "response": {
       "solution": "Inspect port 3000 and restart node-app",
@@ -74,7 +74,7 @@
       0
     ],
     "hitCount": 0,
-    "createdAt": "2026-09-23T06:56:28.958Z",
-    "expiresAt": 1790150188958
+    "createdAt": "2026-09-23T07:11:57.377Z",
+    "expiresAt": 1790151117377
   }
 ]

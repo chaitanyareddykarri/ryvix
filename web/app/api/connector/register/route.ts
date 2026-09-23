@@ -39,29 +39,31 @@ export async function POST(request: Request) {
     const cookieStore = await cookies();
     const supabase = createClient(cookieStore);
 
-    const connectorId = `conn_${crypto.randomBytes(8).toString("hex")}`;
+    // Schema requires valid UUID for connectors.id
+    const connectorId = crypto.randomUUID();
     const apiKey = `ryvix_sec_${crypto.randomBytes(24).toString("hex")}`;
     const serverHostname = hostname || `node-${crypto.randomBytes(3).toString("hex")}.customer.internal`;
 
-    // 1. Register connector in public.connectors
+    // 1. Register connector in public.connectors matching exact schema
     const { data: connectorRecord, error: connErr } = await supabase
       .from("connectors")
       .insert({
         id: connectorId,
         environment_id: validation.environmentId,
+        name: `${serverHostname}-connector`,
         connector_type: "agent_daemon",
         status: "active",
-        version: "2.4.0",
+        agent_version: "2.4.0",
         last_heartbeat_at: new Date().toISOString(),
       })
       .select()
       .single();
 
     if (connErr) {
-      console.warn("[Connector DB Warn]:", connErr.message);
+      console.warn("[Connector DB Warning]:", connErr.message);
     }
 
-    // 2. Register or link Server in public.servers
+    // 2. Register or link Server in public.servers matching exact schema
     const { data: serverRecord, error: serverErr } = await supabase
       .from("servers")
       .insert({
@@ -81,7 +83,7 @@ export async function POST(request: Request) {
       .single();
 
     if (serverErr) {
-      console.warn("[Server DB Warn]:", serverErr.message);
+      console.warn("[Server DB Warning]:", serverErr.message);
     }
 
     return NextResponse.json({

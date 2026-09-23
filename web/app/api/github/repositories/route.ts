@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { createClient } from "@/utils/supabase/server";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -15,7 +16,8 @@ export async function GET(request: Request) {
   if (!token) {
     return NextResponse.json({
       connected: false,
-      message: "GitHub account is not connected. Please authorize GitHub first.",
+      oauthConfigured: Boolean(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET),
+      message: "GitHub account is not connected. Please authorize GitHub or enter a token.",
       repositories: [],
     });
   }
@@ -73,7 +75,6 @@ export async function GET(request: Request) {
 
     if (!reposRes.ok) {
       if (reposRes.status === 401) {
-        // Token expired or revoked
         cookieStore.delete("gh_session_token");
         return NextResponse.json(
           {
@@ -136,6 +137,104 @@ export async function GET(request: Request) {
         error: err.message || "Failed to query GitHub repositories",
         repositories: [],
       },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { token } = body;
+
+    if (!token || typeof token !== "string" || !token.trim()) {
+      return NextResponse.json(
+        { success: false, error: "Please provide a valid GitHub personal access token" },
+        { status: 400 }
+      );
+    }
+
+    const cleanToken = token.trim();
+
+    // Verify token with GitHub User API
+    const ghUserRes = await fetch("https://api.github.com/user", {
+      headers: {
+        Authorization: `Bearer ${cleanToken}`,
+        Accept: "application/vnd.github.v3+json",
+        "User-Agent": "Ryvix-Platform",
+      },
+    });
+
+    if (!ghUserRes.ok) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "GitHub rejected this token. Make sure it has 'repo' scope and has not expired.",
+        },
+        { status: 401 }
+      );
+    }
+
+    const ghUser = await ghUserRes.json();
+    const cookieStore = await cookies();
+
+    // Store in HTTP-only session cookie
+    cookieStore.set("gh_session_token", cleanToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: "/",
+    });
+
+    cookieStore.set("gh_user_login", ghUser.login, {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 7,
+      path: "/",
+    });
+
+    // Also persist installation in Supabase if user is authenticated
+    const supabase = createClient(cookieStore);
+    const {
+      data: { user: supabaseUser },
+    } = await supabase.auth.getUser();
+
+    if (supabaseUser) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("organization_id")
+        .eq("id", supabaseUser.id)
+        .single();
+
+      if (profile?.organization_id) {
+        await supabase.from("repository_installations").upsert(
+          {
+            organization_id: profile.organization_id,
+            installation_id: Number(ghUser.id),
+            account_login: ghUser.login,
+            account_type: ghUser.type === "Organization" ? "organization" : "user",
+            permissions: {
+              scope: "repo,read:org",
+              connected_at: new Date().toISOString(),
+              target_login: ghUser.login,
+            },
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "organization_id,installation_id" }
+        );
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Connected successfully as @${ghUser.login}`,
+      userLogin: ghUser.login,
+    });
+  } catch (err: any) {
+    return NextResponse.json(
+      { success: false, error: err.message || "Failed to verify token" },
       { status: 500 }
     );
   }

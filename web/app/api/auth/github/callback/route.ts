@@ -87,7 +87,6 @@ export async function GET(request: Request) {
     } = await supabase.auth.getUser();
 
     if (supabaseUser) {
-      // Find organization
       const { data: profile } = await supabase
         .from("profiles")
         .select("organization_id")
@@ -97,11 +96,11 @@ export async function GET(request: Request) {
       const orgId = profile?.organization_id;
 
       if (orgId) {
-        // Upsert repository installation
+        // Upsert repository installation matching exact schema
         await supabase.from("repository_installations").upsert(
           {
             organization_id: orgId,
-            installation_id: ghUser.id,
+            installation_id: Number(ghUser.id),
             account_login: ghUser.login,
             account_type: ghUser.type === "Organization" ? "organization" : "user",
             permissions: {
@@ -109,7 +108,6 @@ export async function GET(request: Request) {
               connected_at: new Date().toISOString(),
               target_login: ghUser.login,
             },
-            status: "active",
             updated_at: new Date().toISOString(),
           },
           { onConflict: "organization_id,installation_id" }
@@ -117,7 +115,7 @@ export async function GET(request: Request) {
       }
     }
 
-    // 4. Set secure session cookie containing the token (HttpOnly, Secure)
+    // 4. Set secure session cookie containing the token
     cookieStore.set("gh_session_token", accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -127,7 +125,7 @@ export async function GET(request: Request) {
     });
 
     cookieStore.set("gh_user_login", ghUser.login, {
-      httpOnly: false, // readable by client to show avatar/username
+      httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 7,
