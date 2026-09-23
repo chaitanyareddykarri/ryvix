@@ -28,46 +28,45 @@ export async function GET() {
     const cookieStore = await cookies();
     const supabase = createClient(cookieStore);
 
-    // 1. Query real servers directly from Supabase PostgreSQL under RLS
-    const { data: dbServers, error } = await supabase
-      .from("servers")
-      .select("*, services_inventory(*)")
-      .order("created_at", { ascending: false });
+    // 1. Authenticate the user to scope servers by organization
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    let finalServers: any[] = [];
+    let dbServers: any[] = [];
 
-    if (!error && Array.isArray(dbServers) && dbServers.length > 0) {
-      finalServers = dbServers;
-    } else {
-      // 2. Direct PostgreSQL query to guarantee 100% real database records are served
-      try {
-        const { Client } = require("pg");
-        const client = new Client({
-          connectionString:
-            process.env.DATABASE_URL ||
-            "postgresql://postgres:CR%24%24Reddy2006@db.tsoyrpgifovzwqtgpkkb.supabase.co:5432/postgres",
-          ssl: { rejectUnauthorized: false },
-        });
-        await client.connect();
-        const res = await client.query(`
-          SELECT s.id, s.hostname, s.ip_address, s.os_type, s.cloud_provider, s.status, s.cpu_cores, s.ram_mb, s.disk_gb, s.updated_at,
-                 json_agg(json_build_object('service_name', svc.service_name, 'status', svc.status)) as services_inventory
-          FROM servers s
-          LEFT JOIN services_inventory svc ON svc.server_id = s.id
-          GROUP BY s.id
-          ORDER BY s.created_at DESC
-          LIMIT 6
-        `);
-        await client.end();
-        if (res.rows && res.rows.length > 0) {
-          finalServers = res.rows;
+    if (user) {
+      // Find the user's organization
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("organization_id")
+        .eq("id", user.id)
+        .single();
+
+      if (profile?.organization_id) {
+        // Find environments belonging to this organization
+        const { data: envs } = await supabase
+          .from("environments")
+          .select("id")
+          .eq("organization_id", profile.organization_id);
+
+        const envIds = (envs || []).map((e: any) => e.id);
+
+        if (envIds.length > 0) {
+          const { data: serversData } = await supabase
+            .from("servers")
+            .select("*, services_inventory(*)")
+            .in("environment_id", envIds)
+            .order("created_at", { ascending: false });
+
+          if (Array.isArray(serversData)) {
+            dbServers = serversData;
+          }
         }
-      } catch (pgErr) {
-        console.warn("Direct PG query failed:", pgErr);
       }
     }
 
-    const formatted: ServerState[] = finalServers.map((s: any) => ({
+    const formatted: ServerState[] = dbServers.map((s: any) => ({
       id: s.id,
       hostname: s.hostname,
       ip: s.ip_address || "198.51.100.24",

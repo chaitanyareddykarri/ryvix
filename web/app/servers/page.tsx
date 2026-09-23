@@ -3,6 +3,7 @@
 import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
+import ConnectServerModal from "@/components/ConnectServerModal";
 
 interface SystemdService {
   name: string;
@@ -31,6 +32,7 @@ export default function ServersPage() {
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"all" | "healthy" | "degraded">("all");
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [showEnrollModal, setShowEnrollModal] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -159,6 +161,7 @@ export default function ServersPage() {
               {userEmail}
             </span>
           )}
+          <Link href="/observability" className="btn-secondary" style={{ padding: "0.4rem 0.9rem", fontSize: "0.82rem", textDecoration: "none", color: "#38bdf8", borderColor: "rgba(56, 189, 248, 0.3)" }}>📡 Observability</Link>
           <Link href="/tasks" className="btn-secondary" style={{ padding: "0.4rem 0.9rem", fontSize: "0.82rem", textDecoration: "none" }}>
             Coding Workspace
           </Link>
@@ -195,7 +198,7 @@ export default function ServersPage() {
 
         {/* Enroll Button */}
         <button
-          onClick={generateEnrollment}
+          onClick={() => setShowEnrollModal(true)}
           disabled={enrolling}
           className="btn-primary"
           style={{
