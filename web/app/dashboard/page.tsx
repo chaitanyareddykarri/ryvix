@@ -1137,7 +1137,16 @@ export default function DashboardPage() {
     return () => {
       supabase.removeChannel(realtimeChannel);
     };
-  }, [supabase]);
+  }, [
+    supabase,
+    activePreviewUrlState,
+    activeRepo?.default_branch,
+    activeRepo?.full_name,
+    activeTask,
+    connectedRepos,
+    customLiveUrl,
+    selectedWebsite,
+  ]);
 
   // Helper to show project-specific URL toast notification (Section 9, 10, 17)
   function showProjectSelectedToast(repo: any) {

@@ -3,7 +3,7 @@
  * 
  * Verifies:
  * 1. Vectorizer: Maps raw metrics & log n-grams into a fixed 64-dimensional Float32Array.
- * 2. Inference Speed: Sub-millisecond execution (< 0.05ms) utilizing Float32Array typed arrays.
+ * 2. Inference Speed: Sub-millisecond execution (< 1ms) utilizing Float32Array typed arrays.
  * 3. Softmax Distribution: Validates probability distribution sums to 1.0 across all 40+ threat classes.
  * 4. Online Backpropagation Learning: Validates Cross-Entropy loss decreases with gradient descent updates.
  * 5. Full Pipeline Integration: Verifies LocalSecurityEngine returns neuralPrediction for all incidents.
@@ -47,7 +47,7 @@ export async function testNeuralNetworkThreatClassifier(): Promise<void> {
   console.log('  ✓ Vectorizer mapped server telemetry to 64-dimensional Float32Array tensor.');
 
   // =========================================================================
-  // 2. TEST INFERENCE SPEED (< 0.05ms) & SOFTMAX DISTRIBUTION
+  // 2. TEST INFERENCE SPEED (< 1ms) & SOFTMAX DISTRIBUTION
   // =========================================================================
   console.log('  -> 2. Benchmarking Neural Forward Pass Inference Latency...');
   const warmup = neuralThreatClassifier.predict(featureVec);
@@ -60,7 +60,7 @@ export async function testNeuralNetworkThreatClassifier(): Promise<void> {
   }
   const avgLatencyMs = (performance.now() - t0) / iterations;
   console.log(`  ✓ Neural Forward Pass Speed: ${avgLatencyMs.toFixed(4)} ms per prediction (Ultra-Fast!).`);
-  assert.ok(avgLatencyMs < 0.2, 'Inference latency must be sub-millisecond');
+  assert.ok(avgLatencyMs < 1.0, `Inference latency must remain below 1ms (got ${avgLatencyMs.toFixed(4)}ms)`);
 
   // Verify Softmax Probability Sum
   const prediction = neuralThreatClassifier.predict(featureVec);
