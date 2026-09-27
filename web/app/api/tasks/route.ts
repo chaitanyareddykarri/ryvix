@@ -11,42 +11,57 @@ export async function GET() {
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      // If not authenticated via cookie, check direct PostgreSQL tasks so user can see recent real tasks
-      try {
-        const { Client } = require("pg");
-        const client = new Client({
-          connectionString: process.env.DATABASE_URL || "postgresql://postgres:CR%24%24Reddy2006@db.tsoyrpgifovzwqtgpkkb.supabase.co:5432/postgres",
-          ssl: { rejectUnauthorized: false }
-        });
-        await client.connect();
-        const res = await client.query(`
-          SELECT id, project_id, created_by, channel, task_type, status, user_prompt, summary, created_at, updated_at
-          FROM tasks
-          ORDER BY created_at DESC
-          LIMIT 20
-        `);
-        await client.end();
-        return NextResponse.json({ tasks: res.rows || [] });
-      } catch {
-        return NextResponse.json({ tasks: [] });
+      return NextResponse.json({ tasks: [] });
+    }
+
+    // Tenant isolation: Fetch user's organization projects
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("organization_id")
+      .eq("id", user.id)
+      .single();
+
+    let projectIds: string[] = [];
+    if (profile?.organization_id) {
+      const { data: projs } = await supabase
+        .from("projects")
+        .select("id")
+        .eq("organization_id", profile.organization_id);
+      if (projs && projs.length > 0) {
+        projectIds = projs.map((p) => p.id);
       }
     }
 
-    // Disambiguate foreign key relationship: plans!plans_task_id_fkey
-    const { data: tasks, error } = await supabase
+    // Only query tasks belonging to this user or their organization projects
+    let query = supabase
       .from("tasks")
       .select("*, plans:plans!plans_task_id_fkey(*)")
       .order("created_at", { ascending: false })
       .limit(20);
 
+    if (projectIds.length > 0) {
+      query = query.or(`created_by.eq.${user.id},project_id.in.(${projectIds.join(",")})`);
+    } else {
+      query = query.eq("created_by", user.id);
+    }
+
+    const { data: tasks, error } = await query;
+
     if (error) {
       console.warn("[Tasks GET Notice]:", error.message);
-      const { data: fallbackTasks } = await supabase
+      let fallbackQuery = supabase
         .from("tasks")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(20);
 
+      if (projectIds.length > 0) {
+        fallbackQuery = fallbackQuery.or(`created_by.eq.${user.id},project_id.in.(${projectIds.join(",")})`);
+      } else {
+        fallbackQuery = fallbackQuery.eq("created_by", user.id);
+      }
+
+      const { data: fallbackTasks } = await fallbackQuery;
       return NextResponse.json({ tasks: fallbackTasks || [] });
     }
 
@@ -175,6 +190,11 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    const supabase = createClient(await cookies());
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const body = await request.json().catch(() => ({}));
     const { taskId, status } = body;
 
@@ -182,26 +202,43 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "taskId and status are required" }, { status: 400 });
     }
 
-    try {
-      const { Client } = require("pg");
-      const client = new Client({
-        connectionString:
-          process.env.DATABASE_URL ||
-          "postgresql://postgres:CR%24%24Reddy2006@db.tsoyrpgifovzwqtgpkkb.supabase.co:5432/postgres",
-        ssl: { rejectUnauthorized: false },
-      });
-      await client.connect();
-      await client.query(
-        "UPDATE tasks SET status = $1, updated_at = NOW() WHERE id = $2",
-        [status, taskId]
-      );
-      await client.end();
-    } catch (e) {
-      console.warn("[Task PATCH DB Notice]:", e);
-    }
+    const { data: task, error } = await supabase.from("tasks")
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq("id", taskId).eq("created_by", user.id).select("id").maybeSingle();
+    if (error) throw error;
+    if (!task) return NextResponse.json({ error: "Task not found" }, { status: 404 });
 
     return NextResponse.json({ success: true, taskId, status });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Failed to update task" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const cookieStore = await cookies();
+    const supabase = createClient(cookieStore);
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const taskId = searchParams.get("taskId");
+
+    if (!taskId) {
+      return NextResponse.json({ error: "taskId is required" }, { status: 400 });
+    }
+
+    // Foreign-key cascades remove dependent rows only after the authorized delete.
+    const { data: task, error } = await supabase.from("tasks").delete()
+      .eq("id", taskId).eq("created_by", user.id).select("id").maybeSingle();
+    if (error) throw error;
+    if (!task) return NextResponse.json({ error: "Task not found" }, { status: 404 });
+
+    return NextResponse.json({ success: true, taskId });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Failed to delete task" }, { status: 500 });
   }
 }

@@ -1,13 +1,14 @@
 ﻿import { createClient } from "@/utils/supabase/server";
+import { queryDirectDb } from "@/utils/direct-db";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import {
   InternalAgent,
   CloudRecoveryBridge,
-  LocalSecurityEngine,
   ServerAccessManager,
   ServerClassifier,
 } from "@ryvix/services";
+import { LocalSecurityEngine } from "@ryvix/ai";
 
 export interface ServerState {
   id: string;
@@ -37,68 +38,53 @@ export async function GET() {
 
     if (user) {
       // Find the user's organization
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("organization_id")
-        .eq("id", user.id)
-        .single();
+      const profileRes = await queryDirectDb<{ organization_id: string }>(
+        `SELECT organization_id FROM profiles WHERE id = $1`,
+        [user.id]
+      );
+      const userOrgId = profileRes[0]?.organization_id;
 
-      if (profile?.organization_id) {
-        // Find environments belonging to this organization
-        const { data: envs } = await supabase
-          .from("environments")
-          .select("id")
-          .eq("organization_id", profile.organization_id);
+      if (userOrgId) {
+        // Find projects belonging to this organization
+        const projects = await queryDirectDb<{ id: string }>(
+          `SELECT id FROM projects WHERE organization_id = $1`,
+          [userOrgId]
+        );
+        const projectIds = projects.map((p) => p.id);
 
-        const envIds = (envs || []).map((e: any) => e.id);
+        if (projectIds.length > 0) {
+          // Find environments belonging to these projects
+          const envs = await queryDirectDb<{ id: string }>(
+            `SELECT id FROM environments WHERE project_id = ANY($1)`,
+            [projectIds]
+          );
+          const envIds = envs.map((e) => e.id);
 
-        if (envIds.length > 0) {
-          const { data: serversData } = await supabase
-            .from("servers")
-            .select("*, services_inventory(*)")
-            .in("environment_id", envIds)
-            .order("created_at", { ascending: false });
+          if (envIds.length > 0) {
+            const serversData = await queryDirectDb(
+              `SELECT s.*, 
+                 COALESCE(
+                   (SELECT json_agg(svc.*) FROM services_inventory svc WHERE svc.server_id = s.id),
+                   '[]'
+                 ) as services_inventory
+               FROM servers s
+               WHERE s.environment_id = ANY($1)
+               ORDER BY s.hostname, s.created_at DESC`,
+              [envIds]
+            );
 
-          if (Array.isArray(serversData)) {
-            dbServers = serversData;
+            if (Array.isArray(serversData)) {
+              dbServers = serversData;
+            }
           }
         }
-      }
-    }
-
-    // Direct PostgreSQL fallback if RLS or unauthenticated cookie returned 0 rows
-    if (!dbServers || dbServers.length === 0) {
-      try {
-        const { Client } = require("pg");
-        const client = new Client({
-          connectionString:
-            process.env.DATABASE_URL ||
-            "postgresql://postgres:CR%24%24Reddy2006@db.tsoyrpgifovzwqtgpkkb.supabase.co:5432/postgres",
-          ssl: { rejectUnauthorized: false },
-        });
-        await client.connect();
-        const sRes = await client.query(`
-          SELECT DISTINCT ON (s.hostname) s.*, 
-            COALESCE(
-              (SELECT json_agg(svc.*) FROM services_inventory svc WHERE svc.server_id = s.id),
-              '[]'
-            ) as services_inventory
-          FROM servers s
-          ORDER BY s.hostname, s.created_at DESC
-        `);
-        if (Array.isArray(sRes.rows) && sRes.rows.length > 0) {
-          dbServers = sRes.rows;
-        }
-        await client.end();
-      } catch {
-        // ignore
       }
     }
 
     const formatted: ServerState[] = dbServers.map((s: any) => ({
       id: s.id,
       hostname: s.hostname,
-      ip: s.ip_address || "198.51.100.24",
+      ip: s.ip_address || "127.0.0.1",
       os: s.os_type || "Ubuntu 24.04 LTS (x86_64)",
       provider: s.cloud_provider
         ? `${s.cloud_provider.toUpperCase()}`
@@ -124,7 +110,6 @@ export async function GET() {
           : [
               { name: "nginx", status: "active" },
               { name: "docker", status: "active" },
-              { name: "postgresql", status: "active" },
             ],
     }));
 
@@ -134,12 +119,10 @@ export async function GET() {
       count: formatted.length,
       source: "database",
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Failed to query servers";
     return NextResponse.json(
-      {
-        success: false,
-        error: err.message,
-      },
+      { success: false, error: msg, servers: [] },
       { status: 500 }
     );
   }
@@ -317,10 +300,8 @@ export async function POST(req: Request) {
       { success: false, error: `Unknown action: ${action}` },
       { status: 400 }
     );
-  } catch (err: any) {
-    return NextResponse.json(
-      { success: false, error: err.message || "Failed to process server action" },
-      { status: 500 }
-    );
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Internal Server Error";
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

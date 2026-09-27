@@ -1,56 +1,117 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import * as crypto from "node:crypto";
+import { queryDirectDb } from "@/utils/direct-db";
+import { cookies } from "next/headers";
+import { createClient } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const { Client } = require("pg");
-    const client = new Client({
-      connectionString:
-        process.env.DATABASE_URL ||
-        "postgresql://postgres:CR%24%24Reddy2006@db.tsoyrpgifovzwqtgpkkb.supabase.co:5432/postgres",
-      ssl: { rejectUnauthorized: false },
-    });
-    await client.connect();
+    const cookieStore = await cookies();
+    const supabase = createClient(cookieStore);
 
-    const orgRes = await client.query(`
-      SELECT id, name, slug, created_at, updated_at
-      FROM organizations
-      ORDER BY created_at DESC
-      LIMIT 1
-    `);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    const keyRes = await client.query(`
-      SELECT id, name, key_prefix, scopes, created_at, expires_at
-      FROM api_keys
-      WHERE revoked_at IS NULL
-      ORDER BY created_at DESC
-      LIMIT 5
-    `);
+    let orgId: string | null = null;
+    let userFullName: string = "Account Owner";
+    let userEmail: string = "";
 
-    const membersRes = await client.query(`
-      SELECT om.id, om.role, p.full_name, COALESCE(u.email, p.full_name || '@company.com') as email
-      FROM organization_members om
-      LEFT JOIN profiles p ON p.id = om.user_id
-      LEFT JOIN auth.users u ON u.id = om.user_id
-      LIMIT 10
-    `);
+    if (user) {
+      userEmail = user.email || "";
+      userFullName = user.user_metadata?.full_name || user.email?.split("@")[0] || "Account Owner";
 
-    await client.end();
+      const profileRes = await queryDirectDb<{ organization_id: string; full_name: string }>(
+        `SELECT organization_id, full_name FROM profiles WHERE id = $1`,
+        [user.id]
+      );
 
-    const org = orgRes.rows[0] || {
-      id: "f796c1ea-53c0-48f3-9bb1-56fd7841e744",
-      name: "Nova Studio",
-      slug: "nova-studio",
-      billing_tier: "enterprise",
+      if (profileRes[0]?.organization_id) {
+        orgId = profileRes[0].organization_id;
+      }
+      if (profileRes[0]?.full_name) {
+        userFullName = profileRes[0].full_name;
+      }
+    }
+
+    if (!orgId) {
+      return NextResponse.json({
+        success: true,
+        organization: {
+          id: user?.id || "individual-workspace",
+          name: `${userFullName}'s Workspace`,
+          slug: "individual-workspace",
+          billing_tier: "individual",
+        },
+        apiKeys: [],
+        members: user
+          ? [
+              {
+                id: user.id,
+                role: "Owner",
+                full_name: userFullName,
+                email: userEmail,
+              },
+            ]
+          : [],
+      });
+    }
+
+    // 1. Fetch user's genuine organization
+    const orgRes = await queryDirectDb(
+      `SELECT id, name, slug, created_at, updated_at
+       FROM organizations
+       WHERE id = $1`,
+      [orgId]
+    );
+
+    // 2. Fetch user's organization API keys
+    const keyRes = await queryDirectDb(
+      `SELECT id, name, key_prefix, scopes, created_at, expires_at
+       FROM api_keys
+       WHERE organization_id = $1 AND revoked_at IS NULL
+       ORDER BY created_at DESC
+       LIMIT 10`,
+      [orgId]
+    );
+
+    // 3. Fetch ONLY members of this specific organization
+    const membersRes = await queryDirectDb(
+      `SELECT om.id, om.role, COALESCE(p.full_name, split_part(u.email, '@', 1)) as full_name, u.email
+       FROM organization_members om
+       LEFT JOIN profiles p ON p.id = om.user_id
+       LEFT JOIN auth.users u ON u.id = om.user_id
+       WHERE om.organization_id = $1
+       ORDER BY om.created_at ASC`,
+      [orgId]
+    );
+
+    let finalMembers = membersRes || [];
+    if (finalMembers.length === 0 && user) {
+      finalMembers = [
+        {
+          id: user.id,
+          role: "Owner",
+          full_name: userFullName,
+          email: userEmail,
+        },
+      ];
+    }
+
+    const org = orgRes[0] || {
+      id: orgId,
+      name: `${userFullName}'s Workspace`,
+      slug: "workspace",
+      billing_tier: "individual",
     };
 
     return NextResponse.json({
       success: true,
       organization: org,
-      apiKeys: keyRes.rows || [],
-      members: membersRes.rows || [],
+      apiKeys: keyRes || [],
+      members: finalMembers,
     });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
@@ -59,24 +120,44 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json().catch(() => ({}));
-    const { action, orgName, orgId } = body;
+    const cookieStore = await cookies();
+    const supabase = createClient(cookieStore);
 
-    const { Client } = require("pg");
-    const client = new Client({
-      connectionString:
-        process.env.DATABASE_URL ||
-        "postgresql://postgres:CR%24%24Reddy2006@db.tsoyrpgifovzwqtgpkkb.supabase.co:5432/postgres",
-      ssl: { rejectUnauthorized: false },
-    });
-    await client.connect();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
+    const profileRes = await queryDirectDb<{ organization_id: string }>(
+      `SELECT organization_id FROM profiles WHERE id = $1`,
+      [user.id]
+    );
+    const userOrgId = profileRes[0]?.organization_id;
+
+    const body = await req.json().catch(() => ({}));
+    const { action, orgName } = body;
+    const targetOrgId = userOrgId;
+
+    if (!targetOrgId) {
+      return NextResponse.json({ success: false, error: "No organization found" }, { status: 400 });
+    }
+
+    const membership = await queryDirectDb<{ role: string }>(
+      "SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2",
+      [targetOrgId, user.id]
+    );
+    if (!membership.some(({ role }) => role === "owner" || role === "admin")) {
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    }
 
     if (action === "update_org" && orgName) {
-      await client.query("UPDATE organizations SET name = $1, updated_at = NOW() WHERE id = $2", [
+      await queryDirectDb("UPDATE organizations SET name = $1, updated_at = NOW() WHERE id = $2", [
         orgName,
-        orgId || "f796c1ea-53c0-48f3-9bb1-56fd7841e744",
+        targetOrgId,
       ]);
-      await client.end();
       return NextResponse.json({ success: true, message: "Organization updated successfully" });
     }
 
@@ -85,22 +166,20 @@ export async function POST(req: NextRequest) {
       const prefix = rawSecret.slice(0, 16);
       const hash = crypto.createHash("sha256").update(rawSecret).digest("hex");
 
-      const insertRes = await client.query(
+      const insertRes = await queryDirectDb(
         `INSERT INTO api_keys (id, organization_id, name, key_prefix, hashed_secret, scopes, expires_at, created_at)
          VALUES (gen_random_uuid(), $1, $2, $3, $4, ARRAY['read', 'write', 'deploy', 'ai'], NOW() + INTERVAL '1 year', NOW())
          RETURNING id, name, key_prefix, created_at, expires_at`,
-        [orgId || "f796c1ea-53c0-48f3-9bb1-56fd7841e744", body.keyName || "Platform API Key", prefix, hash]
+        [targetOrgId, body.keyName || "Platform API Key", prefix, hash]
       );
-      await client.end();
 
       return NextResponse.json({
         success: true,
         rawKey: rawSecret,
-        key: insertRes.rows[0],
+        key: insertRes[0],
       });
     }
 
-    await client.end();
     return NextResponse.json({ success: false, error: "Unknown action" }, { status: 400 });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });

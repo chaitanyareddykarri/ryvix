@@ -43,11 +43,11 @@ export async function POST(request: Request) {
     // 3. Correlate with internal heartbeat
     const lastHeartbeat = serverRecord?.updated_at || new Date().toISOString();
     const serverEntity: any = {
-      id: serverRecord?.id || "8e429e4b-1065-4714-99f8-9b2666694344",
-      hostname: serverRecord?.hostname || "app-prod-worker-01",
+      id: serverRecord?.id || "unregistered",
+      hostname: serverRecord?.hostname || "unknown-server",
       status: serverRecord?.status || "healthy",
-      environment_id: environmentId || "47a88a1e-0e7d-41a1-ab2d-5c5f3a3466b7",
-      ip_address: serverRecord?.ip_address || "198.51.100.10",
+      environment_id: environmentId || "unregistered",
+      ip_address: serverRecord?.ip_address || "0.0.0.0",
       created_at: serverRecord?.created_at || new Date().toISOString(),
       updated_at: lastHeartbeat,
     };

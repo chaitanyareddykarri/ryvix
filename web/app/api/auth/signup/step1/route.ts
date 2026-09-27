@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { Client } from "pg";
+import { queryDirectDb } from "@/utils/direct-db";
 import { generateRandomOtp, maskEmail, createSignupChallenge } from "@/utils/auth-security";
 import { sendOtpEmail } from "@/utils/email-service";
 
@@ -46,24 +46,16 @@ export async function POST(request: Request) {
     }
 
     // 2. Pre-check if user already exists in auth.users
-    const dbUrl = getDbUrl();
-    if (dbUrl) {
-      const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
-      try {
-        await client.connect();
-        const checkRes = await client.query("SELECT id FROM auth.users WHERE email = $1 LIMIT 1", [email]);
-        if (checkRes.rowCount && checkRes.rowCount > 0) {
-          await client.end();
-          return NextResponse.json(
-            { error: "An account already exists with this email. Please sign in instead." },
-            { status: 400 }
-          );
-        }
-      } catch (dbErr: any) {
-        console.warn("[Signup Step 1] Database check warning:", dbErr.message);
-      } finally {
-        try { await client.end(); } catch {}
+    try {
+      const checkRes = await queryDirectDb("SELECT id FROM auth.users WHERE email = $1 LIMIT 1", [email]);
+      if (checkRes.length > 0) {
+        return NextResponse.json(
+          { error: "An account already exists with this email. Please sign in instead." },
+          { status: 400 }
+        );
       }
+    } catch (dbErr: any) {
+      console.warn("[Signup Step 1] Database check warning:", dbErr.message);
     }
 
     // 3. Generate a genuine cryptographically random 6-digit OTP

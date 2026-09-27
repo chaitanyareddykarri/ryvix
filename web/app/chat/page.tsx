@@ -80,13 +80,14 @@ export default function WebChatPage() {
     {
       id: "msg_welcome",
       role: "assistant",
-      content: "Hello! I am **Ryvix AGI**, your autonomous engineering and infrastructure partner. I can write and review code diffs, triage server outages, contain security threats, and execute verified operational runbooks in sub-millisecond cycles.\n\nHow can I assist your infrastructure or codebase today?",
+      content: "Hello! I am **Ryvix AI**, your autonomous website engineer and infrastructure partner. I understand your website source code, live server health, and deployments. You can talk to me in simple plain English without needing any technical knowledge.\n\nHow can I help with your website today?",
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
 
   const [inputPrompt, setInputPrompt] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [promptMode, setPromptMode] = useState<"non_coder" | "developer">("non_coder");
   const [activeTab, setActiveTab] = useState<"chat" | "diff" | "preview">("chat");
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [activeDiff, setActiveDiff] = useState<DiffPayload | null>(null);

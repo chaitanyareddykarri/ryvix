@@ -453,8 +453,12 @@ export class ModelGateway {
     }
 
     // Default: Coding Task Execution Plan
+    const userMatch = promptText.match(/"([^"]+)"/);
+    const cleanTask = userMatch ? userMatch[1] : promptText.replace(/^You are the Ryvix AI Coding Orchestrator[^\n]*\n+/i, '').slice(0, 45);
+    const cleanTitle = cleanTask.slice(0, 45).replace(/[\r\n]+/g, ' ').trim();
+
     return JSON.stringify({
-      planTitle: `Autonomous Plan for: ${promptText.slice(0, 40).replace(/[\r\n]+/g, ' ')}...`,
+      planTitle: `Implementation Plan: ${cleanTitle}`,
       steps: [
         {
           order: 1,

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { Client } from "pg";
+import { getDirectDbPool } from "@/utils/direct-db";
 import { createServerClient } from "@supabase/ssr";
 import { verifySignupChallenge } from "@/utils/auth-security";
 
@@ -59,8 +59,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
-    await client.connect();
+    const pool = getDirectDbPool();
+    const client = await pool.connect();
+    client.on("error", (err) => console.warn("[Signup Step 2 Client Notice]:", err.message));
 
     let newUserId: string;
 
@@ -143,7 +144,7 @@ export async function POST(request: Request) {
         `, [newUserId, userEmail]);
       }
     } finally {
-      await client.end();
+      client.release();
     }
 
     // 3. Establish genuine Supabase session via password login

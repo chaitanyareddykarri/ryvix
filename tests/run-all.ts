@@ -28,6 +28,8 @@ import { testCodingAssistant } from './coding-assistant.test';
 import { testHybridLearningEngine } from './hybrid-learning-engine.test';
 import { testAIModelGateway } from './ai-model-gateway.test';
 import { testGitHubIntegration } from './github-integration.test';
+import { testRepositoryAnalyzer } from './repository-analyzer.test';
+import { testTaskRouteAuthorization } from './task-route-authorization.test';
 import { testServerConnectorPipeline } from './server-connector-pipeline.test';
 import { testCodingWorkspacePipeline } from './coding-workspace.test';
 import { testAuthLifecycle } from './auth-lifecycle.test';
@@ -55,6 +57,8 @@ async function runAllTests() {
     { name: 'Workspace Expiry & Docker Teardown', fn: testWorkspaceCleanupFlow },
     { name: 'Path 1: AI Coding Workspace & PR Pipeline (Phases 1-4)', fn: testCodingWorkspacePipeline },
     { name: 'GitHub App Access & Repository Selection Lifecycle', fn: testGitHubIntegration },
+    { name: 'Real-Time Repository Analyzer & Deployment Detector', fn: testRepositoryAnalyzer },
+    { name: 'Task and Settings Route Authorization', fn: testTaskRouteAuthorization },
     { name: 'Multi-Provider LLM Gateway & Rate-Limit Failover', fn: testAIModelGateway },
     { name: 'Interactive AI Coding Assistant & Self-Debugger', fn: testCodingAssistant },
     { name: 'Hybrid Autonomous Decision Engine & Self-Learning Memory', fn: testHybridLearningEngine },

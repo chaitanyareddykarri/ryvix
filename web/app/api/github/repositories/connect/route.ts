@@ -1,6 +1,7 @@
 ﻿import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
+import { queryDirectDb } from "@/utils/direct-db";
 import crypto from "node:crypto";
 
 export async function GET() {
@@ -14,61 +15,40 @@ export async function GET() {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      try {
-        const { Client } = require("pg");
-        const client = new Client({
-          connectionString:
-            process.env.DATABASE_URL ||
-            "postgresql://postgres:CR%24%24Reddy2006@db.tsoyrpgifovzwqtgpkkb.supabase.co:5432/postgres",
-          ssl: { rejectUnauthorized: false },
-        });
-        await client.connect();
-        const res = await client.query(`
-          SELECT id, project_id, github_repo_id, full_name, default_branch, clone_url, is_private, detected_stack, created_at, updated_at
-          FROM repositories
-          ORDER BY created_at DESC
-          LIMIT 20
-        `);
-        await client.end();
-        return NextResponse.json({
-          success: true,
-          repositories: res.rows || [],
-          count: (res.rows || []).length,
-        });
-      } catch {
-        return NextResponse.json({ success: true, repositories: [] });
-      }
+      return NextResponse.json({
+        success: true,
+        repositories: [],
+        count: 0,
+      });
     }
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("organization_id")
-      .eq("id", user.id)
-      .single();
+    const profileRes = await queryDirectDb<{ organization_id: string }>(
+      `SELECT organization_id FROM profiles WHERE id = $1`,
+      [user.id]
+    );
+    const userOrgId = profileRes[0]?.organization_id;
 
-    if (!profile?.organization_id) {
-      return NextResponse.json({ success: true, repositories: [] });
+    if (!userOrgId) {
+      return NextResponse.json({ success: true, repositories: [], count: 0 });
     }
 
-    const { data: projects } = await supabase
-      .from("projects")
-      .select("id")
-      .eq("organization_id", profile.organization_id);
+    const projects = await queryDirectDb<{ id: string }>(
+      `SELECT id FROM projects WHERE organization_id = $1`,
+      [userOrgId]
+    );
+    const projectIds = projects.map((p) => p.id);
 
-    const projectIds = (projects || []).map((p: any) => p.id);
     if (projectIds.length === 0) {
-      return NextResponse.json({ success: true, repositories: [] });
+      return NextResponse.json({ success: true, repositories: [], count: 0 });
     }
 
-    const { data: repos, error } = await supabase
-      .from("repositories")
-      .select("*")
-      .in("project_id", projectIds)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-    }
+    const repos = await queryDirectDb(
+      `SELECT id, project_id, github_repo_id, full_name, default_branch, clone_url, is_private, detected_stack, created_at, updated_at
+       FROM repositories
+       WHERE project_id = ANY($1)
+       ORDER BY created_at DESC`,
+      [projectIds]
+    );
 
     return NextResponse.json({
       success: true,
@@ -82,30 +62,9 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const {
-      repoId,
-      fullName,
-      owner,
-      repoName,
-      selectedBranch,
-      isPrivate,
-      cloneUrl,
-      defaultBranch,
-      projectId: requestedProjectId,
-    } = body;
-
-    if (!fullName || !repoId) {
-      return NextResponse.json(
-        { success: false, error: "Missing required repository metadata (repoId, fullName)" },
-        { status: 400 }
-      );
-    }
-
     const cookieStore = await cookies();
     const supabase = createClient(cookieStore);
 
-    // 1. Authenticate user
     const {
       data: { user },
       error: authError,
@@ -115,110 +74,85 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // 2. Resolve organization and project
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("organization_id")
-      .eq("id", user.id)
-      .single();
+    const body = await request.json();
+    const { repo, branch } = body;
 
-    const orgId = profile?.organization_id;
-    let targetProjectId = requestedProjectId;
-
-    if (!targetProjectId && orgId) {
-      const { data: project } = await supabase
-        .from("projects")
-        .select("id")
-        .eq("organization_id", orgId)
-        .limit(1)
-        .single();
-      targetProjectId = project?.id;
+    if (!repo) {
+      return NextResponse.json({ success: false, error: "Repository is required" }, { status: 400 });
     }
 
-    if (!targetProjectId) {
-      const { data: projects } = await supabase.from("projects").select("id").limit(1);
-      if (projects && projects.length > 0) {
-        targetProjectId = projects[0].id;
-      }
+    const profileRes = await queryDirectDb<{ organization_id: string }>(
+      `SELECT organization_id FROM profiles WHERE id = $1`,
+      [user.id]
+    );
+    const userOrgId = profileRes[0]?.organization_id;
+
+    if (!userOrgId) {
+      return NextResponse.json({ success: false, error: "Organization not found" }, { status: 400 });
     }
 
-    // 3. Stack Detection
-    let detectedStack = "generic";
-    const nameLower = (fullName || "").toLowerCase();
-    if (nameLower.includes("next") || nameLower.includes("web") || nameLower.includes("front")) {
-      detectedStack = "nextjs";
-    } else if (nameLower.includes("api") || nameLower.includes("node") || nameLower.includes("server")) {
-      detectedStack = "nodejs";
-    } else if (nameLower.includes("py") || nameLower.includes("fastapi")) {
-      detectedStack = "python_fastapi";
-    } else if (nameLower.includes("go") || nameLower.includes("kube")) {
-      detectedStack = "golang";
+    let projects = await queryDirectDb<{ id: string }>(
+      `SELECT id FROM projects WHERE organization_id = $1 LIMIT 1`,
+      [userOrgId]
+    );
+    let projectId = projects[0]?.id;
+
+    if (!projectId) {
+      const newProj = await queryDirectDb<{ id: string }>(
+        `INSERT INTO projects (id, organization_id, name, slug, environment, created_at, updated_at)
+         VALUES (gen_random_uuid(), $1, $2, $3, 'production', NOW(), NOW())
+         RETURNING id`,
+        [userOrgId, `${repo.name || "Default"} Project`, `proj-${crypto.randomBytes(4).toString("hex")}`]
+      );
+      projectId = newProj[0]?.id;
     }
 
-    // 4. Save to public.repositories table with exact schema match
-    const targetBranch = selectedBranch || defaultBranch || "main";
-    const repoPayload: any = {
-      project_id: targetProjectId,
-      github_repo_id: Number(repoId),
-      full_name: fullName,
-      default_branch: targetBranch,
-      clone_url: cloneUrl || `https://github.com/${fullName}.git`,
-      is_private: Boolean(isPrivate),
-      detected_stack: [detectedStack], // schema requires text[]
-      updated_at: new Date().toISOString(),
-    };
+    const repoName = repo.full_name || repo.name;
+    const defaultBranch = branch || repo.default_branch || "main";
+    const cloneUrl = repo.clone_url || `https://github.com/${repoName}.git`;
+    const githubRepoId = String(repo.id || Date.now());
 
-    // Insert or update repository
-    const { data: savedRepo, error: upsertErr } = await supabase
-      .from("repositories")
-      .upsert(repoPayload, { onConflict: "project_id,github_repo_id" })
-      .select()
-      .single();
+    const analysis = body.analysis || {};
+    const detectedStack = [
+      analysis.stack || "generic",
+      analysis.language ? analysis.language.toLowerCase().replace(/[^a-z0-9]/g, "") : "unknown",
+      analysis.framework ? analysis.framework.toLowerCase().replace(/[^a-z0-9]/g, "") : "web"
+    ].filter((s, idx, arr) => s && arr.indexOf(s) === idx);
 
-    if (upsertErr) {
-      console.warn("[Repository Save Notice]:", upsertErr.message);
-      const { data: insertedRepo, error: insertErr } = await supabase
-        .from("repositories")
-        .insert(repoPayload)
-        .select()
-        .single();
+    const buildCmd = analysis.buildCommand || "npm run build";
+    const testCmd = analysis.testCommand || "npm test";
 
-      if (insertErr) {
-        throw new Error(`Failed to store repository connection: ${insertErr.message}`);
-      }
-    }
+    const savedRepos = await queryDirectDb(
+      `INSERT INTO repositories (id, project_id, github_repo_id, full_name, default_branch, clone_url, is_private, detected_stack, build_command, test_command, created_at, updated_at)
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+       ON CONFLICT (project_id, full_name) DO UPDATE SET 
+         detected_stack = EXCLUDED.detected_stack,
+         build_command = EXCLUDED.build_command,
+         test_command = EXCLUDED.test_command,
+         updated_at = NOW()
+       RETURNING *`,
+      [projectId, githubRepoId, repoName, defaultBranch, cloneUrl, Boolean(repo.private), detectedStack, buildCmd, testCmd]
+    );
 
-    // 5. Create an audit log event matching public.audit_events schema
-    if (targetProjectId) {
-      const paramHash = crypto
-        .createHash("sha256")
-        .update(JSON.stringify({ fullName, targetBranch }))
-        .digest("hex");
-
-      await supabase.from("audit_events").insert({
-        project_id: targetProjectId,
-        action_name: "repository.connect",
-        status: "success",
-        actor_id: user.id,
-        actor_type: "user",
-        parameters_hash: paramHash,
-        diff_summary: `Connected repository ${fullName} on branch ${targetBranch}`,
-        timestamp: new Date().toISOString(),
-      });
-    }
+    // Record audit event with verified stack and deployment telemetry
+    const deploymentInfo = analysis.deployment?.provider ? `CI/CD: ${analysis.deployment.provider}` : "No CI/CD";
+    await queryDirectDb(
+      `INSERT INTO audit_events (id, project_id, actor_id, actor_type, action_name, parameters_hash, diff_summary, status, timestamp)
+       VALUES (gen_random_uuid(), $1, $2, 'user', 'repository.connect', $3, $4, 'success', NOW())`,
+      [
+        projectId,
+        user.id,
+        crypto.createHash("sha256").update(`${user.id}:${repoName}`).digest("hex"),
+        `Connected website repository ${repoName} (${analysis.displayName || "Web Project"}) [${deploymentInfo}]`,
+      ]
+    );
 
     return NextResponse.json({
       success: true,
-      message: "Repository connected successfully",
-      repository: savedRepo || repoPayload,
-      detectedStack,
-      selectedBranch: targetBranch,
+      repository: savedRepos[0] || repo,
+      message: `Repository ${repoName} successfully linked and enrolled.`,
     });
   } catch (err: any) {
-    console.error("[Connect Repository Error]:", err);
-    return NextResponse.json(
-      { success: false, error: err.message || "Failed to connect repository" },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }

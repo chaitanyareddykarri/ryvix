@@ -30,6 +30,7 @@ export default function TasksPage() {
   const [prCreated, setPrCreated] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [connectedRepos, setConnectedRepos] = useState<any[]>([]);
 
   const supabase = createClient();
 
@@ -82,7 +83,8 @@ export default function TasksPage() {
   function handleApproveAndShip() {
     if (!activeTask) return;
     const prNumber = Math.floor(100 + Math.random() * 900);
-    setPrCreated(`https://github.com/customer/repo/pull/${prNumber}`);
+    const repoSlug = connectedRepos[0]?.full_name || "customer/website";
+    setPrCreated(`https://github.com/${repoSlug}/pull/${prNumber}`);
     setActiveTask((prev) => (prev ? { ...prev, status: "completed" } : null));
   }
 

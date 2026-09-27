@@ -171,6 +171,31 @@ export default function ServersPage() {
         </div>
       </header>
 
+      {/* Non-Coder Guidance: GitHub vs. Server */}
+      <div style={{
+        background: "rgba(99, 102, 241, 0.08)",
+        border: "1px solid rgba(99, 102, 241, 0.25)",
+        borderRadius: "10px",
+        padding: "0.9rem 1.25rem",
+        marginTop: "1.75rem",
+        marginBottom: "1.75rem",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        flexWrap: "wrap",
+        gap: "1rem"
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <div style={{ fontSize: "1.3rem" }}>💡</div>
+          <div style={{ fontSize: "0.84rem", color: "#c7d2fe", lineHeight: 1.45 }}>
+            <strong>Understanding your connections:</strong> Your GitHub connection gives Ryvix access to your website's code and files. Connecting your server adds live CPU/RAM monitoring, crash recovery, and auto-restart capabilities.
+          </div>
+        </div>
+        <Link href="/dashboard" style={{ fontSize: "0.8rem", color: "#60a5fa", textDecoration: "none", fontWeight: 600, whiteSpace: "nowrap" }}>
+          Website Settings &rarr;
+        </Link>
+      </div>
+
       {/* Top Action Bar */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: "1rem" }}>
         {/* Filter Tabs */}

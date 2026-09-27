@@ -1,47 +1,88 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
+import { queryDirectDb } from "@/utils/direct-db";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    let connectors: any[] = [];
+    const cookieStore = await cookies();
+    const supabase = createClient(cookieStore);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    try {
-      const { Client } = require("pg");
-      const client = new Client({
-        connectionString:
-          process.env.DATABASE_URL ||
-          "postgresql://postgres:CR%24%24Reddy2006@db.tsoyrpgifovzwqtgpkkb.supabase.co:5432/postgres",
-        ssl: { rejectUnauthorized: false },
-      });
-      await client.connect();
-      const res = await client.query(`
-        SELECT id, name, connector_type as type, status, agent_version, last_heartbeat_at, created_at
-        FROM connectors
-        ORDER BY created_at ASC
-      `);
-      await client.end();
-      connectors = res.rows || [];
-    } catch (e) {
-      console.warn("[Connections DB Warning]:", e);
+    let enrolledConnectors: any[] = [];
+
+    if (user) {
+      const profileRes = await queryDirectDb<{ organization_id: string }>(
+        `SELECT organization_id FROM profiles WHERE id = $1`,
+        [user.id]
+      );
+      const userOrgId = profileRes[0]?.organization_id;
+
+      if (userOrgId) {
+        const projs = await queryDirectDb<{ id: string }>(
+          `SELECT id FROM projects WHERE organization_id = $1`,
+          [userOrgId]
+        );
+        const projectIds = projs.map((p) => p.id);
+
+        if (projectIds.length > 0) {
+          const envs = await queryDirectDb<{ id: string }>(
+            `SELECT id FROM environments WHERE project_id = ANY($1)`,
+            [projectIds]
+          );
+          const envIds = envs.map((e) => e.id);
+
+          if (envIds.length > 0) {
+            enrolledConnectors = await queryDirectDb(
+              `SELECT id, name, connector_type as type, status, agent_version, last_heartbeat_at, created_at
+               FROM connectors
+               WHERE environment_id = ANY($1)
+               ORDER BY created_at ASC`,
+              [envIds]
+            );
+          }
+        }
+      }
     }
 
-    const formatted = connectors.map((c) => {
-      const descriptions: Record<string, string> = {
-        whatsapp: "Meta Cloud API Gateway • Outage Notifications & One-Touch Approvals",
-        gmail: "Direct SMTP Integration • Daily Status Digests & Verification Tokens",
-        github: "GitHub App Webhook Listener • Push, Pull Request & CI Check Runs",
-        server_inband: "Ryvix In-Band Telemetry Agent • Metrics, IP Enforcement & Systemd Watcher",
-      };
+    const descriptions: Record<string, string> = {
+      whatsapp: "Meta Cloud API Gateway • Outage Notifications & One-Touch Approvals",
+      gmail: "Direct SMTP Integration • Daily Status Digests & Verification Tokens",
+      github: "GitHub App Webhook Listener • Push, Pull Request & CI Check Runs",
+      server_inband: "Ryvix In-Band Telemetry Agent • Metrics, IP Enforcement & Systemd Watcher",
+    };
+
+    const defaultChannels = [
+      { id: "conn_whatsapp", name: "Meta WhatsApp Cloud Gateway", type: "whatsapp" },
+      { id: "conn_gmail", name: "Gmail Incident & Digest Dispatcher", type: "gmail" },
+      { id: "conn_github", name: "GitHub App Webhook Listener", type: "github" },
+      { id: "conn_server_inband", name: "Ryvix In-Band Agent Daemon", type: "server_inband" },
+    ];
+
+    const formatted = defaultChannels.map((channel) => {
+      const enrolled = enrolledConnectors.find((c) => c.type === channel.type);
+      if (enrolled) {
+        return {
+          id: enrolled.id,
+          name: enrolled.name,
+          type: enrolled.type,
+          status: enrolled.status || "active",
+          details: descriptions[enrolled.type] || `Version ${enrolled.agent_version || "v2.4.1"}`,
+          lastActive: enrolled.last_heartbeat_at ? new Date(enrolled.last_heartbeat_at).toLocaleTimeString() : "Active",
+        };
+      }
+
       return {
-        id: c.id,
-        name: c.name,
-        type: c.type,
-        status: c.status,
-        details: descriptions[c.type] || `Version ${c.agent_version || "v2.4.1"}`,
-        lastActive: c.last_heartbeat_at ? new Date(c.last_heartbeat_at).toLocaleTimeString() : "Active",
+        id: channel.id,
+        name: channel.name,
+        type: channel.type,
+        status: "unconfigured",
+        details: descriptions[channel.type],
+        lastActive: "Not Connected",
       };
     });
 

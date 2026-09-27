@@ -24,7 +24,7 @@ export async function sendOtpEmail(params: SendOtpEmailParams): Promise<{
   const { to, otp, type, fullName } = params;
 
   const smtpUser = process.env.SMTP_USER || "chaitanyareddykarri2006@gmail.com";
-  const smtpPass = process.env.SMTP_PASSWORD || "psqhyadenvhrjmuk";
+  const smtpPass = process.env.SMTP_PASSWORD || "";
   const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
   const smtpPort = parseInt(process.env.SMTP_PORT || "465", 10);
   const fromEmail = process.env.EMAIL_FROM || `"Ryvix Auth" <${smtpUser}>`;
