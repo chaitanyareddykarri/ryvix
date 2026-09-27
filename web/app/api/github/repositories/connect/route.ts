@@ -125,7 +125,7 @@ export async function POST(request: Request) {
     const savedRepos = await queryDirectDb(
       `INSERT INTO repositories (id, project_id, github_repo_id, full_name, default_branch, clone_url, is_private, detected_stack, build_command, test_command, created_at, updated_at)
        VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
-       ON CONFLICT (project_id, full_name) DO UPDATE SET 
+       ON CONFLICT (project_id, full_name) DO UPDATE SET
          detected_stack = EXCLUDED.detected_stack,
          build_command = EXCLUDED.build_command,
          test_command = EXCLUDED.test_command,

@@ -188,7 +188,7 @@ export default function ServersPage() {
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
           <div style={{ fontSize: "1.3rem" }}>💡</div>
           <div style={{ fontSize: "0.84rem", color: "#c7d2fe", lineHeight: 1.45 }}>
-            <strong>Understanding your connections:</strong> Your GitHub connection gives Ryvix access to your website's code and files. Connecting your server adds live CPU/RAM monitoring, crash recovery, and auto-restart capabilities.
+            <strong>Understanding your connections:</strong> Your GitHub connection gives Ryvix access to your website&apos;s code and files. Connecting your server adds live CPU/RAM monitoring, crash recovery, and auto-restart capabilities.
           </div>
         </div>
         <Link href="/dashboard" style={{ fontSize: "0.8rem", color: "#60a5fa", textDecoration: "none", fontWeight: 600, whiteSpace: "nowrap" }}>

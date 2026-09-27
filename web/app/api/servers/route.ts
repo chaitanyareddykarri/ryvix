@@ -62,7 +62,7 @@ export async function GET() {
 
           if (envIds.length > 0) {
             const serversData = await queryDirectDb(
-              `SELECT s.*, 
+              `SELECT s.*,
                  COALESCE(
                    (SELECT json_agg(svc.*) FROM services_inventory svc WHERE svc.server_id = s.id),
                    '[]'
