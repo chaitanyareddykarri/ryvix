@@ -9,6 +9,8 @@ import {
   ServerClassifier,
 } from "@ryvix/services";
 import { LocalSecurityEngine } from "@ryvix/ai";
+import { requireProjectOperator, operationAuthorization } from "@/utils/operation-access";
+import type { SupportedCloudProvider } from "@ryvix/services";
 
 export interface ServerState {
   id: string;
@@ -130,12 +132,16 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const supabase = createClient(await cookies());
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     const body = await req.json();
     const { action, serverId, environmentId, capability, params } = body;
 
     // Action A: Real single-line agent enrollment script
     if (action === "generate_enrollment") {
-      const secret = "ryvix_demo_enrollment_secret_key_2026";
+      const secret = process.env.CONNECTOR_ENROLLMENT_SECRET;
+      if (!secret) return NextResponse.json({ success: false, error: "Connector enrollment is not configured" }, { status: 503 });
       const token = InternalAgent.generateEnrollmentToken(
         environmentId || "env_prod_ecommerce",
         secret,
@@ -164,17 +170,29 @@ export async function POST(req: Request) {
 
     // Action C: Real out-of-band cloud recovery reboot
     if (action === "oob_cloud_reboot") {
+      if (body.approved !== true || !serverId) return NextResponse.json({ success: false, error: "Server ID and explicit approval required" }, { status: 400 });
+      const { data: server, error } = await supabase.from("servers").select("id, environment_id, cloud_provider, cloud_instance_id").eq("id", serverId).maybeSingle();
+      if (error || !server) return NextResponse.json({ success: false, error: "Server not found" }, { status: 404 });
+      const { data: environment } = await supabase.from("environments").select("project_id").eq("id", server.environment_id).maybeSingle();
+      if (!environment) return NextResponse.json({ success: false, error: "Server project not found" }, { status: 403 });
+      const role = await requireProjectOperator(supabase, user.id, environment.project_id);
+      if (!["owner", "admin"].includes(role)) return NextResponse.json({ success: false, error: "Administrator approval required" }, { status: 403 });
+      if (!server.cloud_provider || !server.cloud_instance_id) return NextResponse.json({ success: false, error: "Server has no configured cloud resource" }, { status: 400 });
+      // Operator-managed allowlist prevents customer-supplied enrollment metadata from targeting other accounts.
+      const allowed = (process.env.RYVIX_CLOUD_TARGETS || "").split(",");
+      if (!allowed.includes(`${server.id}:${server.cloud_provider}:${server.cloud_instance_id}`)) return NextResponse.json({ success: false, error: "Cloud resource is not enabled for recovery" }, { status: 403 });
       const bridge = new CloudRecoveryBridge();
       const result = await bridge.executePowerAction(
-        params?.provider || "aws",
-        params?.instanceId || "i-09ab7c12d45ef",
-        "hard_reset"
+        server.cloud_provider as SupportedCloudProvider,
+        server.cloud_instance_id,
+        "hard_reset",
+        operationAuthorization(supabase, user.id, environment.project_id)
       );
 
       return NextResponse.json({
         success: true,
         result,
-      });
+      }, { status: result.status === "dispatched" ? 202 : 200 });
     }
 
     // Action D: Real-time Neural Threat & Metric Diagnosis (<0.02ms)

@@ -1,3 +1,4 @@
+import { fakeCloud, testApproval, healthyProbe as fixtureProbe } from './helpers/execution-fixtures';
 /**
  * Master End-to-End Total Project Integration Test Suite
  * 
@@ -182,10 +183,10 @@ export async function testTotalProjectIntegration(): Promise<void> {
   // LAYER 6: OUT-OF-BAND CLOUD RECOVERY & SELF-HEALING
   // =========================================================================
   console.log('\n--- [LAYER 6: OUT-OF-BAND CLOUD RECOVERY & SELF-HEALING] ---');
-  const bridge = new CloudRecoveryBridge();
-  const resetResult = await bridge.executePowerAction('aws', 'i-0123456789abcdef0', 'hard_reset');
-  assert.equal(resetResult.status, 'completed');
-  assert.ok(resetResult.providerMessage.includes('Hypervisor action'));
+  const bridge = new CloudRecoveryBridge({ aws: fakeCloud, digitalocean: fakeCloud });
+  const resetResult = await bridge.executePowerAction('aws', 'i-0123456789abcdef0', 'hard_reset', testApproval);
+  assert.equal(resetResult.status, 'dispatched');
+  assert.ok(resetResult.providerMessage.includes('Provider action'));
 
   const capExec = await agentApp.executeCapability('service.restart', { unit: 'node-app' });
   assert.equal(capExec.success, true);

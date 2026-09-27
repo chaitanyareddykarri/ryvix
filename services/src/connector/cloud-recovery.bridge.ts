@@ -10,7 +10,8 @@
  * - Differential diagnosis: distinguishing between daemon freeze vs kernel panic vs cloud outage
  */
 
-import * as crypto from 'node:crypto';
+import { requireAuthorization, type OperationAuthorization } from '../../../backend/src/services/operation-authorization';
+import { configuredCloudAdapters, type CloudProviderAdapter, type PowerAction } from './cloud-provider.adapters';
 
 export type SupportedCloudProvider = 'aws' | 'digitalocean' | 'hetzner' | 'gcp' | 'baremetal';
 
@@ -44,91 +45,39 @@ export interface DifferentialDiagnosisResult {
 }
 
 export class CloudRecoveryBridge {
-  /**
-   * Probes the underlying cloud hypervisor out-of-band.
-   */
-  async probeHypervisor(
-    provider: SupportedCloudProvider,
-    instanceId: string,
-    simulatedFailureMode?: 'kernel_panic' | 'cloud_outage'
-  ): Promise<HypervisorProbeResult> {
-    const checkedAt = new Date().toISOString();
-
-    if (simulatedFailureMode === 'cloud_outage') {
-      return {
-        provider,
-        instanceId,
-        state: 'unknown',
-        hypervisorResponsive: false,
-        statusChecks: {
-          systemCheck: 'impaired',
-          instanceCheck: 'impaired',
-        },
-        checkedAt,
-      };
-    }
-
-    if (simulatedFailureMode === 'kernel_panic') {
-      // Hypervisor itself is UP, but instance guest check has failed
-      return {
-        provider,
-        instanceId,
-        state: 'running',
-        hypervisorResponsive: true,
-        statusChecks: {
-          systemCheck: 'ok',
-          instanceCheck: 'impaired',
-        },
-        checkedAt,
-      };
-    }
-
-    // Default healthy hypervisor state
-    return {
-      provider,
-      instanceId,
-      state: 'running',
-      hypervisorResponsive: true,
-      statusChecks: {
-        systemCheck: 'ok',
-        instanceCheck: 'ok',
-      },
-      checkedAt,
-    };
+  constructor(private readonly adapters: Partial<Record<SupportedCloudProvider, CloudProviderAdapter>> = configuredCloudAdapters()) {}
+  private adapter(provider: SupportedCloudProvider) {
+    const adapter = this.adapters[provider];
+    if (!adapter) throw new Error('Cloud provider is not configured or supported');
+    return adapter;
   }
-
-  /**
-   * Dispatches an out-of-band power cycle or ACPI reboot instruction.
-   */
-  async executePowerAction(
-    provider: SupportedCloudProvider,
-    instanceId: string,
-    action: 'reboot' | 'hard_reset' | 'power_off' | 'power_on'
-  ): Promise<CloudPowerActionResult> {
-    const actionId = `act_oob_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
-    const executedAt = new Date().toISOString();
-
-    return {
-      actionId,
-      provider,
-      instanceId,
-      action,
-      status: 'completed',
-      providerMessage: `[${provider.toUpperCase()}] Hypervisor action '${action}' applied to instance '${instanceId}' successfully.`,
-      executedAt,
-    };
+  async probeHypervisor(provider: SupportedCloudProvider, instanceId: string): Promise<HypervisorProbeResult> {
+    return this.adapter(provider).probe(instanceId);
   }
-
-  /**
-   * Differential Diagnosis Engine:
-   * Compares internal daemon telemetry stream with out-of-band hypervisor metrics.
-   */
+  async executePowerAction(provider: SupportedCloudProvider, instanceId: string, action: PowerAction,
+    authorization?: OperationAuthorization): Promise<CloudPowerActionResult> {
+    requireAuthorization(authorization);
+    if (!['reboot', 'hard_reset', 'power_off', 'power_on'].includes(action)) throw new Error('Unsupported power action');
+    const adapter = this.adapter(provider);
+    const target = provider + ':' + instanceId;
+    await authorization.recordAudit({ action: 'cloud.' + action, target, status: 'requested' });
+    try {
+      const operation = await adapter.execute(instanceId, action);
+      if (!operation.id || !['dispatched', 'completed'].includes(operation.status)) throw new Error('Provider action failed');
+      await authorization.recordAudit({ action: 'cloud.' + action, target, status: 'success', detail: operation.status + ':' + operation.id });
+      return { actionId: operation.id, provider, instanceId, action, status: operation.status,
+        providerMessage: 'Provider action ' + operation.status + '; verify instance health separately', executedAt: new Date().toISOString() };
+    } catch (error) {
+      await authorization.recordAudit({ action: 'cloud.' + action, target, status: 'failure', detail: 'Provider action failed or outcome unknown' });
+      throw new Error('Cloud power action failed or timed out; verify provider state before retrying');
+    }
+  }
   diagnoseFailure(
     lastHeartbeatSecondsAgo: number,
     hypervisorProbe: HypervisorProbeResult
   ): DifferentialDiagnosisResult {
     // 1. If internal daemon is active (<30s heartbeat), server is healthy
-    if (lastHeartbeatSecondsAgo < 30) {
+    if (lastHeartbeatSecondsAgo < 30 && hypervisorProbe.state === 'running' && hypervisorProbe.statusChecks.instanceCheck === 'ok') {
       return {
         diagnosis: 'HEALTHY',
         confidence: 0.99,
@@ -147,7 +96,7 @@ export class CloudRecoveryBridge {
       };
     }
 
-    if (hypervisorProbe.statusChecks.instanceCheck === 'impaired' || hypervisorProbe.state === 'running') {
+    if (hypervisorProbe.statusChecks.instanceCheck === 'impaired') {
       return {
         diagnosis: 'KERNEL_PANIC_OOM',
         confidence: 0.92,
@@ -156,6 +105,9 @@ export class CloudRecoveryBridge {
       };
     }
 
+    if (hypervisorProbe.statusChecks.instanceCheck === 'insufficient_data' || hypervisorProbe.state !== 'running') {
+      return { diagnosis: 'UNKNOWN', confidence: 0, recommendation: 'NONE', explanation: 'Insufficient provider health evidence; investigate before recovery.' };
+    }
     return {
       diagnosis: 'DAEMON_CRASH',
       confidence: 0.85,

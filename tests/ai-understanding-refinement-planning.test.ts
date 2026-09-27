@@ -1,3 +1,4 @@
+import { fakeDocker, fakeGitHub, testApproval } from './helpers/execution-fixtures';
 import assert from 'node:assert/strict';
 import {
   requirementRefiner,
@@ -246,7 +247,7 @@ export async function testAIUnderstandingRefinementPlanning() {
   // SCENARIO 10: Existing coding workspace still works
   // =========================================================================
   console.log('[10] Testing Existing Coding Workspace Sandbox Integration...');
-  const workspaceManager = new DockerWorkspaceManager();
+  const workspaceManager = new DockerWorkspaceManager(fakeDocker);
   const session = await workspaceManager.createSession({
     taskId: 'task_sandbox_verify_01',
     projectId: 'proj_ecom_prod',

@@ -1,215 +1,122 @@
-/**
- * Ryvix Pull Request & Release Pipeline Service
- * 
- * Manages the transition from approved sandbox verification to Git release:
- * - Executes authenticated GitHub REST API / Octokit calls using PAT or App installation tokens
- * - Creates atomic branch pull requests via https://api.github.com/repos/{owner}/{repo}/pulls
- * - Commits approved file diffs with cryptographic author signatures
- * - Provides graceful fallback and audit logging for staging, unit test, and offline environments
- */
-
 import * as crypto from 'node:crypto';
 import type { PullRequest } from '@ryvix/database';
+import { requireAuthorization, type OperationAuthorization } from './operation-authorization';
 
-export interface FileChangeItem {
-  path: string;
-  content?: string;
-  action?: 'create' | 'modify' | 'delete';
-}
-
+export interface FileChangeItem { path: string; content?: string; action?: 'create' | 'modify' | 'delete' }
 export interface CreatePullRequestParams {
-  repositoryId?: string;
-  repoUrl?: string;
-  taskId?: string;
-  taskPrompt?: string;
-  title?: string;
-  description?: string;
-  baseBranch?: string;
-  branchName?: string;
-  summary?: string;
-  changedFiles?: string[];
-  changes?: FileChangeItem[];
-  githubToken?: string;
+  repositoryId?: string; repoUrl?: string; taskId?: string; taskPrompt?: string; title?: string;
+  description?: string; baseBranch?: string; branchName?: string; summary?: string;
+  changedFiles?: string[]; changes?: FileChangeItem[]; githubToken?: string;
+  authorization?: OperationAuthorization;
 }
-
 export interface PullRequestResult extends PullRequest {
-  prUrl: string;
-  prNumber: number;
-  branchName: string;
-  summary: {
-    filesChanged: number;
-    additions: number;
-    deletions: number;
-  };
-  apiStatus?: 'created_via_github_api' | 'fallback_staging_record';
-  apiError?: string;
+  prUrl: string; prNumber: number; branchName: string;
+  summary: { filesChanged: number; additions: number; deletions: number };
+  apiStatus: 'created_via_github_api';
 }
-
 export class PullRequestService {
-  /**
-   * Parses repository owner and name from a standard Git or GitHub URL.
-   */
-  static parseRepoCoordinates(repoUrl?: string): { owner: string; repo: string } | null {
-    if (!repoUrl) return null;
-    const clean = repoUrl.trim().replace(/\.git$/, '');
-    const match = clean.match(/github\.com[/:]([^/]+)\/([^/]+)/i);
-    if (match) {
-      return { owner: match[1], repo: match[2] };
-    }
-    // Also support "owner/repo" shorthand
-    const parts = clean.split('/');
-    if (parts.length === 2 && !clean.includes(':')) {
-      return { owner: parts[0], repo: parts[1] };
-    }
-    return null;
+  static parseRepoCoordinates(value?: string): { owner: string; repo: string } | null {
+    if (!value) return null;
+    let path = value.trim();
+    if (path.startsWith('https://')) {
+      const url = new URL(path);
+      if (url.hostname !== 'github.com' || url.username || url.password || url.search || url.hash) return null;
+      path = url.pathname.slice(1);
+    } else if (path.startsWith('git@github.com:')) path = path.slice('git@github.com:'.length);
+    path = path.replace(/\.git$/, '');
+    const match = path.match(/^([A-Za-z0-9][A-Za-z0-9-]*)\/([A-Za-z0-9_.-]+)$/);
+    return match && match[2] !== '.' && match[2] !== '..' ? { owner: match[1], repo: match[2] } : null;
   }
-
-  /**
-   * Verifies whether a given GitHub Personal Access Token is valid by probing /user.
-   */
   static async verifyGitHubToken(token: string): Promise<{ valid: boolean; user?: string; error?: string }> {
     try {
-      const res = await fetch('https://api.github.com/user', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/vnd.github+json',
-          'X-GitHub-Api-Version': '2022-11-28',
-          'User-Agent': 'Ryvix-Autonomous-PR-Pipeline',
-        },
+      const response = await fetch('https://api.github.com/user', {
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' },
+        signal: AbortSignal.timeout(15000), redirect: 'error',
       });
-      if (res.ok) {
-        const data = await res.json();
-        return { valid: true, user: data.login };
-      }
-      return { valid: false, error: `GitHub responded with HTTP ${res.status}` };
-    } catch (err: any) {
-      return { valid: false, error: err.message };
-    }
+      if (!response.ok) return { valid: false, error: `GitHub HTTP ${response.status}` };
+      const data = await response.json();
+      return { valid: true, user: data.login };
+    } catch { return { valid: false, error: 'GitHub token verification unavailable' }; }
   }
 
-  /**
-   * Generates or opens a GitHub Pull Request for an approved task.
-   * If an authenticated GitHub token is provided (or configured in env), dispatches
-   * a live POST request to https://api.github.com/repos/{owner}/{repo}/pulls.
-   */
-  static async createPullRequest(params: CreatePullRequestParams): Promise<PullRequestResult> {
-    const branchName = params.branchName || `ryvix/task-${(params.taskId || 'feat').slice(-6)}`;
-    const now = new Date().toISOString();
-    const repoUrl = params.repoUrl || 'https://github.com/customer/repo';
-    const coords = PullRequestService.parseRepoCoordinates(repoUrl);
-
-    const token =
-      params.githubToken ||
-      process.env.GITHUB_TOKEN ||
-      process.env.GH_TOKEN ||
-      process.env.GITHUB_PAT;
-
-    const filesChangedCount = params.changes
-      ? params.changes.length
-      : params.changedFiles
-      ? params.changedFiles.length
-      : 1;
-
-    const additions = params.changes
-      ? params.changes.reduce((acc, c) => acc + (c.content ? c.content.split('\n').length : 15), 0)
-      : 25;
-    const deletions = 3;
-
-    const prTitle = params.title || `Ryvix: ${(params.taskPrompt || 'Automated changes').slice(0, 60)}`;
-    const prBody =
-      params.description ||
-      params.summary ||
-      `### ?? Ryvix Autonomous Pull Request\n\n- **Branch**: \`${branchName}\`\n- **Files Modified**: ${filesChangedCount}\n- **Synthesized by**: Ryvix Autonomous Coding Engine`;
-
-    // -------------------------------------------------------------------------
-    // 1. LIVE GITHUB REST API PIPELINE (If authenticated token & valid repo)
-    // -------------------------------------------------------------------------
-    if (token && coords) {
+  static async createPullRequest(params: CreatePullRequestParams, request: typeof fetch = fetch): Promise<PullRequestResult> {
+    requireAuthorization(params.authorization);
+    const auth = params.authorization;
+    const coords = this.parseRepoCoordinates(params.repoUrl);
+    if (!coords) throw new Error('Valid GitHub repository is required');
+    // Token must be selected for this tenant by the backend, never a global fallback.
+    const token = params.githubToken;
+    if (!token) throw new Error('Repository-scoped GitHub token is required');
+    const base = params.baseBranch || 'main';
+    const branch = params.branchName || `ryvix/task-${crypto.randomUUID()}`;
+    if (!branch.startsWith('ryvix/') || branch === base || /[\s~^:?*\[\\]|\.\.|@\{|\/\//.test(branch) || /[/.]$/.test(branch)) {
+      throw new Error('Use a valid, separate ryvix/ working branch');
+    }
+    const changes = params.changes || [];
+    const paths = new Set<string>();
+    for (const change of changes) {
+      if (!change.path || change.path.startsWith('/') || change.path.includes('\\') || change.path.includes('\0') ||
+        change.path.split('/').some(part => !part || part === '..' || part === '.' || part.toLowerCase() === '.git') || paths.has(change.path)) {
+        throw new Error('Invalid or duplicate changed file path');
+      }
+      if (change.action !== 'delete' && typeof change.content !== 'string') throw new Error('Changed files require full content');
+      paths.add(change.path);
+    }
+    const target = `${coords.owner}/${coords.repo}`;
+    const api = async (suffix: string, method = 'GET', body?: unknown): Promise<any> => {
+      let response: Response;
       try {
-        const apiUrl = `https://api.github.com/repos/${coords.owner}/${coords.repo}/pulls`;
-        const res = await fetch(apiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/vnd.github+json',
-            'X-GitHub-Api-Version': '2022-11-28',
-            'User-Agent': 'Ryvix-Autonomous-PR-Pipeline',
-          },
-          body: JSON.stringify({
-            title: prTitle,
-            head: branchName,
-            base: params.baseBranch || 'main',
-            body: prBody,
-          }),
+        response = await request(`https://api.github.com/repos/${target}/${suffix}`, {
+          method, headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json',
+            'Content-Type': 'application/json', 'X-GitHub-Api-Version': '2022-11-28' },
+          body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(30000), redirect: 'error',
         });
-
-        if (res.status === 201) {
-          const data = await res.json();
-          return {
-            id: `pr_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`,
-            repository_id: params.repositoryId || 'repo_default',
-            task_id: params.taskId || null,
-            pr_number: data.number,
-            prNumber: data.number,
-            branch_name: branchName,
-            branchName: branchName,
-            title: data.title,
-            status: (data.state as 'open' | 'closed' | 'merged') || 'open',
-            html_url: data.html_url,
-            prUrl: data.html_url,
-            created_at: data.created_at || now,
-            updated_at: data.updated_at || now,
-            summary: {
-              filesChanged: data.changed_files || filesChangedCount,
-              additions: data.additions || additions,
-              deletions: data.deletions || deletions,
-            },
-            apiStatus: 'created_via_github_api',
-          };
-        } else {
-          const errBody = await res.text().catch(() => '');
-          console.warn(`[PullRequestService] GitHub API responded with HTTP ${res.status}: ${errBody.slice(0, 120)}`);
-        }
-      } catch (err: any) {
-        console.warn('[PullRequestService] GitHub API call encountered exception:', err.message);
-      }
-    }
-
-    // -------------------------------------------------------------------------
-    // 2. DETERMINISTIC FALLBACK (For offline, unit-test, or sandbox environments)
-    // -------------------------------------------------------------------------
-    const prNumber = Math.floor(100 + Math.random() * 900);
-    const htmlUrl = `${repoUrl.replace(/\.git$/, '')}/pull/${prNumber}`;
-
-    const pullRequest: PullRequestResult = {
-      id: `pr_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`,
-      repository_id: params.repositoryId || 'repo_default',
-      task_id: params.taskId || null,
-      pr_number: prNumber,
-      prNumber: prNumber,
-      branch_name: branchName,
-      branchName: branchName,
-      title: prTitle,
-      status: 'open',
-      html_url: htmlUrl,
-      prUrl: htmlUrl,
-      created_at: now,
-      updated_at: now,
-      summary: {
-        filesChanged: filesChangedCount,
-        additions,
-        deletions,
-      },
-      apiStatus: 'fallback_staging_record',
+      } catch { throw new Error(`GitHub ${method} ${suffix.split('/')[0]} request failed`); }
+      if (!response.ok) throw new Error(`GitHub ${method} ${suffix.split('/')[0]} failed (HTTP ${response.status})`);
+      return response.json();
     };
-
-    return pullRequest;
+    await auth.recordAudit({ action: 'github.create_pr', target, status: 'requested' });
+    try {
+      if (changes.length) {
+        const ref = await api(`git/ref/heads/${encodeURIComponent(base)}`);
+        if (!ref.object?.sha) throw new Error('GitHub base reference is missing');
+        const parent = await api(`git/commits/${ref.object.sha}`);
+        if (!parent.tree?.sha) throw new Error('GitHub base tree is missing');
+        // Preserve executable file modes and reject symlink/submodule modifications.
+        const tree = await api(`git/trees/${parent.tree.sha}?recursive=1`);
+        if (tree.truncated || !Array.isArray(tree.tree)) throw new Error('Repository tree is incomplete');
+        const entries = changes.map(change => {
+          const previous = tree.tree.find((item: any) => item.path === change.path);
+          if (previous && !['100644', '100755'].includes(previous.mode)) throw new Error('Only regular files may be changed');
+          if (change.action === 'delete' && !previous) throw new Error('Cannot delete a missing file');
+          return { path: change.path, mode: previous?.mode || '100644', type: 'blob',
+            ...(change.action === 'delete' ? { sha: null } : { content: change.content }) };
+        });
+        const nextTree = await api('git/trees', 'POST', { base_tree: parent.tree.sha, tree: entries });
+        if (!nextTree.sha || nextTree.sha === parent.tree.sha) throw new Error('No repository changes to publish');
+        const commit = await api('git/commits', 'POST', { message: params.title || 'Ryvix approved changes', tree: nextTree.sha, parents: [ref.object.sha] });
+        if (!commit.sha) throw new Error('GitHub did not return a commit');
+        // Creation fails on collision. Never overwrite an existing branch.
+        await api('git/refs', 'POST', { ref: `refs/heads/${branch}`, sha: commit.sha });
+      } else {
+        const head = await api(`git/ref/heads/${encodeURIComponent(branch)}`);
+        if (!head.object?.sha) throw new Error('Existing working branch is required');
+      }
+      const data = await api('pulls', 'POST', { title: params.title || `Ryvix: ${params.taskPrompt || 'Approved changes'}`,
+        head: branch, base, body: params.description || params.summary || 'Approved Ryvix changes' });
+      if (!Number.isInteger(data.number) || !data.html_url || data.state !== 'open') throw new Error('GitHub returned an invalid pull request');
+      await auth.recordAudit({ action: 'github.create_pr', target, status: 'success', detail: `PR #${data.number}` });
+      return { id: String(data.id), repository_id: params.repositoryId || target, task_id: params.taskId || null,
+        pr_number: data.number, prNumber: data.number, branch_name: branch, branchName: branch,
+        title: data.title, status: 'open', html_url: data.html_url, prUrl: data.html_url,
+        created_at: data.created_at, updated_at: data.updated_at,
+        summary: { filesChanged: data.changed_files ?? changes.length, additions: data.additions ?? 0, deletions: data.deletions ?? 0 },
+        apiStatus: 'created_via_github_api' };
+    } catch (error) {
+      await auth.recordAudit({ action: 'github.create_pr', target, status: 'failure', detail: error instanceof Error ? error.message : 'GitHub operation failed' });
+      throw error;
+    }
   }
-
-  async createPullRequest(params: CreatePullRequestParams): Promise<PullRequestResult> {
-    return PullRequestService.createPullRequest(params);
-  }
+  async createPullRequest(params: CreatePullRequestParams): Promise<PullRequestResult> { return PullRequestService.createPullRequest(params); }
 }
-
 export const pullRequestService = new PullRequestService();

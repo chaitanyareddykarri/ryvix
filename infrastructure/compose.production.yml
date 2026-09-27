@@ -1,0 +1,27 @@
+services:
+  web:
+    image: ${RYVIX_IMAGE:?Set an immutable Ryvix image tag}
+    restart: unless-stopped
+    init: true
+    labels:
+      com.ryvix.revision: ${RYVIX_RELEASE_SHA}
+    user: "1000:1000"
+    env_file:
+      - ${RYVIX_RUNTIME_ENV_FILE:?Set the absolute path to the server environment file}
+    environment:
+      RYVIX_RELEASE_SHA: ${RYVIX_RELEASE_SHA:?Set the deployed commit}
+    ports:
+      - "127.0.0.1:${RYVIX_HTTP_PORT:-3000}:3000"
+    volumes:
+      - ai-data:/app/ai/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+volumes:
+  ai-data:

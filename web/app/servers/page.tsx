@@ -108,6 +108,7 @@ export default function ServersPage() {
   }
 
   async function triggerOobReboot(serverId: string, provider: string) {
+    if (!window.confirm("Reboot this server through its cloud provider? Running services will be interrupted.")) return;
     setActionMessage(`Dispatching Out-of-Band Cloud Reboot via ${provider}...`);
     try {
       const res = await fetch("/api/servers", {
@@ -116,7 +117,7 @@ export default function ServersPage() {
         body: JSON.stringify({
           action: "oob_cloud_reboot",
           serverId,
-          params: { provider: provider.toLowerCase().split(" ")[0], instanceId: "i-09ab7c12d45ef" },
+          approved: true,
         }),
       });
       const data = await res.json();

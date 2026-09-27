@@ -1,3 +1,4 @@
+import { fakeCloud, testApproval, healthyProbe as fixtureProbe } from './helpers/execution-fixtures';
 import assert from 'node:assert/strict';
 import { InternalAgent } from '../services/src/connector/internal-agent';
 import { CloudRecoveryBridge } from '../services/src/connector/cloud-recovery.bridge';
@@ -85,7 +86,7 @@ export async function testServerConnectorPipeline() {
   // =========================================================================
   console.log('  -> Testing Phase 3: Out-of-Band Cloud Recovery Bridge & Differential Diagnosis...');
 
-  const cloudBridge = new CloudRecoveryBridge();
+  const cloudBridge = new CloudRecoveryBridge({ aws: fakeCloud, digitalocean: fakeCloud });
 
   // Test Case A: Healthy state diagnosis
   const healthyProbe = await cloudBridge.probeHypervisor('aws', 'i-09ab7c12d45ef');
@@ -95,21 +96,21 @@ export async function testServerConnectorPipeline() {
 
   // Test Case B: Kernel Freeze / OOM Lockup diagnosis
   // Internal daemon died (>30s ago), but hypervisor is UP and guest instanceCheck impaired
-  const frozenProbe = await cloudBridge.probeHypervisor('aws', 'i-09ab7c12d45ef', 'kernel_panic');
+  const frozenProbe = { ...fixtureProbe, statusChecks: { systemCheck: 'ok' as const, instanceCheck: 'impaired' as const } };
   const frozenDiagnosis = cloudBridge.diagnoseFailure(60, frozenProbe); // 60s ago heartbeat
   assert.equal(frozenDiagnosis.diagnosis, 'KERNEL_PANIC_OOM');
   assert.equal(frozenDiagnosis.recommendation, 'OUT_OF_BAND_HARD_RESET');
 
   // Test Case C: Underlying Cloud Provider Hypervisor Outage
-  const outageProbe = await cloudBridge.probeHypervisor('digitalocean', 'do-droplet-892', 'cloud_outage');
+  const outageProbe = { ...fixtureProbe, hypervisorResponsive: false };
   const outageDiagnosis = cloudBridge.diagnoseFailure(120, outageProbe);
   assert.equal(outageDiagnosis.diagnosis, 'HYPERVISOR_OUTAGE');
   assert.equal(outageDiagnosis.recommendation, 'CONTACT_CLOUD_PROVIDER');
 
   // Test Case D: Execute Out-of-Band Hard Reset
-  const oobAction = await cloudBridge.executePowerAction('aws', 'i-09ab7c12d45ef', 'hard_reset');
-  assert.equal(oobAction.status, 'completed');
-  assert.ok(oobAction.providerMessage.includes('Hypervisor action'));
+  const oobAction = await cloudBridge.executePowerAction('aws', 'i-09ab7c12d45ef', 'hard_reset', testApproval);
+  assert.equal(oobAction.status, 'dispatched');
+  assert.ok(oobAction.providerMessage.includes('Provider action'));
 
   console.log('  ✓ Phase 3: Out-of-Band Cloud Recovery & Differential Diagnosis PASSED.');
 

@@ -1,3 +1,4 @@
+import { fakeDocker, fakeGitHub, testApproval } from './helpers/execution-fixtures';
 import assert from 'node:assert/strict';
 import { RepositoryAnalyzer } from '../backend/src/connectors/github.connector';
 import { DockerWorkspaceManager } from '../services/src/workspace/docker-workspace.manager';
@@ -48,7 +49,7 @@ export async function testCodingWorkspacePipeline() {
   // =========================================================================
   console.log('  -> Testing Phase 3: Docker Sandbox Execution Engine...');
 
-  const workspaceManager = new DockerWorkspaceManager();
+  const workspaceManager = new DockerWorkspaceManager(fakeDocker);
 
   // Create ephemeral workspace sandbox
   const session = await workspaceManager.createSession({
@@ -79,7 +80,7 @@ export async function testCodingWorkspacePipeline() {
   // Execute verification / test command in isolated container
   const execResult = await workspaceManager.executeCommand(session.id, 'npm test');
   assert.equal(execResult.exitCode, 0, 'Container command execution must succeed');
-  assert.ok(execResult.stdout.includes('Simulated execution'), 'Container execution output verified');
+  assert.ok(execResult.stdout.includes('fixture command output'), 'Container execution output verified');
 
   console.log(`  âœ“ Phase 3: Docker Sandbox created (${session.container_id}) on port ${session.preview_port} and applied diff.`);
 
@@ -93,6 +94,7 @@ export async function testCodingWorkspacePipeline() {
 
   // Pull request generation upon user approval
   const prResult = await PullRequestService.createPullRequest({
+    githubToken: 'test-token', authorization: testApproval,
     repoUrl: 'https://github.com/acme/storefront',
     baseBranch: 'main',
     branchName: 'ryvix/ai-hero-fix-ecom',
@@ -105,7 +107,7 @@ export async function testCodingWorkspacePipeline() {
         action: 'create',
       },
     ],
-  });
+  }, fakeGitHub);
 
   assert.ok(prResult.prUrl.includes('pull/'), 'PR URL must be generated');
   assert.equal(prResult.branchName, 'ryvix/ai-hero-fix-ecom', 'Branch name must match');

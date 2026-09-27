@@ -1,3 +1,5 @@
+import { fakeDocker } from './helpers/execution-fixtures';
+import { DockerWorkspaceManager } from '../services/src/workspace/docker-workspace.manager';
 /**
  * @file ai-self-understanding-and-coding-space.test.ts
  *
@@ -34,6 +36,7 @@ import {
 } from '../services/src';
 
 export async function testAiSelfUnderstandingAndCodingSpace(): Promise<void> {
+  const dockerWorkspaceManager = new DockerWorkspaceManager(fakeDocker);
   console.log('\n======================================================================');
   console.log(' TEST SUITE 38: AI DEEP SELF-UNDERSTANDING, CODING SPACES & AGI CORE');
   console.log('======================================================================\n');

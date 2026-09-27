@@ -3,6 +3,7 @@ import { dockerWorkspaceManager } from "@ryvix/services";
 import { queryDirectDb } from "@/utils/direct-db";
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
+import { requireProjectOperator, operationAuthorization } from "@/utils/operation-access";
 
 export const dynamic = "force-dynamic";
 
@@ -72,10 +73,7 @@ export async function GET() {
       });
     }
 
-    // Auto-mark expired sessions as destroyed in DB
-    await queryDirectDb(
-      `UPDATE workspace_sessions SET status = 'destroyed' WHERE expires_at < NOW() AND status IN ('active', 'executing', 'provisioning')`
-    );
+    // Expiry does not prove successful destruction; the worker owns container cleanup.
 
     // Query active non-expired DB sessions belonging to this user's organization projects
     const dbSessions = await queryDirectDb(`
@@ -128,11 +126,17 @@ export async function POST(req: NextRequest) {
     const { action, taskId, projectId, command } = body;
 
     if (action === "execute" && command) {
+      const session = dockerWorkspaceManager.getSession(body.sessionId);
+      if (!session) return NextResponse.json({ success: false, error: "Workspace not found on this worker" }, { status: 404 });
+      await requireProjectOperator(supabase, user.id, session.project_id);
+      const audit = operationAuthorization(supabase, user.id, session.project_id);
+      await audit.recordAudit({ action: "workspace.execute", target: session.id, status: "requested" });
       const execResult = await dockerWorkspaceManager.executeCommand(
-        body.sessionId || "default",
+        session.id,
         command
       );
-      return NextResponse.json({ success: true, result: execResult });
+      await audit.recordAudit({ action: "workspace.execute", target: session.id, status: execResult.success ? "success" : "failure", detail: `exit=${execResult.exitCode}` });
+      return NextResponse.json({ success: execResult.success, result: execResult });
     }
 
     // Resolve user's actual project ID
@@ -152,14 +156,19 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    if (!resolvedProjectId) return NextResponse.json({ success: false, error: "A project is required" }, { status: 400 });
+    await requireProjectOperator(supabase, user.id, resolvedProjectId);
+    const audit = operationAuthorization(supabase, user.id, resolvedProjectId);
+    await audit.recordAudit({ action: "workspace.create", target: resolvedProjectId, status: "requested" });
     const session = await dockerWorkspaceManager.createSession({
       taskId: taskId || `task_${Date.now()}`,
-      projectId: resolvedProjectId || `proj_${Date.now()}`,
+      projectId: resolvedProjectId,
       cpu: 2,
       ramMb: 2048,
       ttlMinutes: 15,
     });
 
+    await audit.recordAudit({ action: "workspace.create", target: session.id, status: "success" });
     return NextResponse.json({ success: true, session });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });

@@ -1,3 +1,4 @@
+import { fakeGitHub, testApproval } from './helpers/execution-fixtures';
 import assert from 'node:assert/strict';
 import * as crypto from 'node:crypto';
 import { GitHubConnector } from '../backend/src/connectors/github.connector';
@@ -130,14 +131,15 @@ export async function testGitHubIntegration() {
   console.log('  -> 5. Testing Pull Request Generation with Linked Repository...');
 
   const pr = await PullRequestService.createPullRequest({
+    githubToken: 'test-token', authorization: testApproval,
     repositoryId: linkedRepo.id,
     repoUrl: linkedRepo.clone_url,
     baseBranch: linkedRepo.default_branch,
     branchName: featureBranch,
     title: 'fix(ui): responsive hero banner update',
     summary: 'Autonomous modification verified in Docker sandbox container',
-    changes: [{ path: 'components/HeroBanner.tsx', action: 'modify' }],
-  });
+    changes: [{ path: 'components/HeroBanner.tsx', action: 'modify', content: 'export const Hero = 1;' }],
+  }, fakeGitHub);
 
   assert.ok(pr.html_url.includes('pull/'), 'PR URL must point to pull request endpoint');
   assert.equal(pr.branch_name, featureBranch);

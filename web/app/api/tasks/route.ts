@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { generateTaskPlan } from "@ryvix/ai";
 import { dockerWorkspaceManager } from "@ryvix/services";
+import { requireProjectOperator, operationAuthorization } from "@/utils/operation-access";
 
 export async function GET() {
   try {
@@ -124,6 +125,9 @@ export async function POST(request: Request) {
       }
     }
 
+    if (!projectId) return NextResponse.json({ error: "A project is required" }, { status: 400 });
+    await requireProjectOperator(supabase, user.id, projectId);
+
     // 3. AI Reasoning: Generate structured plan
     const aiPlan = await generateTaskPlan({
       taskId: `task_${Date.now()}`,
@@ -139,7 +143,7 @@ export async function POST(request: Request) {
     // 4. Create Task in PostgreSQL
     let createdTaskId = `task_${Date.now()}`;
     if (projectId) {
-      const { data: taskRecord } = await supabase
+      const { data: taskRecord, error: taskError } = await supabase
         .from("tasks")
         .insert({
           project_id: projectId,
@@ -153,18 +157,22 @@ export async function POST(request: Request) {
         .select("id")
         .single();
 
+      if (taskError || !taskRecord) throw new Error("Failed to persist task");
       if (taskRecord) {
         createdTaskId = taskRecord.id;
       }
     }
 
     // 5. Spin up ephemeral Docker Sandbox Session
+    const audit = operationAuthorization(supabase, user.id, projectId);
+    await audit.recordAudit({ action: "workspace.create", target: createdTaskId, status: "requested" });
     const sandboxSession = await dockerWorkspaceManager.createSession(
       createdTaskId,
       projectId || "proj_default",
       "node:22-alpine",
       15
     );
+    await audit.recordAudit({ action: "workspace.create", target: sandboxSession.id, status: "success" });
 
     return NextResponse.json({
       success: true,

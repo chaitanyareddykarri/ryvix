@@ -1,57 +1,95 @@
-name: Ryvix CD - Continuous Deployment & Zero-Downtime Canary Rollout
+name: Ryvix deployment
 
 on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
-    inputs:
-      deployment_tier:
-        description: 'Deployment Environment'
-        required: true
-        default: 'production'
-        type: choice
-        options:
-          - staging
-          - canary
-          - production
+  workflow_run:
+    workflows: ["Ryvix CI - Continuous Integration & Quality Gateway"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ryvix-production
+  cancel-in-progress: false
 
 jobs:
-  canary-deployment:
-    name: Zero-Downtime Canary Rollout & Healthcheck
+  publish:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository && vars.RYVIX_DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.image.outputs.name }}
+      revision: ${{ github.event.workflow_run.head_sha }}
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js Runtime
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
         with:
-          node-version: 20
-          cache: 'npm'
-
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Deploy Canary Node (10% Traffic Routing)
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+      - name: Validate build settings
+        env:
+          SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: |
-          echo "Deploying Ryvix Canary Build to Cluster Worker 01..."
-          echo "Zero-downtime Nginx reload triggered..."
-
-      - name: Automated Canary Healthcheck Probe (30s Window)
+          test -n "$SUPABASE_URL" || { echo 'Set NEXT_PUBLIC_SUPABASE_URL'; exit 1; }
+          test -n "$SUPABASE_KEY" || { echo 'Set NEXT_PUBLIC_SUPABASE_ANON_KEY'; exit 1; }
+      - name: Select immutable image
+        id: image
+        env:
+          REPOSITORY: ${{ github.repository }}
+          REVISION: ${{ github.event.workflow_run.head_sha }}
+        run: echo "name=ghcr.io/${REPOSITORY,,}:$REVISION" >> "$GITHUB_OUTPUT"
+      - name: Authenticate registry
+        env:
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REGISTRY_USER: ${{ github.actor }}
+        run: printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io -u "$REGISTRY_USER" --password-stdin
+      - name: Build and publish verified revision
+        env:
+          RYVIX_IMAGE: ${{ steps.image.outputs.name }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
         run: |
-          echo "Probing cluster health endpoints: /api/servers, /api/health"
-          echo "HTTP 200 OK verified. Latency < 15ms. Error Rate: 0.00%."
+          docker build -f infrastructure/Dockerfile -t "$RYVIX_IMAGE" \
+            --build-arg NEXT_PUBLIC_SUPABASE_URL --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY \
+            --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY --build-arg NEXT_PUBLIC_SITE_URL .
+          docker push "$RYVIX_IMAGE"
+      - name: Clear registry credentials
+        if: always()
+        run: docker logout ghcr.io
 
-  production-rollout:
-    name: Full Production Cluster Promotion
-    needs: canary-deployment
-    runs-on: ubuntu-latest
+  deploy:
+    needs: publish
+    runs-on: [self-hosted, Linux, ryvix-production]
+    environment: production
+    permissions:
+      contents: read
+      packages: read
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Promote Canary to Global Cluster
-        run: |
-          echo "Promoting build to all active cluster nodes..."
-          echo "Synchronizing netfilter firewall and neural threat classifier..."
-          echo "Production deployment 100% complete and healthy."
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.publish.outputs.revision }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Authenticate registry
+        env:
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REGISTRY_USER: ${{ github.actor }}
+        run: printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io -u "$REGISTRY_USER" --password-stdin
+      - name: Deploy and verify revision, rolling back on failure
+        env:
+          RYVIX_IMAGE: ${{ needs.publish.outputs.image }}
+          RYVIX_RELEASE_SHA: ${{ needs.publish.outputs.revision }}
+          RYVIX_RUNTIME_ENV_FILE: ${{ vars.RYVIX_RUNTIME_ENV_FILE }}
+          RYVIX_HEALTH_URL: ${{ vars.RYVIX_HEALTH_URL }}
+          RYVIX_HTTP_PORT: ${{ vars.RYVIX_HTTP_PORT }}
+        run: node scripts/deploy.mjs
+      - name: Clear registry credentials
+        if: always()
+        run: docker logout ghcr.io

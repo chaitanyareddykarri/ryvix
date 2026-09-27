@@ -26,7 +26,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const secret = process.env.CONNECTOR_ENROLLMENT_SECRET || "ryvix_demo_enrollment_secret_key_2026";
+    const secret = process.env.CONNECTOR_ENROLLMENT_SECRET;
+    if (!secret) {
+      return NextResponse.json({ success: false, error: "Connector enrollment is not configured" }, { status: 503 });
+    }
     const validation = InternalAgent.verifyEnrollmentToken(enrollmentToken, secret);
 
     if (!validation.valid || !validation.environmentId) {

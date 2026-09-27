@@ -39,6 +39,7 @@ import { testCircuitBreakerFlow } from './circuit-breaker.test';
 import { testWorkspaceCleanupFlow } from './workspace-cleanup.test';
 import { testApiKeySecurity } from './api-keys.test';
 import { testCrossTenantRls } from './cross-tenant-rls.test';
+import { testRealExecution } from './real-execution.test';
 
 async function runAllTests() {
   console.log('============================================================');
@@ -70,6 +71,7 @@ async function runAllTests() {
 
     { name: 'API Key Cryptographic Security & Scopes', fn: testApiKeySecurity },
     { name: 'Cross-Tenant RLS & Audit Immutability', fn: testCrossTenantRls },
+    { name: 'Real Docker, GitHub, Cloud and Authorization Boundaries', fn: testRealExecution },
     { name: 'Deep Server Log Analysis & Root Cause Diagnosis Engine', fn: testLogAnalysisEngine },
     { name: 'Level-5 SRE Autonomous Intelligence Suite (5 Deep Dimensions)', fn: testDeepSreIntelligence },
     { name: 'Autonomous General Intelligence (AGI) & Deductive Reasoning Engine', fn: testGeneralIntelligence },

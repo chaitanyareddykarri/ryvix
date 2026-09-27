@@ -5,7 +5,7 @@ import (
 )
 
 func TestTokenLifecycle(t *testing.T) {
-	secret := "ryvix_demo_enrollment_secret_key_2026"
+	secret := "test-only-enrollment-secret"
 	envID := "env_prod_ecommerce"
 
 	// 1. Format A: ryvix_enr_

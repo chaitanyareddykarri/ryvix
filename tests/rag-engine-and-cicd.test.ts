@@ -109,6 +109,7 @@ export async function testRagEngineAndCicd(): Promise<boolean> {
   console.log('\n[5] Verifying CI/CD GitHub Actions Workflow Configurations...');
   const ciPath = path.resolve(process.cwd(), '.github', 'workflows', 'ci.yml');
   const cdPath = path.resolve(process.cwd(), '.github', 'workflows', 'cd.yml');
+  const deployPath = path.resolve(process.cwd(), 'scripts', 'deploy.mjs');
 
   check(fs.existsSync(ciPath), 'Continuous Integration (CI) workflow file exists (.github/workflows/ci.yml)');
   check(fs.existsSync(cdPath), 'Continuous Deployment (CD) workflow file exists (.github/workflows/cd.yml)');
@@ -120,8 +121,9 @@ export async function testRagEngineAndCicd(): Promise<boolean> {
   check(ciContent.includes('build-verification'), 'CI workflow contains production build verification job');
 
   const cdContent = fs.readFileSync(cdPath, 'utf8');
-  check(cdContent.includes('canary-deployment'), 'CD workflow contains zero-downtime canary deployment stage');
-  check(cdContent.includes('production-rollout'), 'CD workflow contains global cluster promotion stage');
+  check(cdContent.includes('node scripts/deploy.mjs'), 'CD workflow invokes the verified deployment runner');
+  check(fs.existsSync(deployPath), 'Deployment runner exists');
+  check(fs.readFileSync(deployPath, 'utf8').includes('rollback'), 'Deployment runner contains rollback handling');
 
   console.log(`\nAll ${total}/${total} RAG Engine & CI/CD Pipeline assertions PASSED!`);
   return true;
