@@ -387,6 +387,7 @@ export class DeepSelfTrainer {
    * Executes continuous meta-learning across generated perturbations.
    */
   public executeMetaLearningCycle(threatClasses: string[], epochs = 3): TrainingRunSummary {
+    if (!threatClasses.length || !Number.isInteger(epochs) || epochs < 1) throw new Error('Training classes and positive epochs are required');
     const t0 = performance.now();
     const runId = `meta-train-${Date.now()}`;
     const allSamples: SyntheticPerturbation[] = [];
@@ -396,24 +397,21 @@ export class DeepSelfTrainer {
       allSamples.push(...generated);
     }
 
-    let initialLoss = 0.0;
-    let finalLoss = 0.0;
+    const samples = allSamples.map(sample => ({ sample, vector: neuralThreatClassifier.vectorize({
+      metrics: sample.syntheticMetrics, openPorts: sample.openPorts, logs: sample.syntheticLogs,
+    }) }));
+    // Evaluate the same frozen sample set before and after training. Online losses
+    // measured while weights change within an epoch are not comparable snapshots.
+    const evaluateLoss = () => samples.reduce((sum, { sample, vector }) => sum - Math.log(Math.max(1e-12,
+      neuralThreatClassifier.predict(vector).classProbabilities[sample.baseThreat] || 0)), 0) / samples.length;
+    const initialLoss = evaluateLoss();
 
     for (let epoch = 0; epoch < epochs; epoch++) {
-      let epochLossSum = 0;
-      for (const sample of allSamples) {
-        const vec = neuralThreatClassifier.vectorize({
-          metrics: sample.syntheticMetrics,
-          openPorts: sample.openPorts,
-          logs: sample.syntheticLogs,
-        });
-
-        const loss = neuralThreatClassifier.trainSample(vec, sample.baseThreat, 0.01);
-        epochLossSum += loss;
+      for (const { sample, vector } of samples) {
+        neuralThreatClassifier.trainSample(vector, sample.baseThreat, 0.01);
       }
-      if (epoch === 0) initialLoss = epochLossSum / allSamples.length;
-      if (epoch === epochs - 1) finalLoss = epochLossSum / allSamples.length;
     }
+    const finalLoss = evaluateLoss();
 
     const avgReward = allSamples.reduce((sum, s) => sum + s.rewardScore, 0) / allSamples.length;
 

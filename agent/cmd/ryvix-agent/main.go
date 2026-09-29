@@ -46,7 +46,11 @@ func main() {
 
 	// One-shot mode: probe and print JSON
 	if *once {
-		snapshot := d.GatherSnapshot()
+		snapshot, collectErr := d.GatherSnapshot()
+		if collectErr != nil {
+			fmt.Fprintln(os.Stderr, collectErr)
+			os.Exit(1)
+		}
 		data, err := json.MarshalIndent(snapshot, "", "  ")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error serializing snapshot: %v\n", err)

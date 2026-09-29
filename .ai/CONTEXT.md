@@ -1,5 +1,11 @@
 # Ryvix Current Project Context
 
+> Remediation status (2026-09-29): historical completion claims below are not
+> production certification. Read CURRENT_TASK.md and
+> docs/verification/PRODUCTION_REMEDIATION.md for the active uncommitted work,
+> pending migrations and missing live verification. The user's current scope
+> prioritizes real dashboard/task/sandbox/PR/preview/connection/telemetry/AI flows.
+
 ## 1. Project Purpose
 
 Ryvix is an **AI-powered autonomous software and infrastructure operations platform**. It unifies:

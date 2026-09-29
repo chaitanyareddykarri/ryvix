@@ -26,8 +26,14 @@ jobs:
       - name: Run Monorepo TypeScript Verification
         run: npm run typecheck
 
+      - name: Check tracked files for credential regressions
+        run: npm run security:secrets
+
+      - name: Run lint
+        run: npm run lint
+
   master-test-suite:
-    name: Master Test Battery (30 Suites)
+    name: Master Test Battery
     needs: lint-and-typecheck
     runs-on: ubuntu-latest
     steps:
@@ -44,7 +50,7 @@ jobs:
         run: npm ci
 
       - name: Execute Master Test Runner
-        run: npx tsx tests/run-all.ts
+        run: npm test
 
   ai-neural-training-and-rag:
     name: AI Neural Training, Benchmarks & RAG Vector Validation

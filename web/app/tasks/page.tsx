@@ -31,8 +31,9 @@ export default function TasksPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [connectedRepos, setConnectedRepos] = useState<any[]>([]);
+  const [repositoryId, setRepositoryId] = useState("");
 
-  const supabase = createClient();
+  const [supabase] = useState(() => createClient());
 
   useEffect(() => {
     async function checkUser() {
@@ -42,6 +43,11 @@ export default function TasksPage() {
       }
     }
     checkUser();
+    fetch('/api/github/repositories/connect').then(async response => {
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Repositories unavailable.');
+      setConnectedRepos(data.repositories || []);
+    }).catch(error => setErrorMessage(error.message));
   }, [supabase]);
 
   async function handleSubmitPrompt(e: React.FormEvent) {
@@ -56,7 +62,7 @@ export default function TasksPage() {
       const res = await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt.trim() }),
+        body: JSON.stringify({ prompt: prompt.trim(), repositoryId }),
       });
 
       const data = await res.json();
@@ -80,12 +86,19 @@ export default function TasksPage() {
     }
   }
 
-  function handleApproveAndShip() {
-    if (!activeTask) return;
-    const prNumber = Math.floor(100 + Math.random() * 900);
-    const repoSlug = connectedRepos[0]?.full_name || "customer/website";
-    setPrCreated(`https://github.com/${repoSlug}/pull/${prNumber}`);
-    setActiveTask((prev) => (prev ? { ...prev, status: "completed" } : null));
+  async function handleApproveAndShip() {
+    if (!activeTask || loading) return;
+    setLoading(true);
+    setErrorMessage("");
+    try {
+      const response = await fetch(`/api/tasks/${encodeURIComponent(activeTask.id)}/ship`, { method: "POST" });
+      const result = await response.json();
+      if (!response.ok || !result.pullRequest?.url) throw new Error(result.error || "Pull request creation failed.");
+      setPrCreated(result.pullRequest.url);
+      setActiveTask((previous) => previous ? { ...previous, status: result.task.status } : null);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Shipping failed.");
+    } finally { setLoading(false); }
   }
 
   return (
@@ -132,6 +145,10 @@ export default function TasksPage() {
           </p>
 
           <form onSubmit={handleSubmitPrompt} style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+            <select required value={repositoryId} onChange={event => setRepositoryId(event.target.value)} disabled={loading} aria-label="Repository">
+              <option value="">Select a connected repository</option>
+              {connectedRepos.map(repo => <option key={repo.id} value={repo.id}>{repo.full_name}</option>)}
+            </select>
             <input
               type="text"
               required

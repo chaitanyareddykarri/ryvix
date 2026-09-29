@@ -5,7 +5,7 @@ import { createClient } from "@/utils/supabase/client";
 import OtpInput6 from "@/components/OtpInput6";
 import dynamic from "next/dynamic";
 const MovingBlocks3D = dynamic(() => import("@/components/MovingBlocks3D"), { ssr: false });
-import { maskEmail } from "@/utils/auth-security";
+import { maskEmail } from "@/utils/email-display";
 
 type AuthMode =
   | "signin"

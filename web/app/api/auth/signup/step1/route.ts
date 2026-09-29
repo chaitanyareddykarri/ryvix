@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { queryDirectDb } from "@/utils/direct-db";
-import { generateRandomOtp, maskEmail, createSignupChallenge } from "@/utils/auth-security";
+import { generateRandomOtp, createSignupChallenge } from "@/utils/auth-security";
+import { maskEmail } from "@/utils/email-display";
 import { sendOtpEmail } from "@/utils/email-service";
 
 function getDbUrl(): string {
@@ -60,6 +61,7 @@ export async function POST(request: Request) {
 
     // 3. Generate a genuine cryptographically random 6-digit OTP
     const randomOtp = generateRandomOtp();
+    const challengeToken = createSignupChallenge({ email, fullName, password, otp: randomOtp });
 
     // 4. Dispatch OTP email directly via Resend
     const emailRes = await sendOtpEmail({
@@ -83,12 +85,6 @@ export async function POST(request: Request) {
     }
 
     // 5. Create encrypted challenge token with 10 min TTL
-    const challengeToken = createSignupChallenge({
-      email,
-      fullName,
-      password,
-      otp: randomOtp,
-    });
 
     const response = NextResponse.json({
       success: true,

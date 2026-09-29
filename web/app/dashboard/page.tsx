@@ -7,6 +7,7 @@ import { createClient } from "@/utils/supabase/client";
 import MovingBlocks3D from "@/components/MovingBlocks3D";
 import ConnectRepositoryModal from "@/components/ConnectRepositoryModal";
 import ConnectServerModal from "@/components/ConnectServerModal";
+import ConnectionsPanel from "@/components/ConnectionsPanel";
 
 // =========================================================================
 // 1. LUCIDE-STYLE VECTOR ICONS (Zero external dependencies, pixel-perfect)
@@ -403,7 +404,7 @@ function getProjectLiveUrl(repo: any): string | null {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const supabase = createClient();
+  const [supabase] = useState(() => createClient());
 
   // Navigation State
   const [activeTab, setActiveTab] = useState<NavSection>("overview");
@@ -444,7 +445,7 @@ export default function DashboardPage() {
   const [customLiveUrl, setCustomLiveUrl] = useState<string | null>(null);
   const [showLiveUrlModal, setShowLiveUrlModal] = useState<boolean>(false);
   const [liveUrlInput, setLiveUrlInput] = useState<string>("");
-  const [activePreviewUrlState, setActivePreviewUrlState] = useState<string>("http://localhost:3100");
+  const [activePreviewUrlState, setActivePreviewUrlState] = useState<string>("");
 
   // Project Selection URL Toast Notification (Section 9, 10, 17)
   const [projectToast, setProjectToast] = useState<{
@@ -487,8 +488,8 @@ export default function DashboardPage() {
   const [chatMessages, setChatMessages] = useState<Array<{ role: "user" | "assistant"; content: string; thoughtTrace?: string }>>([
     {
       role: "assistant",
-      content: "Hello! I am Ryvix AI, your autonomous fullstack coding architect and SRE. I understand your repository structure, database schema, and live deployment configuration. How can I assist you with your website today?",
-      thoughtTrace: "OODA Cycle: System initialized. Ephemeral container ready. Linked to production fleet.",
+      content: "Ask about your connected repository or infrastructure.",
+
     },
   ]);
   const [chatInput, setChatInput] = useState<string>("");
@@ -550,7 +551,8 @@ export default function DashboardPage() {
   useEffect(() => {
     async function loadWorkspaceData() {
       setLoadingData(true);
-      let resolvedLiveUrl = "";
+      setDeployError(null);
+
       try {
         // 1. Authenticated User Profile
         const { data: { user } } = await supabase.auth.getUser();
@@ -621,7 +623,7 @@ export default function DashboardPage() {
             const savedLive = getProjectLiveUrl(selected);
             setCustomLiveUrl(savedLive);
             setLiveUrlInput(savedLive || "");
-            resolvedLiveUrl = savedLive || "";
+
           }
 
           // Verify GitHub connection status without merging raw unselected repos
@@ -643,12 +645,6 @@ export default function DashboardPage() {
             const serverData = await serverResp.json();
             if (Array.isArray(serverData.servers) && serverData.servers.length > 0) {
               setServers(serverData.servers);
-              setHealthList(serverData.servers.map((s: any) => ({
-                id: s.id,
-                source: s.hostname,
-                message: `Host status ${s.status.toUpperCase()} (${s.provider})`,
-                details: { latency: Math.round(18 + Math.random() * 24) },
-              })));
             }
           }
         } catch {
@@ -698,311 +694,68 @@ export default function DashboardPage() {
           // ignore
         }
 
-        // 7. Real Incidents
-        const realIncidents = [
-          {
-            id: "ca020664-b9c2-4bd0-8423-a6b959097911",
-            title: "RAM Buffer Saturation on app-prod-worker-01 Preempted",
-            incident_type: "resource_exhaustion",
-            severity: "P3_medium",
-            status: "resolved",
-            created_at: "2026-09-23T06:17:01.410Z",
-            resolved_at: "2026-09-23T06:22:01.410Z",
-            ai_diagnosis: "V8 heap cache flushed before OOM boundary crossed.",
-          },
-          {
-            id: "3f7954ce-e84b-4ba4-95ac-da53547b6772",
-            title: "Upstream Gateway TCP Reset Remediated",
-            incident_type: "service_crash",
-            severity: "P2_high",
-            status: "resolved",
-            created_at: "2026-09-22T10:17:01.410Z",
-            resolved_at: "2026-09-22T10:17:01.410Z",
-            ai_diagnosis: "Nginx upstream keepalive socket timeout reconciled with Node.js.",
-          },
-        ];
-        try {
-          const { data: dbInc } = await supabase.from("incidents").select("*").order("created_at", { ascending: false });
-          if (Array.isArray(dbInc) && dbInc.length > 0) {
-            setIncidentsList(dbInc);
-          } else {
-            setIncidentsList(realIncidents);
-          }
-        } catch {
-          setIncidentsList(realIncidents);
-        }
-
-        // 8. Real Security Events
-        const realSecurityEvents = [
-          {
-            id: "3eee10f4-c0ef-4d40-8596-bd798c7ee502",
-            event_type: "GRAPHQL_DEPTH_DOS",
-            severity: "critical",
-            source: "198.51.100.99",
-            source_ip: "198.51.100.99",
-            status: "contained",
-            detected_at: "2026-09-23T10:01:42.297Z",
-            message: "GraphQL query depth exceeded safety threshold (blocked by neural classifier)",
-          },
-          {
-            id: "07a0ed7f-83b2-4661-9ca5-d6f9421d27ca",
-            event_type: "SSH_BRUTE_FORCE",
-            severity: "high",
-            source: "203.0.113.45",
-            source_ip: "203.0.113.45",
-            status: "contained",
-            detected_at: "2026-09-23T10:01:42.372Z",
-            message: "SSH automated credential stuffing attack isolated by eBPF filter",
-          },
-          {
-            id: "1267f7cf-af8c-41b0-b6f8-634397dd3eb4",
-            event_type: "SQLI_PROBE_INTERCEPTED",
-            severity: "medium",
-            source: "192.0.2.14",
-            source_ip: "192.0.2.14",
-            status: "contained",
-            detected_at: "2026-09-23T10:01:42.442Z",
-            message: "Parameterized query barrier neutralized malicious union payload",
-          },
-          {
-            id: "7f42f1db-1574-40c6-97aa-95718e6c0716",
-            event_type: "SUSPICIOUS_TMP_EXECUTION",
-            severity: "medium",
-            source: "198.51.100.99",
-            source_ip: "198.51.100.99",
-            status: "contained",
-            detected_at: "2026-09-23T10:01:42.512Z",
-            message: "Attempted execution in /tmp blocked by AppArmor profile",
-          },
-        ];
-        try {
-          const { data: dbSec } = await supabase.from("security_events").select("*").order("detected_at", { ascending: false });
-          if (Array.isArray(dbSec) && dbSec.length > 0) {
-            setSecurityList(dbSec);
-          } else {
-            setSecurityList(realSecurityEvents);
-          }
-        } catch {
-          setSecurityList(realSecurityEvents);
-        }
-
-        // 9. Real Audit Trail
-        const realAuditEvents = [
-          {
-            id: "bb6f6e18-0520-4d81-8837-d19e74adc488",
-            type: "AUDIT",
-            source: "user",
-            message: `Connected repository ${activeRepo?.full_name || selectedWebsite || "workspace repository"} on branch main`,
-            timestamp: "2026-09-23T12:54:13.073Z",
-            details: { action: "repository.connect", hash: "sha256:e3b0c442..." },
-          },
-          {
-            id: "96952681-0399-48c4-9daf-9bc1c25c2918",
-            type: "AUDIT",
-            source: "system",
-            message: "Health probe verification succeeded for edge cluster",
-            timestamp: "2026-09-23T10:14:00.376Z",
-            details: { action: "health.probe", hash: "sha256:4f82bc19..." },
-          },
-          {
-            id: "7ce29834-9593-4ebd-a556-256322793d62",
-            type: "AUDIT",
-            source: "ai",
-            message: "Synthesized task plan and initialized Docker workspace sandbox",
-            timestamp: "2026-09-23T09:35:08.021Z",
-            details: { action: "task.plan_create", hash: "sha256:d19a02ce..." },
-          },
-        ];
-        try {
-          const { data: dbAudit } = await supabase.from("audit_events").select("*").order("timestamp", { ascending: false }).limit(20);
-          if (Array.isArray(dbAudit) && dbAudit.length > 0) {
-            setLiveLogs(dbAudit.map((a: any) => ({
-              id: a.id,
-              type: "AUDIT",
-              source: a.actor_type || "user",
-              message: a.diff_summary || a.action_name,
-              timestamp: a.timestamp,
-              details: { action: a.action_name, hash: `sha256:${(a.parameters_hash || "").slice(0, 10)}...` },
-            })));
-          } else {
-            setLiveLogs(realAuditEvents);
-          }
-        } catch {
-          setLiveLogs(realAuditEvents);
-        }
+        // Monitoring records are scoped and authorized by the backend.
+        const monitoringResponse = await fetch("/api/dashboard", { cache: "no-store" });
+        const monitoring = await monitoringResponse.json();
+        if (!monitoringResponse.ok) throw new Error(monitoring.error || "Monitoring unavailable.");
+        setIncidentsList(monitoring.incidents);
+        setSecurityList(monitoring.securityEvents);
+        setHealthList(monitoring.healthChecks.map((check: any) => ({
+          id: check.id, source: check.name, message: check.status,
+          details: { latency: check.last_latency_ms },
+        })));
+        setLiveLogs(monitoring.auditEvents.map((event: any) => ({
+          id: event.id, type: "AUDIT", source: event.actor_type,
+          message: event.diff_summary || event.action_name, timestamp: event.timestamp,
+          details: { action: event.action_name, hash: event.parameters_hash },
+        })));
 
         // 10. Real Tasks from PostgreSQL
         const taskResp = await fetch("/api/tasks");
         if (taskResp.ok) {
           const taskData = await taskResp.json();
-          if (Array.isArray(taskData.tasks) && taskData.tasks.length > 0) {
+          if (Array.isArray(taskData.tasks)) {
             setTasks(taskData.tasks);
             const firstTask = taskData.tasks[0];
-            setActiveTask(firstTask);
+            setActiveTask(firstTask || null);
 
-            const currentRepoTitle = activeRepo?.full_name || selectedWebsite || (typeof window !== "undefined" ? localStorage.getItem("ryvix_active_repo") : null) || "Production Website";
-            const currentBranch = activeRepo?.default_branch || "main";
-
-            // Map tasks to Prompt History items
-            const mappedPrompts: PromptHistoryItem[] = taskData.tasks.map((t: any, idx: number) => {
-              const createdAt = t.created_at ? new Date(t.created_at) : new Date();
-              const now = new Date();
-              const diffHours = Math.abs(now.getTime() - createdAt.getTime()) / 36e5;
-              const dateGroup: "Today" | "Yesterday" | "Earlier" =
-                diffHours < 24 ? "Today" : diffHours < 48 ? "Yesterday" : "Earlier";
-
-              const timeStr = diffHours < 1
-                ? `${Math.max(1, Math.round(diffHours * 60))}m ago`
-                : diffHours < 24
-                ? `${Math.round(diffHours)}h ago`
-                : createdAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-
-              const shortCommit = t.id ? t.id.replace(/[^a-f0-9]/gi, "").slice(0, 7) : `a82f${idx}9c`;
-              const prompt = t.user_prompt || t.title || "Modernize website structure";
-
-              let statusBadge: "Completed" | "In Progress" | "Awaiting Approval" | "Failed" = "Completed";
-              if (t.status === "awaiting_approval") statusBadge = "Awaiting Approval";
-              else if (t.status === "running" || t.status === "executing" || t.status === "in_progress") statusBadge = "In Progress";
-              else if (t.status === "failed") statusBadge = "Failed";
-
+            const mappedChanges: CodeChangeItem[] = taskData.tasks.map((task: any) => {
+              const created = new Date(task.created_at);
+              const hours = (Date.now() - created.getTime()) / 3600000;
+              const files: CodeChangeFile[] = task.result?.files || [];
               return {
-                id: t.id || `prompt-${idx}`,
-                prompt,
-                project: currentRepoTitle,
-                repository: currentRepoTitle,
-                timestamp: timeStr,
-                dateGroup,
-                taskId: t.id ? `TASK-${t.id.slice(0, 6)}` : `TASK-${idx + 100}`,
-                status: statusBadge,
-                deploymentStatus: t.status === "completed" ? "Live" : "Pending",
-                commitSha: shortCommit,
-                filesCount: t.files_count || (idx % 3) + 2,
-              };
-            });
-            setPromptHistory(mappedPrompts);
-
-            // Map tasks to Code Changes / Commits with file-level diffs
-            const mappedChanges: CodeChangeItem[] = taskData.tasks.map((t: any, idx: number) => {
-              const createdAt = t.created_at ? new Date(t.created_at) : new Date();
-              const now = new Date();
-              const diffHours = Math.abs(now.getTime() - createdAt.getTime()) / 36e5;
-              const dateGroup: "Today" | "Yesterday" | "Earlier" =
-                diffHours < 24 ? "Today" : diffHours < 48 ? "Yesterday" : "Earlier";
-
-              const timeStr = diffHours < 1
-                ? `${Math.max(1, Math.round(diffHours * 60))}m ago`
-                : diffHours < 24
-                ? `${Math.round(diffHours)}h ago`
-                : createdAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-
-              const shortCommit = t.id ? t.id.replace(/[^a-f0-9]/gi, "").slice(0, 7) : `a82f${idx}9c`;
-              const prompt = t.user_prompt || t.title || "Update component styling";
-              const message = t.summary || `feat: ${prompt.slice(0, 52)}`;
-
-              const isNav = /nav|header|menu/i.test(prompt);
-              const isPrice = /price|tier|cost/i.test(prompt);
-              const isHero = /hero|banner|intro/i.test(prompt);
-              const isTheme = /dark|theme|color|style/i.test(prompt);
-
-              const files: CodeChangeFile[] = [
-                {
-                  filename: isNav ? "components/Navbar.tsx" : isHero ? "components/Hero.tsx" : "components/FeatureSection.tsx",
-                  additions: isNav ? 42 : 56,
-                  deletions: isNav ? 12 : 14,
-                  oldCode: isNav
-                    ? '<header className="bg-white text-gray-900 border-b border-gray-200">\n  <div className="max-w-7xl mx-auto px-4 flex justify-between">'
-                    : '<section className="py-12 bg-gray-50">\n  <h1 className="text-3xl font-bold">Standard Layout</h1>',
-                  newCode: isNav
-                    ? '<header className="bg-black text-white border-b border-neutral-800 backdrop-blur-md sticky top-0 z-50">\n  <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">'
-                    : '<section className="py-20 bg-neutral-950 text-white relative overflow-hidden">\n  <h1 className="text-5xl font-extrabold tracking-tight bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">Modernized Experience</h1>',
-                },
-                {
-                  filename: isPrice ? "components/Pricing.tsx" : "app/page.tsx",
-                  additions: 68,
-                  deletions: 18,
-                  oldCode: '<main className="min-h-screen">\n  <LegacyContent />\n</main>',
-                  newCode: '<main className="min-h-screen bg-black">\n  <ModernHero />\n  <FeatureGrid />\n  <PricingSection tiers={defaultTiers} />\n</main>',
-                },
-                {
-                  filename: isTheme ? "styles/theme.css" : "styles/globals.css",
-                  additions: 14,
-                  deletions: 6,
-                  oldCode: ':root {\n  --primary: #2563eb;\n  --background: #ffffff;\n}',
-                  newCode: ':root {\n  --primary: #7C6CFF;\n  --accent: #42D9FF;\n  --background: #05070A;\n  --surface: #0D1218;\n}',
-                },
-              ];
-
-              const totalAdditions = files.reduce((acc, f) => acc + f.additions, 0);
-              const totalDeletions = files.reduce((acc, f) => acc + f.deletions, 0);
-
-              return {
-                id: t.id || `change-${idx}`,
-                taskId: t.id ? `TASK-${t.id.slice(0, 6)}` : `TASK-${idx + 100}`,
-                commitSha: shortCommit,
-                message,
-                author: "Ryvix AI Engine",
-                timestamp: timeStr,
-                dateGroup,
-                branch: currentBranch,
-                repository: currentRepoTitle,
+                id: task.id, taskId: task.id,
+                commitSha: task.pullRequest?.commitSha || "",
+                message: task.summary || task.user_prompt || task.title,
+                author: task.created_by || "",
+                timestamp: Number.isFinite(created.getTime()) ? created.toLocaleString() : "Not available",
+                dateGroup: hours < 24 ? "Today" : hours < 48 ? "Yesterday" : "Earlier",
+                branch: task.pullRequest?.branch || task.result?.branch || "",
+                repository: task.repository?.full_name || "",
                 filesChanged: files,
-                additions: totalAdditions,
-                deletions: totalDeletions,
-                previewUrl: "http://localhost:3100",
-                liveUrl: resolvedLiveUrl,
+                additions: files.reduce((sum, file) => sum + file.additions, 0),
+                deletions: files.reduce((sum, file) => sum + file.deletions, 0),
+                previewUrl: task.workspace?.previewUrl || "",
               };
             });
             setCodeChanges(mappedChanges);
-            if (mappedChanges.length > 0) {
-              setSelectedChangeId(mappedChanges[0].id);
-            }
+            setSelectedChangeId((current) => mappedChanges.some(c => c.id === current) ? current : mappedChanges[0]?.id || null);
+            setPromptHistory(taskData.tasks.map((task: any, index: number) => ({
+              id: task.id, taskId: task.id,
+              prompt: task.user_prompt || task.title,
+              project: task.project_id, repository: mappedChanges[index].repository,
+              timestamp: mappedChanges[index].timestamp, dateGroup: mappedChanges[index].dateGroup,
+              status: task.status === "completed" ? "Completed" : task.status === "failed" ? "Failed" :
+                task.status === "awaiting_approval" ? "Awaiting Approval" : "In Progress",
+              commitSha: mappedChanges[index].commitSha, filesCount: mappedChanges[index].filesChanged.length,
+            })));
+            // Task completion/PR creation is not evidence of a deployment.
+            setChangeHistory([]);
 
-            const dynamicHistory: ChangeHistoryItem[] = taskData.tasks.map((t: any, idx: number) => {
-              const createdAt = t.created_at ? new Date(t.created_at) : new Date();
-              const now = new Date();
-              const diffHours = Math.abs(now.getTime() - createdAt.getTime()) / 36e5;
-              const dateGroup: "Today" | "Yesterday" | "Earlier" =
-                diffHours < 24 ? "Today" : diffHours < 48 ? "Yesterday" : "Earlier";
-
-              const timeStr = diffHours < 1
-                ? `${Math.max(1, Math.round(diffHours * 60))}m ago`
-                : diffHours < 24
-                ? `${Math.round(diffHours)}h ago`
-                : createdAt.toLocaleDateString();
-
-              const statusMap: Record<string, "Live" | "Approved" | "Deploying" | "Pending"> = {
-                completed: "Live",
-                success: "Live",
-                approved: "Approved",
-                in_progress: "Deploying",
-                running: "Deploying",
-                awaiting_approval: "Pending",
-                pending: "Pending",
-              };
-
-              const shortCommit = t.id ? t.id.replace(/[^a-f0-9]/gi, "").slice(0, 7) : `c8e${idx}1a`;
-              const prompt = t.user_prompt || t.title || "Automated Platform Task";
-
-              return {
-                id: t.id || `task-${idx}`,
-                time: timeStr,
-                dateGroup,
-                title: t.summary || prompt.slice(0, 42),
-                request: prompt,
-                aiSummary: t.summary || `Synthesized and executed: ${prompt}`,
-                status: statusMap[t.status] || "Review Needed",
-                filesCount: t.files_count || (t.plans?.[0]?.steps?.length ? t.plans[0].steps.length : 1),
-                branch: t.branch || (connectedRepos[0]?.defaultBranch || "main"),
-                commit: shortCommit,
-                previewUrl: "http://localhost:3100",
-                liveUrl: resolvedLiveUrl,
-              };
-            });
-            setChangeHistory(dynamicHistory);
           }
         }
       } catch (err) {
-        console.warn("Failed to load live workspace data:", err);
+        setDeployError(err instanceof Error ? err.message : "Workspace data unavailable.");
       } finally {
         setLoadingData(false);
       }
@@ -1016,107 +769,7 @@ export default function DashboardPage() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "tasks" },
-        (payload: any) => {
-          if (payload.eventType === "INSERT") {
-            const newTask = payload.new;
-            setTasks((prev) => [newTask, ...prev.filter((t) => t.id !== newTask.id)]);
-            setActiveTask(newTask);
-
-            const shortCommit = newTask.id ? newTask.id.replace(/[^a-f0-9]/gi, "").slice(0, 7) : "a82f19c";
-            const newPrompt: PromptHistoryItem = {
-              id: newTask.id,
-              prompt: newTask.user_prompt || "AI Change Request",
-              project: activeRepo?.full_name || selectedWebsite || "Production Website",
-              repository: activeRepo?.full_name || selectedWebsite || "Production Website",
-              timestamp: "Just now",
-              dateGroup: "Today",
-              taskId: `TASK-${newTask.id.slice(0, 6)}`,
-              status: newTask.status === "completed" ? "Completed" : "Awaiting Approval",
-              deploymentStatus: newTask.status === "completed" ? "Live" : "Pending",
-              commitSha: shortCommit,
-              filesCount: 3,
-            };
-            setPromptHistory((prev) => [newPrompt, ...prev.filter((p) => p.id !== newPrompt.id)]);
-
-            const newChange: CodeChangeItem = {
-              id: newTask.id,
-              taskId: `TASK-${newTask.id.slice(0, 6)}`,
-              commitSha: shortCommit,
-              message: newTask.summary || `feat: ${(newTask.user_prompt || "Modify website").slice(0, 48)}`,
-              author: "Ryvix AI Engine",
-              timestamp: "Just now",
-              dateGroup: "Today",
-              branch: activeRepo?.default_branch || "main",
-              repository: activeRepo?.full_name || selectedWebsite || "Production Website",
-              filesChanged: [
-                {
-                  filename: "components/Navbar.tsx",
-                  additions: 42,
-                  deletions: 12,
-                  oldCode: '<header className="bg-white text-gray-900 border-b border-gray-200">',
-                  newCode: '<header className="bg-black text-white border-b border-neutral-800">',
-                },
-                {
-                  filename: "app/page.tsx",
-                  additions: 68,
-                  deletions: 18,
-                  oldCode: '<main className="min-h-screen">\n  <LegacyContent />\n</main>',
-                  newCode: '<main className="min-h-screen bg-black">\n  <ModernHero />\n  <PricingSection />\n</main>',
-                },
-              ],
-              additions: 110,
-              deletions: 30,
-              previewUrl: activePreviewUrlState,
-              liveUrl: customLiveUrl || "",
-            };
-            setCodeChanges((prev) => [newChange, ...prev.filter((c) => c.id !== newChange.id)]);
-            setSelectedChangeId(newChange.id);
-
-            setChangeHistory((prev) => [
-              {
-                id: newTask.id,
-                time: "Just now",
-                dateGroup: "Today",
-                title: newTask.summary || newTask.user_prompt?.slice(0, 42) || "New Task",
-                request: newTask.user_prompt || "AI Task",
-                aiSummary: newTask.summary || "Synthesized change request",
-                status: newTask.status === "completed" ? "Live" : "Deploying",
-                filesCount: 4,
-                branch: "main",
-                commit: newTask.id.slice(0, 7),
-                previewUrl: activePreviewUrlState,
-                liveUrl: customLiveUrl || "",
-              },
-              ...prev,
-            ]);
-          } else if (payload.eventType === "UPDATE") {
-            const updated = payload.new;
-            setTasks((prev) =>
-              prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t))
-            );
-            setPromptHistory((prev) =>
-              prev.map((p) =>
-                p.id === updated.id
-                  ? {
-                      ...p,
-                      status: updated.status === "completed" ? "Completed" : updated.status === "awaiting_approval" ? "Awaiting Approval" : "In Progress",
-                      deploymentStatus: updated.status === "completed" ? "Live" : "Pending",
-                    }
-                  : p
-              )
-            );
-            if (activeTask && activeTask.id === updated.id) {
-              setActiveTask((prev: any) => ({ ...prev, ...updated }));
-              if (updated.status === "completed") {
-                setPreviewState("deployed");
-                setStatusMessage("LIVE");
-              } else if (updated.status === "awaiting_approval") {
-                setPreviewState("preview_ready");
-                setStatusMessage("PREVIEW READY");
-              }
-            }
-          }
-        }
+        () => { void loadWorkspaceData(); }
       )
       .on(
         "postgres_changes",
@@ -1137,17 +790,7 @@ export default function DashboardPage() {
     return () => {
       supabase.removeChannel(realtimeChannel);
     };
-  }, [
-    supabase,
-    activePreviewUrlState,
-    activeRepo?.default_branch,
-    activeRepo?.full_name,
-    activeTask,
-    connectedRepos,
-    customLiveUrl,
-    selectedWebsite,
-  ]);
-
+  }, [supabase]);
   // Helper to show project-specific URL toast notification (Section 9, 10, 17)
   function showProjectSelectedToast(repo: any) {
     if (!repo) return;
@@ -1171,126 +814,6 @@ export default function DashboardPage() {
     }, 4000);
   }
 
-  // Sync tasks and change history to the selected project context
-  function syncTasksToProject(repo: any, taskList: DatabaseTask[]) {
-    if (!taskList || taskList.length === 0) return;
-    const currentRepoTitle = repo?.full_name || repo?.name || selectedWebsite || "Production Website";
-    const currentBranch = repo?.default_branch || "main";
-    const projectUrl = getProjectLiveUrl(repo) || "";
-
-    const mappedPrompts: PromptHistoryItem[] = taskList.map((t: any, idx: number) => {
-      const createdAt = t.created_at ? new Date(t.created_at) : new Date();
-      const now = new Date();
-      const diffHours = Math.abs(now.getTime() - createdAt.getTime()) / 36e5;
-      const dateGroup: "Today" | "Yesterday" | "Earlier" =
-        diffHours < 24 ? "Today" : diffHours < 48 ? "Yesterday" : "Earlier";
-
-      const timeStr = diffHours < 1
-        ? `${Math.max(1, Math.round(diffHours * 60))}m ago`
-        : diffHours < 24
-        ? `${Math.round(diffHours)}h ago`
-        : createdAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-
-      const shortCommit = t.id ? t.id.replace(/[^a-f0-9]/gi, "").slice(0, 7) : `a82f${idx}9c`;
-      const prompt = t.user_prompt || t.title || "Modernize website structure";
-
-      let statusBadge: "Completed" | "In Progress" | "Awaiting Approval" | "Failed" = "Completed";
-      if (t.status === "awaiting_approval") statusBadge = "Awaiting Approval";
-      else if (t.status === "running" || t.status === "executing" || t.status === "in_progress") statusBadge = "In Progress";
-      else if (t.status === "failed") statusBadge = "Failed";
-
-      return {
-        id: t.id || `prompt-${idx}`,
-        prompt,
-        project: currentRepoTitle,
-        repository: currentRepoTitle,
-        timestamp: timeStr,
-        dateGroup,
-        taskId: t.id ? `TASK-${t.id.slice(0, 6)}` : `TASK-${idx + 100}`,
-        status: statusBadge,
-        deploymentStatus: t.status === "completed" ? "Live" : "Pending",
-        commitSha: shortCommit,
-        filesCount: t.files_count || (idx % 3) + 2,
-      };
-    });
-    setPromptHistory(mappedPrompts);
-
-    const mappedChanges: CodeChangeItem[] = taskList.map((t: any, idx: number) => {
-      const createdAt = t.created_at ? new Date(t.created_at) : new Date();
-      const now = new Date();
-      const diffHours = Math.abs(now.getTime() - createdAt.getTime()) / 36e5;
-      const dateGroup: "Today" | "Yesterday" | "Earlier" =
-        diffHours < 24 ? "Today" : diffHours < 48 ? "Yesterday" : "Earlier";
-
-      const timeStr = diffHours < 1
-        ? `${Math.max(1, Math.round(diffHours * 60))}m ago`
-        : diffHours < 24
-        ? `${Math.round(diffHours)}h ago`
-        : createdAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-
-      const shortCommit = t.id ? t.id.replace(/[^a-f0-9]/gi, "").slice(0, 7) : `a82f${idx}9c`;
-      const prompt = t.user_prompt || t.title || "Update component styling";
-      const message = t.summary || `feat: ${prompt.slice(0, 52)}`;
-
-      const isNav = /nav|header|menu/i.test(prompt);
-      const isPrice = /price|tier|cost/i.test(prompt);
-      const isHero = /hero|banner|intro/i.test(prompt);
-      const isTheme = /dark|theme|color|style/i.test(prompt);
-
-      const files: CodeChangeFile[] = [
-        {
-          filename: isNav ? "components/Navbar.tsx" : isHero ? "components/Hero.tsx" : "components/FeatureSection.tsx",
-          additions: isNav ? 42 : 56,
-          deletions: isNav ? 12 : 14,
-          oldCode: isNav
-            ? '<header className="bg-white text-gray-900 border-b border-gray-200">\n  <div className="max-w-7xl mx-auto px-4 flex justify-between">'
-            : '<section className="py-12 bg-gray-50">\n  <h1 className="text-3xl font-bold">Standard Layout</h1>',
-          newCode: isNav
-            ? '<header className="bg-black text-white border-b border-neutral-800 backdrop-blur-md sticky top-0 z-50">\n  <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">'
-            : '<section className="py-20 bg-neutral-950 text-white relative overflow-hidden">\n  <h1 className="text-5xl font-extrabold tracking-tight bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">Modernized Experience</h1>',
-        },
-        {
-          filename: isPrice ? "components/Pricing.tsx" : "app/page.tsx",
-          additions: 68,
-          deletions: 18,
-          oldCode: '<main className="min-h-screen">\n  <LegacyContent />\n</main>',
-          newCode: '<main className="min-h-screen bg-black">\n  <ModernHero />\n  <FeatureGrid />\n  <PricingSection tiers={defaultTiers} />\n</main>',
-        },
-        {
-          filename: isTheme ? "styles/theme.css" : "styles/globals.css",
-          additions: 14,
-          deletions: 6,
-          oldCode: ':root {\n  --primary: #2563eb;\n  --background: #ffffff;\n}',
-          newCode: ':root {\n  --primary: #7C6CFF;\n  --accent: #42D9FF;\n  --background: #05070A;\n  --surface: #0D1218;\n}',
-        },
-      ];
-
-      const totalAdditions = files.reduce((acc, f) => acc + f.additions, 0);
-      const totalDeletions = files.reduce((acc, f) => acc + f.deletions, 0);
-
-      return {
-        id: t.id || `change-${idx}`,
-        taskId: t.id ? `TASK-${t.id.slice(0, 6)}` : `TASK-${idx + 100}`,
-        commitSha: shortCommit,
-        message,
-        author: "Ryvix AI Engine",
-        timestamp: timeStr,
-        dateGroup,
-        branch: currentBranch,
-        repository: currentRepoTitle,
-        filesChanged: files,
-        additions: totalAdditions,
-        deletions: totalDeletions,
-        previewUrl: "http://localhost:3100",
-        liveUrl: projectUrl,
-      };
-    });
-    setCodeChanges(mappedChanges);
-    if (mappedChanges.length > 0) {
-      setSelectedChangeId(mappedChanges[0].id);
-    }
-  }
-
   // Handle Repository Selection (Project Identity, Context, URL & Toast Flow)
   function handleSelectRepository(repo: any, options?: { showToast?: boolean }) {
     if (!repo) return;
@@ -1307,7 +830,6 @@ export default function DashboardPage() {
     setShowWebsiteModal(false);
 
     // Sync tasks and change records for the selected project
-    syncTasksToProject(repo, tasks);
 
     // Match workspace sandbox session if project matches
     if (repo.project_id && workspaceSessions.length > 0) {
@@ -1351,7 +873,6 @@ export default function DashboardPage() {
         }
         return updated;
       });
-      syncTasksToProject(updatedRepo, tasks);
       showProjectSelectedToast(updatedRepo);
     }
     setShowLiveUrlModal(false);
@@ -1379,7 +900,6 @@ export default function DashboardPage() {
         }
         return updated;
       });
-      syncTasksToProject(updatedRepo, tasks);
       showProjectSelectedToast(updatedRepo);
     }
     setShowLiveUrlModal(false);
@@ -1414,6 +934,7 @@ export default function DashboardPage() {
         body: JSON.stringify({
           prompt: message,
           projectId: activeRepo?.project_id || undefined,
+          repositoryId: activeRepo?.id || undefined,
           stream: true,
         }),
       });
@@ -1457,7 +978,7 @@ export default function DashboardPage() {
             updated[lastIdx] = {
               ...updated[lastIdx],
               content: accumulated || updated[lastIdx].content,
-              thoughtTrace: lastThought || "OODA Cycle: Verified plan against codebase AST.",
+              thoughtTrace: lastThought || undefined,
             };
           }
           return updated;
@@ -1470,8 +991,8 @@ export default function DashboardPage() {
         if (lastIdx >= 0 && updated[lastIdx].role === "assistant") {
           updated[lastIdx] = {
             ...updated[lastIdx],
-            content: updated[lastIdx].content || "I have analyzed your request and prepared the modification in the isolated Docker workspace sandbox.",
-            thoughtTrace: "Executed verified synthesis with local cognitive engine.",
+            content: "Chat request failed. Please retry.",
+            thoughtTrace: undefined,
           };
         }
         return updated;
@@ -1484,36 +1005,21 @@ export default function DashboardPage() {
   // Live Task Approval & Actions in Database
   async function handleApproveTask(taskId: string) {
     try {
-      const resp = await fetch("/api/tasks", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ taskId, status: "approved" }),
-      });
-      if (resp.ok) {
-        setTasks((prev) =>
-          prev.map((t) => (t.id === taskId ? { ...t, status: "approved" } : t))
-        );
-      }
-    } catch (e) {
-      console.error(e);
-    }
+      const response = await fetch(`/api/tasks/${encodeURIComponent(taskId)}/ship`, { method: "POST" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Shipping failed.");
+      setTasks(previous => previous.map(task => task.id === taskId ? { ...task, status: data.task.status } : task));
+    } catch (error) { setDeployError(error instanceof Error ? error.message : "Shipping failed."); }
   }
 
   async function handleRejectTask(taskId: string) {
     try {
-      const resp = await fetch("/api/tasks", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ taskId, status: "rejected" }),
-      });
-      if (resp.ok) {
-        setTasks((prev) =>
-          prev.map((t) => (t.id === taskId ? { ...t, status: "rejected" } : t))
-        );
-      }
-    } catch (e) {
-      console.error(e);
-    }
+      const response = await fetch("/api/tasks", { method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId, status: "cancelled" }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Cancellation failed.");
+      setTasks(previous => previous.map(task => task.id === taskId ? { ...task, status: data.status } : task));
+    } catch (error) { setDeployError(error instanceof Error ? error.message : "Cancellation failed."); }
   }
 
   async function handleDeleteTask(taskId: string, e?: React.MouseEvent) {
@@ -1545,12 +1051,12 @@ export default function DashboardPage() {
       });
       const data = await res.json();
       if (data.success && data.probe) {
-        setProbeResult(`Probe verified: ${data.probe.status.toUpperCase()} in ${data.probe.latencyMs}ms (HTTP ${data.probe.statusCode || 200})`);
+        setProbeResult(`Probe verified: ${data.probe.status.toUpperCase()} in ${data.probe.latencyMs}ms (HTTP ${data.probe.statusCode ?? "unavailable"})`);
       } else {
-        setProbeResult("Probe completed: 200 OK (38ms latency, 0 packet loss)");
+        setProbeResult(data.error || "Probe failed: no measurement was returned.");
       }
     } catch {
-      setProbeResult("Probe completed: 200 OK (42ms latency, TLS valid)");
+      setProbeResult("Probe unavailable: request failed.");
     } finally {
       setIsProbing(false);
     }
@@ -1566,21 +1072,11 @@ export default function DashboardPage() {
         body: JSON.stringify({ action: "diagnose_threat_neural" }),
       });
       const data = await res.json();
-      setNeuralDiagResult(data.diagnosis || {
-        threatType: "GRAPHQL_DEPTH_DOS",
-        actionTaken: "blocked_by_neural_classifier",
-        confidence: 0.998,
-        forwardPassLatencyMs: 0.048,
-        clusterIpBlocked: "198.51.100.99",
-      });
-    } catch {
-      setNeuralDiagResult({
-        threatType: "GRAPHQL_DEPTH_DOS",
-        actionTaken: "blocked_by_neural_classifier",
-        confidence: 0.998,
-        forwardPassLatencyMs: 0.048,
-        clusterIpBlocked: "198.51.100.99",
-      });
+      if (!res.ok || !data.diagnosis) throw new Error(data.error || "Diagnosis unavailable.");
+      setNeuralDiagResult(data.diagnosis);
+    } catch (error) {
+      setNeuralDiagResult(null);
+      setDeployError(error instanceof Error ? error.message : "Diagnosis unavailable.");
     } finally {
       setIsDiagnosingNeural(false);
     }
@@ -1713,6 +1209,7 @@ export default function DashboardPage() {
         body: JSON.stringify({
           prompt: finalPrompt,
           projectId: activeRepo?.project_id || undefined,
+          repositoryId: activeRepo?.id || undefined,
         }),
       });
 
@@ -1734,8 +1231,8 @@ export default function DashboardPage() {
         }
 
         setAnalyzingStep(4);
-        setPreviewState("preview_ready");
-        setStatusMessage("PREVIEW READY");
+        setPreviewState(data.workspace?.previewUrl ? "preview_ready" : "none");
+        setStatusMessage(data.workspace?.previewUrl ? "PREVIEW READY" : "Preview unavailable.");
         setActiveTab("previews");
       }
     } catch (err: any) {
@@ -1748,65 +1245,22 @@ export default function DashboardPage() {
     }
   }
 
-  // User Approves & Deploys with Real Backend Status Progression
+  // Approval requests a real PR; the customer's pipeline controls deployment.
   async function handleApproveDeployment() {
     setShowApprovalModal(false);
-    setPreviewState("deploying");
-    setStatusMessage("DEPLOYING");
-    setDeploymentStep(1); // Changes approved
     setDeployError(null);
-
-    const targetTaskId = activeTask?.id || tasks[0]?.id;
-
+    const taskId = activeTask?.id;
+    if (!taskId) { setDeployError("Select a task to approve."); return; }
+    setStatusMessage("CREATING PULL REQUEST");
     try {
-      if (targetTaskId) {
-        // 1. Mark task as approved in PostgreSQL
-        await fetch("/api/tasks", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ taskId: targetTaskId, status: "approved" }),
-        });
-        setDeploymentStep(2); // Build & regression tests verified
-
-        // 2. Mark task as completed / live in PostgreSQL
-        const completeRes = await fetch("/api/tasks", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ taskId: targetTaskId, status: "completed" }),
-        });
-
-        if (!completeRes.ok) {
-          const errData = await completeRes.json();
-          throw new Error(errData.error || "Deployment execution failed");
-        }
-      }
-
-      setDeploymentStep(4);
-      setPreviewState("deployed");
-      setStatusMessage("LIVE");
-
-      const promptSummary = activeTask?.title || activeTask?.prompt || promptText || "Modernized website update";
-      const newHistoryItem: ChangeHistoryItem = {
-        id: targetTaskId || `ch-${Date.now()}`,
-        dateGroup: "Today",
-        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        title: promptSummary.slice(0, 42),
-        request: activeTask?.prompt || promptText || "Homepage update",
-        aiSummary: activeTask?.title || "Applied AI modifications and verified in Docker sandbox.",
-        status: "Live",
-        filesCount: taskSteps.length || 4,
-        branch: activeRepo?.default_branch ? `ryvix/${activeRepo.default_branch}` : "ryvix/patch-live",
-        commit: (targetTaskId || "c8e1a").replace(/[^a-f0-9]/gi, "").slice(0, 7),
-        previewUrl: activePreviewUrlState,
-        liveUrl: customLiveUrl || `https://${websiteDomain}`,
-      };
-
-      setChangeHistory((prev) => [newHistoryItem, ...prev.filter((h) => h.id !== newHistoryItem.id)]);
-    } catch (err: any) {
-      console.error("[Approval Error]:", err);
-      setDeployError(err.message || "Failed to deploy approved changes");
-      setStatusMessage("DEPLOY FAILED");
-      setPreviewState("preview_ready");
+      const response = await fetch(`/api/tasks/${encodeURIComponent(taskId)}/ship`, { method: "POST" });
+      const result = await response.json();
+      if (!response.ok || !result.pullRequest?.url) throw new Error(result.error || "Pull request creation failed.");
+      setActiveTask((task: any) => ({ ...task, status: result.task.status, pullRequest: result.pullRequest }));
+      setStatusMessage(`PULL REQUEST #${result.pullRequest.number} CREATED`);
+    } catch (error) {
+      setDeployError(error instanceof Error ? error.message : "Pull request creation failed.");
+      setStatusMessage("SHIP FAILED");
     }
   }
 
@@ -2317,6 +1771,7 @@ export default function DashboardPage() {
         {/* ========================================================================= */}
         <main className="dashboard-main-content" style={{ flex: 1, padding: "2rem", overflowY: "auto", minHeight: "calc(100vh - 60px)" }}>
           {/* 1. OVERVIEW (DEFAULT USER-FIRST FLAGSHIP PAGE) */}
+          {deployError && <div role="alert" style={{ color: "#EF4444", padding: "1rem" }}>{deployError}</div>}
           {activeTab === "overview" && (
             <div style={{ maxWidth: "980px", margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: "1rem" }}>
               {/* Overview Top Repository Heading (Requirement 7) */}
@@ -3527,7 +2982,7 @@ export default function DashboardPage() {
                   branch={activeRepo?.default_branch || "main"}
                   commitSha={activeTask?.id ? activeTask.id.slice(0, 7) : "a82f19c"}
                   activeLiveUrl={customLiveUrl || ""}
-                  activePreviewUrl={activePreviewUrlState || "http://localhost:3100"}
+                  activePreviewUrl={activePreviewUrlState || ""}
                   comparisonMode={comparisonMode}
                   setComparisonMode={setComparisonMode}
                   isShowingAfter={isShowingAfter}
@@ -3817,6 +3272,7 @@ export default function DashboardPage() {
                                   </div>
                                 </div>
 
+                                {!activeFile && <p>Diff not available.</p>}
                                 {/* Active File Diff Box */}
                                 {activeFile && (
                                   <div style={{ borderRadius: "8px", border: "1px solid #1D2732", overflow: "hidden", background: "#0D1218" }}>
@@ -3829,28 +3285,9 @@ export default function DashboardPage() {
                                       </span>
                                     </div>
 
-                                    {/* Before / After Blocks */}
-                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1px", background: "#1D2732" }}>
-                                      {/* Before */}
-                                      <div style={{ background: "#0A0E14", padding: "0.85rem 1rem" }}>
-                                        <div style={{ fontSize: "0.68rem", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", color: "#F06A6A", textTransform: "uppercase", marginBottom: "0.5rem", fontWeight: 700 }}>
-                                          — Before (Current Live)
-                                        </div>
-                                        <pre style={{ margin: 0, padding: "0.75rem", borderRadius: "6px", background: "rgba(240, 106, 106, 0.08)", border: "1px solid rgba(240, 106, 106, 0.25)", color: "#FCA5A5", fontSize: "0.78rem", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", whiteSpace: "pre-wrap", overflowX: "auto" }}>
-                                          {activeFile.oldCode}
-                                        </pre>
-                                      </div>
-
-                                      {/* After */}
-                                      <div style={{ background: "#0A0E14", padding: "0.85rem 1rem" }}>
-                                        <div style={{ fontSize: "0.68rem", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", color: "#45D483", textTransform: "uppercase", marginBottom: "0.5rem", fontWeight: 700 }}>
-                                          + After (AI Preview Patch)
-                                        </div>
-                                        <pre style={{ margin: 0, padding: "0.75rem", borderRadius: "6px", background: "rgba(69, 212, 131, 0.08)", border: "1px solid rgba(69, 212, 131, 0.25)", color: "#86EFAC", fontSize: "0.78rem", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", whiteSpace: "pre-wrap", overflowX: "auto" }}>
-                                          {activeFile.newCode}
-                                        </pre>
-                                      </div>
-                                    </div>
+                                    <pre style={{ padding: "1rem", whiteSpace: "pre-wrap", overflowX: "auto" }}>
+                                      {activeFile.diff || "Diff not available."}
+                                    </pre>
                                   </div>
                                 )}
 
@@ -3909,94 +3346,9 @@ export default function DashboardPage() {
 
                     {/* Section 30: DEPLOYMENTS */}
           {activeTab === "deployments" && (
-            <div style={{ maxWidth: "960px", margin: "0 auto" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "1.75rem" }}>
-                <div>
-                  <div style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", color: "#7C6CFF", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "0.3rem" }}>
-                    Production Delivery
-                  </div>
-                  <h2 style={{ fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)", fontSize: "1.9rem", fontWeight: 700, color: "#F5F7FA" }}>
-                    DEPLOYMENT
-                  </h2>
-                </div>
-                <div style={{ fontSize: "0.78rem", color: connectedRepos.length > 0 ? "#45D483" : "#E8B85C", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                  <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: connectedRepos.length > 0 ? "#45D483" : "#E8B85C", boxShadow: connectedRepos.length > 0 ? "0 0 8px #45D483" : "none" }} />
-                  <span>{connectedRepos.length > 0 ? "Deployment Pipeline Active" : "No Deployment Detected"}</span>
-                </div>
-              </div>
-
-              {connectedRepos.length === 0 ? (
-                <div style={{ padding: "3.5rem 2rem", textAlign: "center", background: "#0D1218", border: "1px solid #1D2732", borderRadius: "14px" }}>
-                  <div style={{ width: "52px", height: "52px", borderRadius: "12px", background: "rgba(124, 108, 255, 0.15)", color: "#7C6CFF", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.25rem", fontSize: "1.5rem" }}>
-                    🚀
-                  </div>
-                  <h3 style={{ fontSize: "1.2rem", fontWeight: 700, color: "#F5F7FA" }}>No Website Connected Yet</h3>
-                  <p style={{ fontSize: "0.85rem", color: "#A5AFBC", maxWidth: "440px", margin: "0.4rem auto 1.5rem", lineHeight: 1.5 }}>
-                    Connect your GitHub repository so Ryvix can automatically detect your deployment configuration (GitHub Actions, Vercel, Docker).
-                  </p>
-                  <button
-                    onClick={() => setShowRepoModal(true)}
-                    style={{
-                      padding: "0.65rem 1.4rem",
-                      borderRadius: "8px",
-                      background: "linear-gradient(135deg, #7C6CFF, #42D9FF)",
-                      border: "none",
-                      color: "#ffffff",
-                      fontSize: "0.88rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    + Connect Website &rarr;
-                  </button>
-                </div>
-              ) : (
-                /* Dynamic Deployment Lifecycle Timeline Card */
-                <div style={{ padding: "1.75rem", borderRadius: "14px", background: "#0D1218", border: "1px solid #1D2732", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "1rem", borderBottom: "1px solid #1D2732" }}>
-                    <div>
-                      <div style={{ fontSize: "1.05rem", fontWeight: 700, color: "#F5F7FA" }}>
-                        Deployment: {connectedRepos[0]?.full_name || selectedWebsite}
-                      </div>
-                      <div style={{ fontSize: "0.76rem", color: "#A5AFBC", marginTop: "2px" }}>
-                        Stack: <span style={{ color: "#42D9FF" }}>{connectedRepos[0]?.detected_stack?.[0] || "Detected"}</span> &bull; Branch <span style={{ color: "#A78BFA" }}>{connectedRepos[0]?.default_branch || "main"}</span>
-                      </div>
-                    </div>
-                    <span style={{ padding: "0.25rem 0.75rem", borderRadius: "9999px", background: "rgba(69, 212, 131, 0.12)", color: "#45D483", border: "1px solid rgba(69, 212, 131, 0.3)", fontSize: "0.75rem", fontWeight: 700 }}>
-                      ✓ Deployment Detected
-                    </span>
-                  </div>
-
-                  {/* Step-by-Step Lifecycle Pipeline */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
-                    {[
-                      { step: "GitHub Repository Linked", status: "Secure outbound authentication verified", done: true },
-                      { step: "Project Stack Detected", status: `Analyzed manifests (${connectedRepos[0]?.detected_stack?.[0] || "Fullstack"})`, done: true },
-                      { step: "Build & Verification Commands", status: connectedRepos[0]?.build_command ? `${connectedRepos[0].build_command} • Verified` : "Automated build pipeline configured", done: true },
-                      { step: "Live Synthetic Health Probe", status: "Automated latency probe verified (38ms response)", done: true },
-                    ].map((s) => (
-                      <div key={s.step} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem 1rem", borderRadius: "8px", background: "#121922", border: "1px solid #1D2732" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                          <div style={{ width: "22px", height: "22px", borderRadius: "50%", background: "#45D483", color: "#05070A", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.72rem", fontWeight: 800 }}>
-                            ✓
-                          </div>
-                          <span style={{ fontSize: "0.88rem", fontWeight: 600, color: "#F5F7FA" }}>{s.step}</span>
-                        </div>
-                        <span style={{ fontSize: "0.78rem", color: "#A5AFBC", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)" }}>
-                          {s.status}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "0.5rem" }}>
-                    <span style={{ fontSize: "0.82rem", color: "#A5AFBC" }}>Live Target: <a href={customLiveUrl || activeLiveUrl} target="_blank" rel="noopener noreferrer" style={{ color: "#42D9FF", textDecoration: "none" }}>{customLiveUrl || activeLiveUrl} ↗</a></span>
-                    <button onClick={() => setActiveTab("overview")} style={{ padding: "0.45rem 1rem", borderRadius: "6px", background: "#121922", border: "1px solid #1D2732", color: "#F5F7FA", fontSize: "0.8rem", cursor: "pointer" }}>
-                      Return to Overview
-                    </button>
-                  </div>
-                </div>
-              )}
+            <div style={{ padding: "2rem" }}>
+              <h2>Deployments</h2>
+              <p>Deployment records unavailable. Task completion does not confirm deployment.</p>
             </div>
           )}
 
@@ -4063,7 +3415,7 @@ export default function DashboardPage() {
                     </div>
                     <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "#45D483", marginTop: "0.35rem", display: "flex", alignItems: "center", gap: "0.45rem" }}>
                       <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#45D483" }} />
-                      <span>{h.details?.latency ? `${h.details.latency}ms` : "Healthy"}</span>
+                      <span>{h.details?.latency != null ? `${h.details.latency}ms` : "Not available"}</span>
                     </div>
                     <div style={{ fontSize: "0.74rem", color: "#A5AFBC", marginTop: "0.2rem" }}>
                       {h.message}
@@ -4107,7 +3459,7 @@ export default function DashboardPage() {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                   <span style={{ padding: "0.25rem 0.75rem", borderRadius: "9999px", background: "rgba(69, 212, 131, 0.12)", color: "#45D483", border: "1px solid rgba(69, 212, 131, 0.3)", fontSize: "0.78rem", fontWeight: 700, display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                    <span>✓</span> No active incidents
+                    {incidentsList.filter(i => !["resolved", "closed"].includes(i.status)).length} active incidents
                   </span>
                 </div>
               </div>
@@ -4118,10 +3470,10 @@ export default function DashboardPage() {
                   <IconCheck size={26} color="#45D483" />
                 </div>
                 <h3 style={{ fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)", fontSize: "1.45rem", fontWeight: 700, color: "#F5F7FA", marginBottom: "0.4rem" }}>
-                  ✓ No active incidents
+                  {deployError ? "Incident status unavailable" : incidentsList.some((i) => !["resolved", "closed"].includes(i.status)) ? "Active incidents" : "Cluster Healthy"}
                 </h3>
                 <p style={{ color: "#A5AFBC", fontSize: "0.88rem", maxWidth: "480px", margin: "0 auto" }}>
-                  All production workers, edge gateways, and container workspaces are operating normally without anomalies.
+                  {deployError ? "Monitoring data could not be loaded." : incidentsList.length === 0 ? "No incidents detected." : "Review the recorded incidents below."}
                 </p>
               </div>
 
@@ -4131,12 +3483,12 @@ export default function DashboardPage() {
                   <div style={{ fontSize: "0.78rem", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", color: "#7C6CFF", fontWeight: 700, textTransform: "uppercase" }}>
                     Incident History &amp; Evidence ({incidentsList.length} Records)
                   </div>
-                  <span style={{ fontSize: "0.72rem", color: "#66717F" }}>Auto-remediated by Ryvix SRE Engine</span>
+                  <span style={{ fontSize: "0.72rem", color: "#66717F" }}>Persisted incident records</span>
                 </div>
 
                 {incidentsList.length === 0 ? (
                   <div style={{ padding: "2rem", borderRadius: "10px", background: "#0D1218", border: "1px solid #1D2732", textAlign: "center", color: "#66717F", fontSize: "0.85rem" }}>
-                    No historical incident records logged in database.
+                    {deployError ? "Incident data unavailable." : "No incidents detected."}
                   </div>
                 ) : (
                   incidentsList.map((inc: any) => (
@@ -4230,10 +3582,10 @@ export default function DashboardPage() {
                 <div style={{ padding: "1.25rem 1.5rem", borderRadius: "12px", background: "rgba(124, 108, 255, 0.12)", border: "1px solid rgba(124, 108, 255, 0.3)", marginBottom: "1.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#F5F7FA" }}>
-                      Neural Forward Pass Completed (<span style={{ color: "#45D483" }}>{neuralDiagResult.forwardPassLatencyMs || 0.048}ms</span>)
+                      Neural Forward Pass Completed (<span style={{ color: "#45D483" }}>{neuralDiagResult.forwardPassLatencyMs ?? "Not available"}ms</span>)
                     </span>
                     <span style={{ fontSize: "0.72rem", padding: "0.2rem 0.6rem", borderRadius: "9999px", background: "rgba(239, 68, 68, 0.15)", color: "#EF4444", fontWeight: 700 }}>
-                      BLOCKED IP: {neuralDiagResult.clusterIpBlocked || "198.51.100.99"}
+                      BLOCKED IP: {neuralDiagResult.clusterIpBlocked || "Not available"}
                     </span>
                   </div>
                   <div style={{ fontSize: "0.8rem", color: "#A5AFBC" }}>
@@ -4249,9 +3601,9 @@ export default function DashboardPage() {
                     <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "rgba(69, 212, 131, 0.12)", color: "#45D483", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem auto" }}>
                       <IconShield size={24} color="#45D483" />
                     </div>
-                    <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#F5F7FA" }}>Neural Threat Shield Active — Fleet Secure</div>
+                    <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#F5F7FA" }}>{deployError ? "Security data unavailable." : "No security events detected."}</div>
                     <div style={{ fontSize: "0.84rem", color: "#A5AFBC", marginTop: "0.35rem", maxWidth: "440px", margin: "0.35rem auto 0 auto" }}>
-                      Zero security anomalies or intrusion attempts detected in your workspace. The heuristic classifier is actively protecting your cluster.
+                      Only recorded security events are shown here.
                     </div>
                   </div>
                 ) : (
@@ -4259,17 +3611,17 @@ export default function DashboardPage() {
                   <div key={sec.id || idx} style={{ padding: "1.25rem 1.5rem", borderRadius: "10px", background: "#0D1218", border: "1px solid #1D2732", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                        <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "#F5F7FA" }}>{sec.message}</span>
+                        <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "#F5F7FA" }}>{sec.message || sec.event_type}</span>
                         <span style={{ fontSize: "0.68rem", padding: "0.15rem 0.45rem", borderRadius: "4px", background: sec.severity === "critical" ? "rgba(239, 68, 68, 0.15)" : "rgba(245, 158, 11, 0.15)", color: sec.severity === "critical" ? "#EF4444" : "#F59E0B", fontWeight: 700, textTransform: "uppercase" }}>
                           {sec.severity}
                         </span>
                       </div>
                       <div style={{ fontSize: "0.76rem", color: "#66717F", marginTop: "3px", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)" }}>
-                        Attacker IP: {sec.source} • Time: {new Date(sec.timestamp).toLocaleTimeString()}
+                        Attacker IP: {sec.source_ip || "Not available"} • Time: {new Date(sec.detected_at).toLocaleTimeString()}
                       </div>
                     </div>
                     <span style={{ fontSize: "0.74rem", padding: "0.2rem 0.55rem", borderRadius: "9999px", background: "rgba(69, 212, 131, 0.1)", color: "#45D483", border: "1px solid rgba(69, 212, 131, 0.3)", fontWeight: 600 }}>
-                      ● CONTAINED
+                      {sec.status}
                     </span>
                   </div>
                   ))
@@ -4299,7 +3651,7 @@ export default function DashboardPage() {
                     <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "rgba(124, 108, 255, 0.12)", color: "#7C6CFF", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem auto" }}>
                       <IconTerminal size={24} color="#7C6CFF" />
                     </div>
-                    <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#F5F7FA" }}>No Audit Activity Recorded</div>
+                    <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#F5F7FA" }}>{deployError ? "Audit data unavailable." : "No audit activity yet."}</div>
                     <div style={{ fontSize: "0.84rem", color: "#A5AFBC", marginTop: "0.35rem", maxWidth: "440px", margin: "0.35rem auto 0 auto" }}>
                       Verifiable cryptographic activity trails will appear here automatically as you connect repositories and trigger autonomous workflows.
                     </div>
@@ -4319,12 +3671,12 @@ export default function DashboardPage() {
                           {item.message}
                         </div>
                         <div style={{ fontSize: "0.68rem", color: "#66717F", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", marginTop: "2px" }}>
-                          Hash: {item.details?.hash || "sha256:7b91c89f..."} • Actor: {item.source}
+                          Hash: {item.details?.hash || "Not available"} • Actor: {item.source}
                         </div>
                       </div>
                     </div>
                     <span style={{ fontSize: "0.72rem", padding: "0.2rem 0.55rem", borderRadius: "4px", background: "rgba(124, 108, 255, 0.12)", color: "#A78BFA", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", fontWeight: 600 }}>
-                      VERIFIED
+                      RECORDED
                     </span>
                   </div>
                   ))
@@ -4333,69 +3685,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {activeTab === "connections" && (
-            <div style={{ maxWidth: "960px", margin: "0 auto" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "1.75rem" }}>
-                <div>
-                  <div style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", color: "#7C6CFF", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "0.3rem" }}>
-                    Omnichannel Integrations
-                  </div>
-                  <h2 style={{ fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)", fontSize: "1.9rem", fontWeight: 700, color: "#F5F7FA" }}>
-                    CONNECTIONS &amp; WEBHOOKS
-                  </h2>
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.25rem" }}>
-                {connectionsList.map((conn: any) => {
-                  const isAct = conn.status === "active";
-                  return (
-                    <div key={conn.id} style={{ background: "#0D1218", border: "1px solid #1D2732", borderRadius: "12px", padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                        <div style={{ fontSize: "1.05rem", fontWeight: 700, color: "#F5F7FA" }}>{conn.name}</div>
-                        <span style={{
-                          padding: "0.2rem 0.55rem",
-                          borderRadius: "9999px",
-                          background: isAct ? "rgba(69, 212, 131, 0.1)" : "rgba(165, 175, 188, 0.08)",
-                          color: isAct ? "#45D483" : "#66717F",
-                          border: `1px solid ${isAct ? "rgba(69, 212, 131, 0.3)" : "rgba(102, 113, 127, 0.2)"}`,
-                          fontSize: "0.7rem",
-                          fontWeight: 700,
-                          textTransform: "uppercase"
-                        }}>
-                          ● {isAct ? "ACTIVE" : "NOT CONNECTED"}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: "0.8rem", color: "#A5AFBC" }}>{conn.details}</div>
-                      <button
-                        onClick={() => {
-                          if (conn.type === "github") {
-                            setShowRepoModal(true);
-                          } else if (conn.type === "server_inband") {
-                            setShowServerModal(true);
-                          } else {
-                            alert(`Opening configuration modal for ${conn.name}...`);
-                          }
-                        }}
-                        style={{
-                          padding: "0.45rem",
-                          borderRadius: "6px",
-                          background: "#121922",
-                          border: "1px solid #1D2732",
-                          color: isAct ? "#42D9FF" : "#F5F7FA",
-                          fontSize: "0.78rem",
-                          fontWeight: 600,
-                          cursor: "pointer",
-                        }}
-                      >
-                        {isAct ? (conn.type === "github" ? "Manage Website" : "Configure & Test Endpoint") : "+ Connect & Configure"}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+          {activeTab === "connections" && <ConnectionsPanel />}
 
           {activeTab === "settings" && (
             <div style={{ maxWidth: "960px", margin: "0 auto" }}>

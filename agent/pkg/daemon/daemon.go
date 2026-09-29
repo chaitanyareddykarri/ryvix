@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -36,12 +37,7 @@ func NewAgentDaemon(cfg Config) *AgentDaemon {
 		h, err := os.Hostname()
 		if err == nil {
 			cfg.Hostname = h
-		} else {
-			cfg.Hostname = "app-worker-host"
 		}
-	}
-	if cfg.ServerID == "" {
-		cfg.ServerID = "srv_" + cfg.Hostname
 	}
 	if cfg.Interval == 0 {
 		cfg.Interval = 5 * time.Second
@@ -58,9 +54,12 @@ func NewAgentDaemon(cfg Config) *AgentDaemon {
 }
 
 // GatherSnapshot builds the full telemetry payload.
-func (a *AgentDaemon) GatherSnapshot() telemetry.HostTelemetryPayload {
+func (a *AgentDaemon) GatherSnapshot() (telemetry.HostTelemetryPayload, error) {
 	a.seq++
-	metrics, _ := a.collector.CollectMetrics()
+	metrics, err := a.collector.CollectMetrics()
+	if err != nil {
+		return telemetry.HostTelemetryPayload{}, fmt.Errorf("host metrics unavailable: %w", err)
+	}
 	osType, kernelVer := a.collector.GetOSInfo()
 	services := a.systemd.ScanMonitoredServices()
 	containers := a.docker.ScanContainers()
@@ -75,11 +74,17 @@ func (a *AgentDaemon) GatherSnapshot() telemetry.HostTelemetryPayload {
 		Metrics:       metrics,
 		Services:      services,
 		Containers:    containers,
-	}
+	}, nil
 }
 
 // Run starts the daemon event loop.
 func (a *AgentDaemon) Run(ctx context.Context) error {
+	if a.config.ServerID == "" || a.config.Token == "" || a.config.ControlPlaneURL == "" {
+		return fmt.Errorf("enrolled server identity, credential and control plane URL are required")
+	}
+	if a.config.Interval < time.Second {
+		return fmt.Errorf("telemetry interval must be at least one second")
+	}
 	log.Printf("[Ryvix Agent] Starting native in-band daemon on host '%s' (ServerID: %s)", a.config.Hostname, a.config.ServerID)
 	log.Printf("[Ryvix Agent] Polling interval: %s | Control Plane: %s", a.config.Interval, a.config.ControlPlaneURL)
 
@@ -101,7 +106,11 @@ func (a *AgentDaemon) Run(ctx context.Context) error {
 }
 
 func (a *AgentDaemon) tick() {
-	payload := a.GatherSnapshot()
+	payload, collectErr := a.GatherSnapshot()
+	if collectErr != nil {
+		log.Printf("[Ryvix Agent] %v", collectErr)
+		return
+	}
 	log.Printf("[Ryvix Agent] Heartbeat #%d: CPU=%.1f%% RAM=%.1f%% Disk=%.1f%% (Cores: %d, Load: %.2f)",
 		payload.HeartbeatSeq,
 		payload.Metrics.CPUUsagePercent,

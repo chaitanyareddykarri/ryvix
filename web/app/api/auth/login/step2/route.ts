@@ -43,7 +43,7 @@ export async function POST(request: Request) {
 
     // 1. Verify random OTP against challenge
     const challengeCheck = verifyLoginOtpChallenge(challengeCookie, email, token);
-    if (!challengeCheck.valid) {
+    if (!challengeCheck.valid || !challengeCheck.password) {
       return NextResponse.json(
         { error: challengeCheck.error || "The verification code is incorrect. Please try again." },
         { status: 400 }
@@ -71,13 +71,13 @@ export async function POST(request: Request) {
         },
       });
 
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password: challengeCheck.password,
       });
 
-      if (signInError) {
-        console.warn("[Login Step 2] Session establishment warning:", signInError.message);
+      if (signInError || !signInData?.session || !signInData.user) {
+        return NextResponse.json({ error: "Unable to establish a session. Please sign in again." }, { status: 401 });
       }
     }
 

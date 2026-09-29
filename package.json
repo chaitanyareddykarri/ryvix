@@ -14,7 +14,8 @@
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present && tsx tests/run-all.ts",
+    "test": "npm run test --workspaces --if-present && node --test tests/secret-scan.test.mjs && tsx tests/run-all.ts",
+    "security:secrets": "node scripts/check-secrets.mjs",
     "test:e2e": "tsx tests/run-all.ts",
     "dev": "npm run dev --workspace=@ryvix/web",
     "train": "npm run train:ai && npm run train:deep",
@@ -32,8 +33,8 @@
   },
   "overrides": {
     "next": {
-      "postcss": "8.5.3"
+      "postcss": "8.5.28"
     },
-    "postcss": "8.5.3"
+    "postcss": "8.5.28"
   }
 }

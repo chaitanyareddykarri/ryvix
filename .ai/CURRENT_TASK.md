@@ -1,5 +1,35 @@
 # Current Task & Implementation State
 
+## Current priority: production remediation (2026-09-29)
+
+Work is on `fix/production-remediation`, recovered from `1dc1aa9`.
+The user prioritized dashboard, diffs, PR shipping, repository sandboxes, previews,
+connections, telemetry/streaming, installer, tenant-scoped AI diagnostics and demo
+identity removal. The user has now requested a checkpoint commit and push, followed
+by continued remediation. This supersedes the earlier no-commit instruction. This scope
+supersedes the earlier instruction to block all implementation on credential rotation.
+
+Dashboard record fallbacks are removed. Task artifacts, repository execution,
+PR shipping and preview gateway code exist but require hardening and live verification.
+Connection CRUD now persists existing connector rows and Vault references, with
+an environment-scoped UI. GitHub credentials are validated before storage; other
+providers require their dedicated enrollment/OAuth protocols. Current checks and
+remaining gaps are tracked in the remediation document; do not mark phases complete
+based solely on compilation or simulated integration tests.
+
+Connection local gates passed (48 suites, typecheck, lint, all builds, secret scan).
+Server display now reads scoped rollups with null/stale states (49 suites passed;
+typecheck/lint/build/secret scan passed). Agent collection failures and unsupported
+platforms no longer fabricate measurements; Go tests/vet and Linux cross-build passed.
+Next: authenticated ingestion and stream, secure
+enrollment, installer and diagnostics. Also resolve worker durability, preview reload/routing,
+and task lifecycle cleanup. Database migrations are NOT applied. Runtime credentials,
+Docker infrastructure, preview DNS/TLS and actual credential rotation remain unverified.
+
+See [the remediation checklist](../docs/verification/PRODUCTION_REMEDIATION.md)
+for findings, dependencies, verification evidence and external blockers. The
+completion and test-count claims below are historical, not current certification.
+
 ## Active Milestone: Phase 1–4 Completed, 39 Test Suites Passing, Frontier Deep Learning & Zero-Collision Architecture Active
 
 ### 1. Completed Deliverables

@@ -1,5 +1,7 @@
 ﻿import { createClient } from "@/utils/supabase/server";
 import { queryDirectDb } from "@/utils/direct-db";
+import { requireTenant, RequestError } from "@/utils/tenant-context";
+import { serverTelemetry } from "@/utils/server-telemetry";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import {
@@ -12,121 +14,45 @@ import { LocalSecurityEngine } from "@ryvix/ai";
 import { requireProjectOperator, operationAuthorization } from "@/utils/operation-access";
 import type { SupportedCloudProvider } from "@ryvix/services";
 
-export interface ServerState {
-  id: string;
-  hostname: string;
-  ip: string;
-  os: string;
-  provider: string;
-  status: "healthy" | "degraded" | "unreachable";
-  cpuPercent: number;
-  memoryPercent: number;
-  diskPercent: number;
-  lastHeartbeat: string;
-  services: { name: string; status: "active" | "failed" }[];
-}
-
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
-
-    // 1. Authenticate the user to scope servers by organization
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    let dbServers: any[] = [];
-
-    if (user) {
-      // Find the user's organization
-      const profileRes = await queryDirectDb<{ organization_id: string }>(
-        `SELECT organization_id FROM profiles WHERE id = $1`,
-        [user.id]
-      );
-      const userOrgId = profileRes[0]?.organization_id;
-
-      if (userOrgId) {
-        // Find projects belonging to this organization
-        const projects = await queryDirectDb<{ id: string }>(
-          `SELECT id FROM projects WHERE organization_id = $1`,
-          [userOrgId]
-        );
-        const projectIds = projects.map((p) => p.id);
-
-        if (projectIds.length > 0) {
-          // Find environments belonging to these projects
-          const envs = await queryDirectDb<{ id: string }>(
-            `SELECT id FROM environments WHERE project_id = ANY($1)`,
-            [projectIds]
-          );
-          const envIds = envs.map((e) => e.id);
-
-          if (envIds.length > 0) {
-            const serversData = await queryDirectDb(
-              `SELECT s.*,
-                 COALESCE(
-                   (SELECT json_agg(svc.*) FROM services_inventory svc WHERE svc.server_id = s.id),
-                   '[]'
-                 ) as services_inventory
-               FROM servers s
-               WHERE s.environment_id = ANY($1)
-               ORDER BY s.hostname, s.created_at DESC`,
-              [envIds]
-            );
-
-            if (Array.isArray(serversData)) {
-              dbServers = serversData;
-            }
-          }
-        }
-      }
-    }
-
-    const formatted: ServerState[] = dbServers.map((s: any) => ({
-      id: s.id,
-      hostname: s.hostname,
-      ip: s.ip_address || "127.0.0.1",
-      os: s.os_type || "Ubuntu 24.04 LTS (x86_64)",
-      provider: s.cloud_provider
-        ? `${s.cloud_provider.toUpperCase()}`
-        : "AWS",
-      status:
-        s.status === "warning" || s.status === "critical"
-          ? "degraded"
-          : s.status === "unreachable"
-          ? "unreachable"
-          : "healthy",
-      cpuPercent: s.cpu_cores ? Math.min(Math.round((s.cpu_cores * 4) + 16), 95) : 24,
-      memoryPercent: s.ram_mb ? Math.min(Math.round((s.ram_mb / 1024) * 1.5 + 20), 92) : 58,
-      diskPercent: s.disk_gb ? Math.min(Math.round((s.disk_gb / 20) + 15), 85) : 32,
-      lastHeartbeat: s.updated_at || new Date().toISOString(),
-      services:
-        Array.isArray(s.services_inventory) && s.services_inventory.length > 0
-          ? s.services_inventory
-              .filter((svc: any) => svc && svc.service_name)
-              .map((svc: any) => ({
-                name: svc.service_name,
-                status: svc.status === "failed" ? "failed" : "active",
-              }))
-          : [
-              { name: "nginx", status: "active" },
-              { name: "docker", status: "active" },
-            ],
-    }));
-
-    return NextResponse.json({
-      success: true,
-      servers: formatted,
-      count: formatted.length,
-      source: "database",
-    });
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Failed to query servers";
-    return NextResponse.json(
-      { success: false, error: msg, servers: [] },
-      { status: 500 }
+    const { organizationId, user } = await requireTenant();
+    const rows = await queryDirectDb(
+      `SELECT s.id, s.hostname, s.ip_address, s.os_type, s.cloud_provider, s.status,
+              c.last_heartbeat_at, t.bucket_timestamp, t.cpu_avg, t.ram_percent, t.disk_used_percent,
+              COALESCE((SELECT json_agg(json_build_object('name', svc.service_name,
+                'status', svc.status, 'lastSeenAt', svc.last_seen_at))
+                FROM services_inventory svc WHERE svc.server_id = s.id), '[]') AS services
+       FROM servers s
+       JOIN environments e ON e.id = s.environment_id
+       JOIN projects p ON p.id = e.project_id
+       JOIN organization_members m ON m.organization_id = p.organization_id AND m.user_id = $2
+       LEFT JOIN connectors c ON c.id = s.connector_id AND c.environment_id = s.environment_id
+       LEFT JOIN LATERAL (SELECT bucket_timestamp, cpu_avg, ram_percent, disk_used_percent
+         FROM telemetry_metric_rollups WHERE server_id = s.id
+         ORDER BY bucket_timestamp DESC LIMIT 1) t ON true
+       WHERE p.organization_id = $1 ORDER BY s.hostname, s.created_at DESC`,
+      [organizationId, user.id],
     );
+    const now = Date.now();
+    const servers = rows.map((row) => {
+      const telemetry = serverTelemetry(row, now);
+      return {
+        id: row.id, hostname: row.hostname, ip: row.ip_address ?? null,
+        os: row.os_type ?? null, provider: row.cloud_provider ?? null,
+        status: telemetry.telemetryStatus !== 'fresh' ? 'unknown'
+          : ['warning', 'critical'].includes(row.status) ? 'degraded'
+          : ['healthy', 'unreachable'].includes(row.status) ? row.status : 'unknown',
+        lastHeartbeat: row.last_heartbeat_at ?? null, services: row.services,
+        ...telemetry,
+      };
+    });
+    return NextResponse.json({ success: true, servers, count: servers.length, source: 'telemetry_metric_rollups' },
+      { headers: { 'Cache-Control': 'no-store' } });
+  } catch (error) {
+    return NextResponse.json({ success: false,
+      error: error instanceof RequestError ? error.message : 'Server telemetry unavailable.' },
+      { status: error instanceof RequestError ? error.status : 503 });
   }
 }
 

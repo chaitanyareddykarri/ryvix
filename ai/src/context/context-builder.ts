@@ -54,6 +54,11 @@ export interface ContextBuilderOptions {
 }
 
 export class ContextBuilder {
+  static sanitizeText(text: string): string {
+    let clean = text;
+    for (const pattern of ContextBuilder.SECRET_PATTERNS) clean = clean.replace(pattern, '[REDACTED_SECRET]');
+    return clean;
+  }
   private static readonly SECRET_PATTERNS: RegExp[] = [
     new RegExp('-----BEGIN[ A-Z0-9_-]+PRIVATE KEY-----[\\s\\S]*?-----END[ A-Z0-9_-]+PRIVATE KEY-----', 'gi'),
     new RegExp('(?:password|passwd|pwd|secret|api_key|token|auth_token|service_role_key|jwt_secret)\\s*[:=]\\s*["\']?([a-zA-Z0-9_\\-\\.]{8,})["\']?', 'gi'),

@@ -1,171 +1,101 @@
-import crypto from "crypto";
+import 'server-only';
+import crypto from 'node:crypto';
 
-const CHALLENGE_SECRET =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  "ryvix-auth-challenge-secret-salt-2026";
+const CHALLENGE_TTL_MS = 10 * 60 * 1000;
+type ChallengeKind = 'login' | 'signup';
+interface Challenge {
+  kind: ChallengeKind;
+  email: string;
+  password: string;
+  otp: string;
+  timestamp: number;
+  fullName?: string;
+}
 
-const KEY = crypto.createHash("sha256").update(CHALLENGE_SECRET).digest();
-const CHALLENGE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+// Public Supabase keys cannot protect passwords or OTPs. Read the dedicated
+// server secret lazily so builds do not require runtime credentials.
+function challengeKey(): Buffer {
+  const secret = process.env.AUTH_CHALLENGE_SECRET;
+  if (!secret || !/^[a-f\d]{64}$/i.test(secret)) {
+    throw new Error('AUTH_CHALLENGE_SECRET must contain 32 random bytes encoded as 64 hexadecimal characters');
+  }
+  return Buffer.from(secret, 'hex');
+}
 
-/**
- * Generates a genuine cryptographically random 6-digit OTP code (100000 - 999999).
- */
 export function generateRandomOtp(): string {
   return crypto.randomInt(100000, 1000000).toString();
 }
 
-/**
- * Masks an email for safe display in UI (e.g. c***6@gmail.com).
- */
-export function maskEmail(email: string): string {
-  if (!email || !email.includes("@")) return "u***@example.com";
-  const [local, domain] = email.split("@");
-  if (local.length <= 2) {
-    return `${local[0]}***@${domain}`;
+function encryptData(value: Challenge): string {
+  if (!/^\d{6}$/.test(value.otp) || !value.email || !value.password) {
+    throw new Error('Email, password and a six-digit OTP are required');
   }
-  const first = local[0];
-  const last = local[local.length - 1];
-  return `${first}***${last}@${domain}`;
-}
-
-// Encrypt payload using AES-256-GCM
-function encryptData(obj: any): string {
   const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv("aes-256-gcm", KEY, iv);
-  const text = JSON.stringify(obj);
-  const encrypted = Buffer.concat([cipher.update(text, "utf8"), cipher.final()]);
-  const tag = cipher.getAuthTag();
-  return Buffer.concat([iv, tag, encrypted]).toString("base64url");
+  const cipher = crypto.createCipheriv('aes-256-gcm', challengeKey(), iv);
+  const encrypted = Buffer.concat([cipher.update(JSON.stringify(value), 'utf8'), cipher.final()]);
+  return Buffer.concat([iv, cipher.getAuthTag(), encrypted]).toString('base64url');
 }
 
-// Decrypt payload using AES-256-GCM
-function decryptData(tokenStr: string): any | null {
+function readChallenge(token: string, expectedEmail: string, kind: ChallengeKind): Challenge | null {
   try {
-    const raw = Buffer.from(tokenStr, "base64url");
-    if (raw.length < 28) return null; // 12 iv + 16 tag
-    const iv = raw.subarray(0, 12);
-    const tag = raw.subarray(12, 28);
-    const encrypted = raw.subarray(28);
-
-    const decipher = crypto.createDecipheriv("aes-256-gcm", KEY, iv);
-    decipher.setAuthTag(tag);
-    const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
-    return JSON.parse(decrypted.toString("utf8"));
+    if (typeof token !== 'string' || token.length > 8192 || typeof expectedEmail !== 'string') return null;
+    const raw = Buffer.from(token, 'base64url');
+    if (raw.length < 29) return null;
+    const decipher = crypto.createDecipheriv('aes-256-gcm', challengeKey(), raw.subarray(0, 12));
+    decipher.setAuthTag(raw.subarray(12, 28));
+    const data = JSON.parse(Buffer.concat([decipher.update(raw.subarray(28)), decipher.final()]).toString('utf8'));
+    if (!data || data.kind !== kind || typeof data.email !== 'string' ||
+        data.email !== expectedEmail.trim().toLowerCase() ||
+        typeof data.password !== 'string' || !data.password ||
+        typeof data.otp !== 'string' || !/^\d{6}$/.test(data.otp) ||
+        !Number.isSafeInteger(data.timestamp) || data.timestamp > Date.now() ||
+        Date.now() - data.timestamp >= CHALLENGE_TTL_MS ||
+        (kind === 'signup' && (typeof data.fullName !== 'string' || !data.fullName.trim()))) return null;
+    return data;
   } catch {
     return null;
   }
 }
 
-/**
- * Creates an encrypted challenge cookie for Sign Up with genuine random OTP.
- */
-export function createSignupChallenge(params: {
-  email: string;
-  fullName: string;
-  password: string;
-  otp: string;
-}): string {
-  return encryptData({
-    email: params.email.toLowerCase().trim(),
-    fullName: params.fullName.trim(),
-    password: params.password,
-    otp: params.otp.trim(),
-    timestamp: Date.now(),
-  });
+function matchesOtp(expected: string, submitted: string): boolean {
+  return typeof submitted === 'string' && /^\d{6}$/.test(submitted.trim()) &&
+    crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(submitted.trim()));
 }
 
-/**
- * Verifies the 6-digit OTP against the encrypted Sign Up challenge.
- */
-export function verifySignupChallenge(
-  challenge: string,
-  expectedEmail: string,
-  submittedOtp: string
-): {
-  valid: boolean;
-  error?: string;
-  userData?: { email: string; fullName: string; password: string };
+export function createSignupChallenge(params: { email: string; fullName: string; password: string; otp: string }): string {
+  return encryptData({ ...params, kind: 'signup', email: params.email.trim().toLowerCase(),
+    fullName: params.fullName.trim(), otp: params.otp.trim(), timestamp: Date.now() });
+}
+
+export function verifySignupChallenge(challenge: string, expectedEmail: string, submittedOtp: string): {
+  valid: boolean; error?: string; userData?: { email: string; fullName: string; password: string };
 } {
-  const data = decryptData(challenge);
-  if (!data) {
-    return { valid: false, error: "Invalid or tampered verification session." };
-  }
-
-  if (Date.now() - data.timestamp > CHALLENGE_TTL_MS) {
-    return { valid: false, error: "This verification code has expired. Please request a new code." };
-  }
-
-  if (data.email.toLowerCase() !== expectedEmail.toLowerCase().trim()) {
-    return { valid: false, error: "Email mismatch. Please start registration again." };
-  }
-
-  if (data.otp.trim() !== submittedOtp.trim()) {
-    return { valid: false, error: "The verification code is incorrect. Please try again." };
-  }
-
-  return {
-    valid: true,
-    userData: {
-      email: data.email,
-      fullName: data.fullName,
-      password: data.password,
-    },
-  };
+  const data = readChallenge(challenge, expectedEmail, 'signup');
+  if (!data || !matchesOtp(data.otp, submittedOtp)) return { valid: false, error: 'Invalid, expired or incorrect verification code. Please restart registration.' };
+  return { valid: true, userData: { email: data.email, fullName: data.fullName!, password: data.password } };
 }
 
-/**
- * Creates an encrypted challenge cookie for 2FA Login with genuine random OTP.
- */
-export function createLoginOtpChallenge(email: string, otp: string, password?: string): string {
-  return encryptData({
-    email: email.toLowerCase().trim(),
-    otp: otp.trim(),
-    password: password || "",
-    timestamp: Date.now(),
-  });
+export function createLoginOtpChallenge(email: string, otp: string, password: string): string {
+  return encryptData({ kind: 'login', email: email.trim().toLowerCase(), otp: otp.trim(), password, timestamp: Date.now() });
 }
 
-/**
- * Verifies the 6-digit OTP against the encrypted Login challenge.
- */
-export function verifyLoginOtpChallenge(
-  challenge: string,
-  expectedEmail: string,
-  submittedOtp: string
-): { valid: boolean; error?: string; password?: string } {
-  const data = decryptData(challenge);
-  if (!data) {
-    return { valid: false, error: "Invalid or tampered login session." };
-  }
-
-  if (Date.now() - data.timestamp > CHALLENGE_TTL_MS) {
-    return { valid: false, error: "This verification code has expired. Please request a new code." };
-  }
-
-  if (data.email.toLowerCase() !== expectedEmail.toLowerCase().trim()) {
-    return { valid: false, error: "Email mismatch." };
-  }
-
-  if (data.otp.trim() !== submittedOtp.trim()) {
-    return { valid: false, error: "The verification code is incorrect. Please try again." };
-  }
-
+export function verifyLoginOtpChallenge(challenge: string, expectedEmail: string, submittedOtp: string): {
+  valid: boolean; error?: string; password?: string;
+} {
+  const data = readChallenge(challenge, expectedEmail, 'login');
+  if (!data || !matchesOtp(data.otp, submittedOtp)) return { valid: false, error: 'Invalid, expired or incorrect verification code. Please sign in again.' };
   return { valid: true, password: data.password };
 }
 
-// Backward-compatibility aliases
-export function createLoginChallenge(email: string): string {
-  return createLoginOtpChallenge(email, "000000");
+export function renewLoginChallenge(challenge: string, email: string, otp: string): string {
+  const data = readChallenge(challenge, email, 'login');
+  if (!data) throw new Error('Invalid or expired login challenge');
+  // Resends cannot extend a password-bearing cookie indefinitely.
+  return encryptData({ ...data, otp });
 }
 
-export function verifyLoginChallenge(
-  challenge: string,
-  expectedEmail: string
-): { valid: boolean; error?: string } {
-  const data = decryptData(challenge);
-  if (!data) return { valid: false, error: "Invalid challenge" };
-  if (Date.now() - data.timestamp > CHALLENGE_TTL_MS) return { valid: false, error: "Challenge expired" };
-  if (data.email.toLowerCase() !== expectedEmail.toLowerCase().trim()) return { valid: false, error: "Email mismatch" };
-  return { valid: true };
+export function renewSignupChallenge(challenge: string, email: string, otp: string): string {
+  const data = readChallenge(challenge, email, 'signup');
+  if (!data) throw new Error('Invalid or expired signup challenge');
+  return encryptData({ ...data, otp });
 }

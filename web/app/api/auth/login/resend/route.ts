@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { generateRandomOtp, createLoginOtpChallenge } from "@/utils/auth-security";
+import { generateRandomOtp, renewLoginChallenge } from "@/utils/auth-security";
 import { sendOtpEmail } from "@/utils/email-service";
 
 export async function POST(request: Request) {
@@ -27,6 +27,12 @@ export async function POST(request: Request) {
 
     // Generate fresh random 6-digit OTP
     const newOtp = generateRandomOtp();
+    let newChallenge: string;
+    try {
+      newChallenge = renewLoginChallenge(challengeCookie, email, newOtp);
+    } catch {
+      return NextResponse.json({ error: "Invalid or expired session. Please sign in again." }, { status: 401 });
+    }
     const emailRes = await sendOtpEmail({
       to: email,
       otp: newOtp,
@@ -40,7 +46,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const newChallenge = createLoginOtpChallenge(email, newOtp);
     const response = NextResponse.json({
       success: true,
       message: "A fresh 6-digit verification code has been dispatched to your email.",

@@ -65,7 +65,7 @@ export async function testCodingWorkspacePipeline() {
   assert.equal(session.status, 'active', 'Session must be active');
   assert.ok(session.container_id.startsWith('ryvix_sbx_'), 'Container ID must follow sandbox convention');
   assert.ok(session.preview_port >= 3100, `Preview port (${session.preview_port}) must be allocated in sandbox range >= 3100`);
-  assert.equal(session.preview_url, `http://localhost:${session.preview_port}`, 'Preview URL must match allocated port');
+  assert.equal(session.preview_url, null, 'A container allocation must not claim a ready preview');
   assert.ok(new Date(session.expires_at).getTime() > Date.now(), 'Session expiration must be in the future');
 
   // Apply code patch / diff to sandbox
@@ -90,7 +90,7 @@ export async function testCodingWorkspacePipeline() {
   console.log('  -> Testing Phase 4: Frontend Live Preview & Pull Request Pipeline...');
 
   // Live preview verify
-  assert.ok(session.preview_url.startsWith('http://localhost:'), 'Live preview URL generated and accessible');
+  assert.equal(session.preview_url, null, 'A preview requires a running application and authenticated gateway');
 
   // Pull request generation upon user approval
   const prResult = await PullRequestService.createPullRequest({

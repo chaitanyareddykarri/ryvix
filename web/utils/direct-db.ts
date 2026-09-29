@@ -1,3 +1,4 @@
+import 'server-only';
 import { Pool } from 'pg';
 
 let pool: Pool | null = null;
@@ -15,7 +16,7 @@ export function getDirectDbPool(): Pool {
 
     pool = new Pool({
       connectionString,
-      ssl: { rejectUnauthorized: false },
+      ssl: { rejectUnauthorized: true, ...(process.env.DATABASE_CA_CERT ? { ca: process.env.DATABASE_CA_CERT } : {}) },
       max: 5,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000,
@@ -26,7 +27,7 @@ export function getDirectDbPool(): Pool {
     // this listener catches it cleanly and prevents Node.js from raising an uncaughtException!
     pool.on('error', (err) => {
       // Reclaim dead client gracefully without crashing the server process
-      console.warn('[PostgreSQL Pool Notice] Reclaimed idle connection:', err.message);
+      console.warn('[PostgreSQL Pool Notice] Reclaimed idle connection');
     });
   }
 
@@ -35,7 +36,7 @@ export function getDirectDbPool(): Pool {
 
 /**
  * Executes a SQL query against the direct PostgreSQL database using the managed pool.
- * Returns an array of result rows, or an empty array on error.
+ * Returns persisted rows. Database failures never masquerade as empty results.
  */
 export async function queryDirectDb<T = any>(queryText: string, params?: any[]): Promise<T[]> {
   const p = getDirectDbPool();
@@ -43,7 +44,6 @@ export async function queryDirectDb<T = any>(queryText: string, params?: any[]):
     const res = await p.query(queryText, params);
     return (res.rows || []) as T[];
   } catch (err: any) {
-    console.warn('[PostgreSQL Query Error]:', err.message);
-    return [];
+    throw new Error('Database operation failed');
   }
 }

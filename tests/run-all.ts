@@ -40,6 +40,13 @@ import { testWorkspaceCleanupFlow } from './workspace-cleanup.test';
 import { testApiKeySecurity } from './api-keys.test';
 import { testCrossTenantRls } from './cross-tenant-rls.test';
 import { testRealExecution } from './real-execution.test';
+import { testAuthSecurityBoundary } from './auth-security-boundary.test';
+import { testAuthRouteSecurity } from './auth-route-security.test';
+import { testDashboardData } from './dashboard-data.test';
+import { testTaskArtifacts } from './task-artifacts.test';
+import { testPreviewGrants } from './preview-grants.test';
+import { testConnectionPersistence } from './connection-persistence.test';
+import { testServerTelemetry } from './server-telemetry.test';
 
 async function runAllTests() {
   console.log('============================================================');
@@ -51,6 +58,13 @@ async function runAllTests() {
   let failed = 0;
 
   const testCases: { name: string; fn: () => Promise<void> }[] = [
+    { name: 'Server Telemetry Freshness and Tenant Authorization', fn: testServerTelemetry },
+    { name: 'Dashboard Tenant Scoping, Empty Results and Honest Failures', fn: testDashboardData },
+    { name: 'Measured Task Artifact Diffs', fn: testTaskArtifacts },
+    { name: 'Preview Workspace Grants, Tampering and Expiration', fn: testPreviewGrants },
+    { name: 'Connection Persistence, Vault Failures and Tenant Authorization', fn: testConnectionPersistence },
+    { name: 'OTP Secret, Purpose, Expiry and Resend Boundaries', fn: testAuthSecurityBoundary },
+    { name: 'Authentication Handlers Reject Failed Sessions and Cross-Identity Resends', fn: testAuthRouteSecurity },
     { name: 'Authentication Lifecycle & Multi-Tenant Security (20 Points)', fn: testAuthLifecycle },
     { name: 'Server Outage & Differential Diagnosis', fn: testServerOutage },
     { name: 'Self-Healing Engine & Resolution', fn: testSelfHealingFlow },

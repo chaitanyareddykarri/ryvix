@@ -260,7 +260,7 @@ export async function testAIUnderstandingRefinementPlanning() {
   assert.ok(session.id);
   assert.equal(session.status, 'active');
   assert.ok(session.preview_port >= 3100);
-  assert.ok(session.preview_url.startsWith('http://localhost:'));
+  assert.equal(session.preview_url, null, 'Container creation alone must not advertise a preview');
 
   const execRes = await workspaceManager.executeCommand(session.id, 'npm test');
   assert.equal(execRes.exitCode, 0);

@@ -167,13 +167,13 @@ export async function POST(request: Request) {
       },
     });
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
       email: userEmail,
       password,
     });
 
-    if (signInError) {
-      console.warn("[Signup Step 2] Auto-login warning:", signInError.message);
+    if (signInError || !signInData?.session || !signInData.user) {
+      return NextResponse.json({ error: "Account registration was processed, but sign-in failed. Please return to login." }, { status: 401 });
     }
 
     // 4. Delete the registration challenge cookie

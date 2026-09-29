@@ -7,10 +7,11 @@ export interface CreatePullRequestParams {
   repositoryId?: string; repoUrl?: string; taskId?: string; taskPrompt?: string; title?: string;
   description?: string; baseBranch?: string; branchName?: string; summary?: string;
   changedFiles?: string[]; changes?: FileChangeItem[]; githubToken?: string;
+  expectedBaseSha?: string;
   authorization?: OperationAuthorization;
 }
 export interface PullRequestResult extends PullRequest {
-  prUrl: string; prNumber: number; branchName: string;
+  prUrl: string; prNumber: number; branchName: string; commitSha: string;
   summary: { filesChanged: number; additions: number; deletions: number };
   apiStatus: 'created_via_github_api';
 }
@@ -77,9 +78,11 @@ export class PullRequestService {
     };
     await auth.recordAudit({ action: 'github.create_pr', target, status: 'requested' });
     try {
+      let commitSha = '';
       if (changes.length) {
         const ref = await api(`git/ref/heads/${encodeURIComponent(base)}`);
         if (!ref.object?.sha) throw new Error('GitHub base reference is missing');
+        if (params.expectedBaseSha && ref.object.sha !== params.expectedBaseSha) throw new Error('Repository changed since generation. Regenerate and review the patch.');
         const parent = await api(`git/commits/${ref.object.sha}`);
         if (!parent.tree?.sha) throw new Error('GitHub base tree is missing');
         // Preserve executable file modes and reject symlink/submodule modifications.
@@ -97,17 +100,36 @@ export class PullRequestService {
         const commit = await api('git/commits', 'POST', { message: params.title || 'Ryvix approved changes', tree: nextTree.sha, parents: [ref.object.sha] });
         if (!commit.sha) throw new Error('GitHub did not return a commit');
         // Creation fails on collision. Never overwrite an existing branch.
-        await api('git/refs', 'POST', { ref: `refs/heads/${branch}`, sha: commit.sha });
+        commitSha = commit.sha;
+        try {
+          await api('git/refs', 'POST', { ref: `refs/heads/${branch}`, sha: commit.sha });
+        } catch (error) {
+          if (!params.expectedBaseSha || !(error instanceof Error) || !error.message.includes('HTTP 422')) throw error;
+          const existing = await api(`git/ref/heads/${encodeURIComponent(branch)}`);
+          const existingCommit = await api(`git/commits/${existing.object?.sha}`);
+          if (existingCommit.tree?.sha !== nextTree.sha || existingCommit.parents?.length !== 1 ||
+              existingCommit.parents[0].sha !== params.expectedBaseSha) throw new Error('Working branch contains different changes; manual review required');
+          commitSha = existing.object.sha;
+        }
       } else {
         const head = await api(`git/ref/heads/${encodeURIComponent(branch)}`);
         if (!head.object?.sha) throw new Error('Existing working branch is required');
+        commitSha = head.object.sha;
       }
-      const data = await api('pulls', 'POST', { title: params.title || `Ryvix: ${params.taskPrompt || 'Approved changes'}`,
-        head: branch, base, body: params.description || params.summary || 'Approved Ryvix changes' });
+      let data: any;
+      try {
+        data = await api('pulls', 'POST', { title: params.title || `Ryvix: ${params.taskPrompt || 'Approved changes'}`,
+          head: branch, base, body: params.description || params.summary || 'Approved Ryvix changes' });
+      } catch (error) {
+        if (!params.expectedBaseSha || !(error instanceof Error) || !error.message.includes('HTTP 422')) throw error;
+        const existing = await api(`pulls?state=open&head=${encodeURIComponent(coords.owner + ':' + branch)}&base=${encodeURIComponent(base)}`);
+        data = existing.find((pr: any) => pr.head?.sha === commitSha && pr.base?.repo?.full_name === target);
+        if (!data) throw error;
+      }
       if (!Number.isInteger(data.number) || !data.html_url || data.state !== 'open') throw new Error('GitHub returned an invalid pull request');
       await auth.recordAudit({ action: 'github.create_pr', target, status: 'success', detail: `PR #${data.number}` });
       return { id: String(data.id), repository_id: params.repositoryId || target, task_id: params.taskId || null,
-        pr_number: data.number, prNumber: data.number, branch_name: branch, branchName: branch,
+        pr_number: data.number, prNumber: data.number, branch_name: branch, branchName: branch, commitSha,
         title: data.title, status: 'open', html_url: data.html_url, prUrl: data.html_url,
         created_at: data.created_at, updated_at: data.updated_at,
         summary: { filesChanged: data.changed_files ?? changes.length, additions: data.additions ?? 0, deletions: data.deletions ?? 0 },

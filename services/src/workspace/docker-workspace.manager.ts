@@ -1,6 +1,7 @@
 import * as crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
 import type { WorkspaceSession } from '@ryvix/database';
+import { measuredFileDiff, type ChangedFile } from './task-artifacts';
 
 export interface CommandExecutionResult {
   command: string; exitCode: number; stdout: string; stderr: string; durationMs: number; success: boolean;
@@ -37,6 +38,7 @@ export class DockerWorkspaceManager {
   private timers = new Map<string, ReturnType<typeof setTimeout>>();
   private allocatedPorts = new Set<number>();
   private busy = new Set<string>();
+  private prepared = new Set<string>();
   constructor(private readonly run: DockerRunner = runDocker,
     private readonly allowedImages = (process.env.RYVIX_WORKSPACE_IMAGES || '').split(',').filter(Boolean).concat(DEFAULT_IMAGES)) {}
 
@@ -53,7 +55,7 @@ export class DockerWorkspaceManager {
   }
   private filePath(value: string) {
     if (!value || value.startsWith('/') || value.includes('\\') || value.includes('\0') ||
-        value.split('/').some(part => !part || part === '..' || part === '.') || /^[A-Za-z]:/.test(value)) {
+        value.split('/').some(part => !part || part === '..' || part === '.' || part.toLowerCase() === '.git') || /^[A-Za-z]:/.test(value)) {
       throw new Error('Invalid workspace-relative path');
     }
     return `/workspace/${value}`;
@@ -91,7 +93,7 @@ export class DockerWorkspaceManager {
       const now = Date.now();
       const session: WorkspaceSession = {
         id, task_id: options.taskId, project_id: options.projectId, profile_id: options.profileId || null,
-        container_id: container, status: 'active', preview_url: `http://localhost:${port}`, preview_port: port,
+        container_id: container, status: 'active', preview_url: null, preview_port: port,
         allocated_cpu: cpu, allocated_ram_mb: ram, workspace_path: '/workspace',
         created_at: new Date(now).toISOString(), expires_at: new Date(now + ttl * 60000).toISOString(),
       };
@@ -111,6 +113,39 @@ export class DockerWorkspaceManager {
     for (const file of files) await this.applyDiff(id, file.path, file.content);
     return files.length;
   }
+  async withRestrictedEgress<T>(id: string, operation: () => Promise<T>): Promise<T> {
+    const session = this.session(id);
+    const network = process.env.RYVIX_WORKSPACE_EGRESS_NETWORK;
+    if (!network || !/^[a-zA-Z0-9_-]+$/.test(network)) throw new Error('A restricted workspace egress network is required');
+    const inspection = await this.checked(['network', 'inspect', '--format', '{{index .Labels "ryvix.egress"}}', network]);
+    if (inspection.stdout.trim() !== 'restricted') throw new Error('Workspace egress network is not approved');
+    await this.checked(['network', 'connect', network, session.container_id]);
+    try { return await operation(); }
+    finally {
+      try { await this.checked(['network', 'disconnect', network, session.container_id]); }
+      catch { await this.terminateSession(id); throw new Error('Workspace egress isolation failed; sandbox terminated'); }
+    }
+  }
+  async cloneRepository(id: string, fullName: string, branch: string, token: string, baseSha: string) {
+    const session = this.session(id);
+    if (this.prepared.has(id)) throw new Error('Repository already prepared');
+    if (!/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+$/.test(fullName) || !branch || /[\r\n\0]/.test(branch) ||
+        !/^[a-f0-9]{40,64}$/.test(baseSha) || !token || /[\r\n]/.test(token)) throw new Error('Invalid repository checkout');
+    await this.withRestrictedEgress(id, async () => {
+      // Stdin is consumed by Git before any repository code runs. No credentials are persisted.
+      await this.checked(['exec', '-i', session.container_id, '/bin/sh', '-c',
+        'read -r header; export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.https://github.com/.extraheader GIT_CONFIG_VALUE_0="$header" GIT_TERMINAL_PROMPT=0; git -c core.hooksPath=/dev/null -c protocol.file.allow=never clone --depth=1 --single-branch --no-tags --branch "$1" -- "$2" /workspace',
+        'clone-repository', branch, `https://github.com/${fullName}.git`], 120000,
+        `Authorization: Basic ${Buffer.from(`x-access-token:${token}`).toString('base64')}\n`);
+    });
+    const head = await this.checked(['exec', session.container_id, 'git', 'rev-parse', 'HEAD']);
+    if (head.stdout.trim() !== baseSha) throw new Error('Repository changed during checkout; retry');
+    this.prepared.add(id);
+  }
+  async deleteFile(id: string, filename: string) {
+    const session = this.session(id), target = this.filePath(filename);
+    await this.checked(['exec', session.container_id, 'rm', '--', target]);
+  }
   async applyDiff(id: string, file: string | { filePath: string; patchContent?: string; newContent?: string; isNewFile?: boolean }, newContent?: string): Promise<AppliedDiffResult> {
     const session = this.session(id);
     const relative = typeof file === 'string' ? file : file.filePath;
@@ -119,7 +154,7 @@ export class DockerWorkspaceManager {
     if (content.startsWith('diff --git ') || content.startsWith('--- ')) throw new Error('Unified patches must be resolved to full file contents before writing');
     const target = this.filePath(relative);
     await this.checked(['exec', '-i', session.container_id, '/bin/sh', '-c',
-      'mkdir -p -- "$(dirname -- "$1")" && cat > "$1"', 'write-file', target], 10000, content);
+      'parent=$(dirname -- "$1"); mkdir -p -- "$parent" || exit 1; resolved=$(realpath "$parent") || exit 1; case "$resolved" in /workspace|/workspace/*) ;; *) exit 1;; esac; [ ! -L "$1" ] || exit 1; cat > "$1"', 'write-file', target], 10000, content);
     return { filePath: relative, applied: true, bytesWritten: Buffer.byteLength(content), timestamp: new Date().toISOString() };
   }
   async readFile(id: string, file: string): Promise<string | null> {
@@ -127,6 +162,46 @@ export class DockerWorkspaceManager {
     const result = await this.run(['exec', session.container_id, 'cat', '--', target], 10000);
     if (result.exitCode !== 0) throw new Error('Unable to read workspace file');
     return result.stdout;
+  }
+  /** Capture the actual Git working tree. Never infer files or counts from a prompt. */
+  async captureDiff(id: string): Promise<ChangedFile[]> {
+    const session = this.session(id);
+    const git = async (args: string[]) => this.checked(['exec', session.container_id, 'git',
+      '-c', 'core.hooksPath=/dev/null', '-c', 'diff.external=', ...args]);
+    await git(['add', '--intent-to-add', '--all']);
+    const names = await git(['diff', '--name-only', '-z', 'HEAD', '--']);
+    const paths = names.stdout.split('\0').filter(Boolean);
+    if (paths.length > 100) throw new Error('Patch exceeds 100 changed files');
+    const files: ChangedFile[] = [];
+    for (const filename of paths) {
+      this.filePath(filename);
+      const stat = await this.checked(['exec', session.container_id, '/bin/sh', '-c',
+        'if [ -L "$1" ]; then exit 1; elif [ -f "$1" ]; then printf file; elif [ ! -e "$1" ]; then printf deleted; else exit 1; fi',
+        'inspect-file', `/workspace/${filename}`]);
+      const prior = await git(['ls-tree', 'HEAD', '--', filename]);
+      if (prior.stdout && !/^100(644|755) blob /.test(prior.stdout)) throw new Error('Only regular text files may be changed');
+      const action = stat.stdout === 'deleted' ? 'delete' : prior.stdout ? 'modify' : 'create';
+      const patch = await git(['diff', '--no-ext-diff', '--no-textconv', '--no-renames', 'HEAD', '--', filename]);
+      const content = action === 'delete' ? undefined : (await this.readFile(id, filename)) ?? undefined;
+      files.push(measuredFileDiff(filename, patch.stdout, content, action));
+    }
+    return files;
+  }
+  async startPreview(id: string, command: string, origin: string): Promise<void> {
+    const session = this.session(id);
+    if (!command || command.length > 1024 || !origin.startsWith('https://')) throw new Error('Invalid preview configuration');
+    await this.checked(['exec', '-d', '--env', 'PORT=3000', '--env', 'HOST=0.0.0.0', session.container_id,
+      '/bin/sh', '-lc', `${command} > /tmp/ryvix-preview.log 2>&1`]);
+    const deadline = Math.min(Date.now() + 30000, Date.parse(session.expires_at));
+    while (Date.now() < deadline) {
+      try {
+        const result = await fetch(`http://127.0.0.1:${session.preview_port}/`, { redirect: 'manual', signal: AbortSignal.timeout(1000) });
+        await result.body?.cancel();
+        if (result.status < 500) { session.preview_url = origin; return; }
+      } catch { /* Process may still be starting. */ }
+      await new Promise(resolve => setTimeout(resolve, 250));
+    }
+    throw new Error('Preview application did not become ready before timeout');
   }
   async executeCommand(id: string, command: string, timeoutMs = 30000): Promise<CommandExecutionResult> {
     const session = this.session(id);

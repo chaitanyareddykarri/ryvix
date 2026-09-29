@@ -39,7 +39,7 @@ function loadRoute(relativePath: string, user: any, rows: any[] = []) {
 
 export async function testTaskRouteAuthorization() {
   const taskPath = 'web/app/api/tasks/route.ts';
-  const request = { url: 'http://localhost/api/tasks?taskId=other-task', json: async () => ({ taskId: 'other-task', status: 'approved' }) };
+  const request = { url: 'http://localhost/api/tasks?taskId=other-task', json: async () => ({ taskId: 'other-task', status: 'cancelled' }) };
   for (const method of ['PATCH', 'DELETE']) {
     const unauthenticated = loadRoute(taskPath, null);
     assert.equal((await unauthenticated.route[method](request)).status, 401);
@@ -53,6 +53,10 @@ export async function testTaskRouteAuthorization() {
     const authorized = loadRoute(taskPath, { id: 'user-a' }, [{ id: 'own-task' }]);
     assert.equal((await authorized.route[method](request)).status, 200);
   }
+
+  const bypass = loadRoute(taskPath, { id: 'user-a' }, [{ id: 'own-task' }]);
+  assert.equal((await bypass.route.PATCH({ json: async () => ({ taskId: 'own-task', status: 'completed' }) })).status, 400);
+  assert.equal(bypass.calls.length, 0, 'Client-supplied completion cannot bypass GitHub approval');
 
   const settingsPath = 'web/app/api/settings/route.ts';
   const settingsRequest = { json: async () => ({ action: 'update_org', orgId: 'victim-org', orgName: 'Changed' }) };

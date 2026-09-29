@@ -202,6 +202,7 @@ export class ModelGateway {
     options?: {
       temperature?: number;
       maxTokens?: number;
+      requireProvider?: boolean;
       mockProviderFailures?: Record<string, number>; // For automated failover tests
     }
   ): Promise<LLMCompletionResult> {
@@ -273,6 +274,7 @@ export class ModelGateway {
     // If all external API providers are exhausted or no keys are set,
     // the local reasoning engine synthesizes a high-quality response deterministically.
     const latencyMs = Date.now() - startTime;
+    if (options?.requireProvider) throw new Error('No AI provider is available. Configure a provider and retry.');
     const promptText = messages.map((m) => m.content).join('\n');
     const userMsg = messages.find((m) => m.role === 'user')?.content || 'Autonomous Task';
     const localContent = this.generateLocalReasoning(userMsg);

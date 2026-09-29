@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { maskEmail, generateRandomOtp, createLoginOtpChallenge } from "@/utils/auth-security";
+import { generateRandomOtp, createLoginOtpChallenge } from "@/utils/auth-security";
+import { maskEmail } from "@/utils/email-display";
 import { sendOtpEmail } from "@/utils/email-service";
 
 const supabaseUrl =
@@ -53,6 +54,7 @@ export async function POST(request: Request) {
 
     // 4. Generate genuine cryptographically random 6-digit OTP and send via Resend
     const randomOtp = generateRandomOtp();
+    const challengeToken = createLoginOtpChallenge(email, randomOtp, password);
     const emailRes = await sendOtpEmail({
       to: email,
       otp: randomOtp,
@@ -69,7 +71,6 @@ export async function POST(request: Request) {
     }
 
     // 5. Generate secure encrypted challenge proof with OTP
-    const challengeToken = createLoginOtpChallenge(email, randomOtp, password);
     const masked = maskEmail(email);
 
     const response = NextResponse.json({

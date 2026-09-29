@@ -7,20 +7,22 @@ import ConnectServerModal from "@/components/ConnectServerModal";
 
 interface SystemdService {
   name: string;
-  status: "active" | "inactive" | "failed";
+  status: "active" | "inactive" | "failed" | "restarting";
 }
 
 interface ServerItem {
   id: string;
   hostname: string;
-  ip: string;
-  os: string;
-  provider: string;
-  status: "healthy" | "degraded" | "unreachable";
-  cpuPercent: number;
-  memoryPercent: number;
-  diskPercent: number;
-  lastHeartbeat: string;
+  ip: string | null;
+  os: string | null;
+  provider: string | null;
+  status: "healthy" | "degraded" | "unreachable" | "unknown";
+  telemetryStatus: "fresh" | "stale" | "missing" | "invalid";
+  latestSampleAt: string | null;
+  cpuPercent: number | null;
+  memoryPercent: number | null;
+  diskPercent: number | null;
+  lastHeartbeat: string | null;
   services: SystemdService[];
 }
 
@@ -50,11 +52,13 @@ export default function ServersPage() {
     try {
       const res = await fetch("/api/servers");
       const json = await res.json();
-      if (json.success && json.servers) {
+      if (!res.ok || !json.success) throw new Error(json.error || "Server telemetry unavailable.");
+      if (json.servers) {
         setServers(json.servers);
       }
     } catch (err) {
-      console.error("Failed to load servers", err);
+      setServers([]);
+      setActionMessage(err instanceof Error ? err.message : "Server telemetry unavailable.");
     } finally {
       setLoading(false);
     }
@@ -305,7 +309,7 @@ export default function ServersPage() {
                     {server.hostname}
                   </h3>
                   <div style={{ fontSize: "0.8rem", color: "#9ca3af", fontFamily: "var(--font-mono)", marginTop: "0.2rem" }}>
-                    {server.ip} &bull; {server.provider}
+                    {server.ip ?? "IP unavailable"} &bull; {server.provider ?? "Provider unavailable"}
                   </div>
                 </div>
                 <span
@@ -328,19 +332,23 @@ export default function ServersPage() {
 
               {/* OS & Architecture */}
               <div style={{ fontSize: "0.82rem", color: "var(--text-secondary)", marginBottom: "1.25rem" }}>
-                OS: <span style={{ color: "#d1d5db" }}>{server.os}</span>
+                OS: <span style={{ color: "#d1d5db" }}>{server.os ?? "Not available"}</span>
               </div>
 
+              <p style={{ fontSize: "0.8rem", color: "#9ca3af", marginBottom: "0.75rem" }}>
+                Telemetry: {server.telemetryStatus}
+                {server.latestSampleAt && <> · Last sample: {new Date(server.latestSampleAt).toLocaleString()}</>}
+              </p>
               {/* Resource Gauges */}
               <div style={{ background: "rgba(0,0,0,0.3)", borderRadius: "8px", padding: "1rem", marginBottom: "1.25rem" }}>
                 {/* CPU */}
                 <div style={{ marginBottom: "0.75rem" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", marginBottom: "0.35rem" }}>
                     <span style={{ color: "#9ca3af" }}>CPU Load</span>
-                    <span style={{ color: server.cpuPercent > 80 ? "#f87171" : "#34d399", fontWeight: 600 }}>{server.cpuPercent}%</span>
+                    <span style={{ color: (server.cpuPercent ?? 0) > 80 ? "#f87171" : "#34d399", fontWeight: 600 }}>{server.cpuPercent === null ? "Not available" : `${server.cpuPercent ?? 0}%`}</span>
                   </div>
                   <div style={{ height: "6px", background: "rgba(255,255,255,0.1)", borderRadius: "3px", overflow: "hidden" }}>
-                    <div style={{ width: `${server.cpuPercent}%`, height: "100%", background: server.cpuPercent > 80 ? "#ef4444" : "#10b981" }}></div>
+                    <div style={{ width: `${server.cpuPercent ?? 0}%`, height: "100%", background: (server.cpuPercent ?? 0) > 80 ? "#ef4444" : "#10b981" }}></div>
                   </div>
                 </div>
 
@@ -348,10 +356,10 @@ export default function ServersPage() {
                 <div style={{ marginBottom: "0.75rem" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", marginBottom: "0.35rem" }}>
                     <span style={{ color: "#9ca3af" }}>Memory (RAM)</span>
-                    <span style={{ color: server.memoryPercent > 80 ? "#f87171" : "#60a5fa", fontWeight: 600 }}>{server.memoryPercent}%</span>
+                    <span style={{ color: (server.memoryPercent ?? 0) > 80 ? "#f87171" : "#60a5fa", fontWeight: 600 }}>{server.memoryPercent === null ? "Not available" : `${server.memoryPercent ?? 0}%`}</span>
                   </div>
                   <div style={{ height: "6px", background: "rgba(255,255,255,0.1)", borderRadius: "3px", overflow: "hidden" }}>
-                    <div style={{ width: `${server.memoryPercent}%`, height: "100%", background: server.memoryPercent > 80 ? "#ef4444" : "#3b82f6" }}></div>
+                    <div style={{ width: `${server.memoryPercent ?? 0}%`, height: "100%", background: (server.memoryPercent ?? 0) > 80 ? "#ef4444" : "#3b82f6" }}></div>
                   </div>
                 </div>
 
@@ -359,10 +367,10 @@ export default function ServersPage() {
                 <div>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", marginBottom: "0.35rem" }}>
                     <span style={{ color: "#9ca3af" }}>Disk Storage</span>
-                    <span style={{ color: server.diskPercent > 80 ? "#f87171" : "#a78bfa", fontWeight: 600 }}>{server.diskPercent}%</span>
+                    <span style={{ color: (server.diskPercent ?? 0) > 80 ? "#f87171" : "#a78bfa", fontWeight: 600 }}>{server.diskPercent === null ? "Not available" : `${server.diskPercent ?? 0}%`}</span>
                   </div>
                   <div style={{ height: "6px", background: "rgba(255,255,255,0.1)", borderRadius: "3px", overflow: "hidden" }}>
-                    <div style={{ width: `${server.diskPercent}%`, height: "100%", background: server.diskPercent > 80 ? "#ef4444" : "#8b5cf6" }}></div>
+                    <div style={{ width: `${server.diskPercent ?? 0}%`, height: "100%", background: (server.diskPercent ?? 0) > 80 ? "#ef4444" : "#8b5cf6" }}></div>
                   </div>
                 </div>
               </div>
@@ -373,6 +381,7 @@ export default function ServersPage() {
                   SYSTEMD SERVICES
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                  {server.services.length === 0 && <span>No service inventory available.</span>}
                   {server.services.map((svc) => (
                     <div
                       key={svc.name}
@@ -427,7 +436,7 @@ export default function ServersPage() {
                   Restart Service
                 </button>
                 <button
-                  onClick={() => triggerOobReboot(server.id, server.provider)}
+                  onClick={() => triggerOobReboot(server.id, server.provider ?? "")}
                   style={{
                     flex: 1,
                     padding: "0.45rem 0.5rem",

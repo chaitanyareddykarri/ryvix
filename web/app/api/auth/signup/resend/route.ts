@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { generateRandomOtp, createSignupChallenge } from "@/utils/auth-security";
+import { generateRandomOtp, renewSignupChallenge } from "@/utils/auth-security";
 import { sendOtpEmail } from "@/utils/email-service";
 
 export async function POST(request: Request) {
@@ -27,6 +27,12 @@ export async function POST(request: Request) {
 
     // Generate a fresh random 6-digit OTP
     const newOtp = generateRandomOtp();
+    let newChallenge: string;
+    try {
+      newChallenge = renewSignupChallenge(challengeCookie, email, newOtp);
+    } catch {
+      return NextResponse.json({ error: "Invalid or expired session. Please restart registration." }, { status: 401 });
+    }
 
     const emailRes = await sendOtpEmail({
       to: email,
@@ -40,31 +46,6 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
-
-    // Unpack previous challenge to preserve name and password with new OTP
-    const { verifySignupChallenge } = await import("@/utils/auth-security");
-    // We can decrypt existing challenge
-    const crypto = await import("crypto");
-    const CHALLENGE_SECRET = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "ryvix-auth-challenge-secret-salt-2026";
-    const KEY = crypto.createHash("sha256").update(CHALLENGE_SECRET).digest();
-    
-    let fullName = "";
-    let password = "";
-    try {
-      const raw = Buffer.from(challengeCookie, "base64url");
-      const iv = raw.subarray(0, 12);
-      const tag = raw.subarray(12, 28);
-      const encrypted = raw.subarray(28);
-      const decipher = crypto.createDecipheriv("aes-256-gcm", KEY, iv);
-      decipher.setAuthTag(tag);
-      const dec = JSON.parse(Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8"));
-      fullName = dec.fullName || "";
-      password = dec.password || "";
-    } catch {
-      return NextResponse.json({ error: "Session invalid. Please restart registration." }, { status: 401 });
-    }
-
-    const newChallenge = createSignupChallenge({ email, fullName, password, otp: newOtp });
 
     const response = NextResponse.json({
       success: true,
