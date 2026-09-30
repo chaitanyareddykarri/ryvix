@@ -2,6 +2,14 @@
 
 ## Latest continuation: 2026-09-30
 
+High-impact server recovery was reviewed after the tenant/observability checkpoint.
+The old cloud reset route treated a client `approved: true` field plus an admin
+role as approval and dispatched a hard reset without a persisted approval record.
+That path now fails closed (409), and the servers page disables the reset action.
+Regression coverage verifies no operation is dispatched from the client flag.
+Authenticated internal-agent command dispatch remains pending until its signed
+command protocol, one-use delivery/receipt, and persisted approval flow exist.
+
 Observability/tenant continuation: the missing `/api/observability/logs` route now
 reads curated tenant-scoped audit/security records and latest health snapshots.
 Errors no longer masquerade as empty logs; stale requests are cancelled.

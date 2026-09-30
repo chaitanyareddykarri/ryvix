@@ -27,6 +27,7 @@ export async function testServerTelemetry() {
   let denied = false;
   let dbFailure = false;
   let queries = 0;
+  let cloudAdapterCalls = 0;
   let rows: Record<string, unknown>[] = [];
   const exports: any = {};
   const code = ts.transpileModule(fs.readFileSync('web/app/api/servers/route.ts', 'utf8'), {
@@ -34,6 +35,8 @@ export async function testServerTelemetry() {
   }).outputText;
   vm.runInNewContext(code, { exports, require(name: string) {
     if (name === 'next/server') return { NextResponse: { json: (body: unknown, init?: any) => ({ body, status: init?.status || 200 }) } };
+    if (name === '@/utils/supabase/server') return { createClient: () => ({ auth: { getUser: async () => ({ data: { user: { id: 'verified-user' } }, error: null }) } }) };
+    if (name === 'next/headers') return { cookies: async () => ({}) };
     if (name === '@/utils/server-telemetry') return { serverTelemetry };
     if (name === '@/utils/tenant-context') return { RequestError, requireTenant: async () => {
       if (denied) throw new RequestError('Authentication required.', 401);
@@ -48,9 +51,15 @@ export async function testServerTelemetry() {
       if (dbFailure) throw new Error('private database detail');
       return rows;
     } };
+    if (name === '@ryvix/services') return { ServerAccessManager: {}, ServerClassifier: {}, CloudRecoveryBridge: class { executePowerAction() { cloudAdapterCalls++; } } };
+    if (name === '../../../../backend/src/services/device-protocol') return { DeviceError: class extends Error {} };
     return {};
   } });
   assert.equal((await exports.GET()).body.servers.length, 0);
+  const reboot = await exports.POST({ json: async () => ({ action: 'oob_cloud_reboot', serverId: 'server-1', approved: true }) });
+  assert.equal(reboot.status, 409, 'A browser boolean must not authorize a high-impact cloud action');
+  assert.equal(reboot.body.success, false);
+  assert.equal(cloudAdapterCalls, 0, 'Unpersisted approval must never reach the provider adapter');
   rows = [{ id: 'persisted-server', hostname: 'stored-host', status: 'healthy', services: [] }];
   const missing = (await exports.GET()).body.servers[0];
   assert.equal(missing.cpuPercent, null);

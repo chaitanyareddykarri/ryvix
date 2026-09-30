@@ -8,12 +8,9 @@ import { agentReleaseConfiguration } from "../../../../backend/src/services/agen
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import {
-  CloudRecoveryBridge,
   ServerAccessManager,
   ServerClassifier,
 } from "@ryvix/services";
-import { requireProjectOperator, operationAuthorization } from "@/utils/operation-access";
-import type { SupportedCloudProvider } from "@ryvix/services";
 
 export async function GET() {
   try {
@@ -78,31 +75,12 @@ export async function POST(req: Request) {
     if (action === "execute_capability") {
       return NextResponse.json({ success: false, error: "Remote command delivery and persisted approval are not configured. No operation was performed." }, { status: 503 });
     }
-    // Action C: Real out-of-band cloud recovery reboot
+    // High-impact recovery must be bound to a persisted approval record. A
+    // client boolean is not evidence of approval, so fail closed until the
+    // approval request/decision/dispatch workflow is available.
     if (action === "oob_cloud_reboot") {
-      if (body.approved !== true || !serverId) return NextResponse.json({ success: false, error: "Server ID and explicit approval required" }, { status: 400 });
-      const { data: server, error } = await supabase.from("servers").select("id, environment_id, cloud_provider, cloud_instance_id").eq("id", serverId).maybeSingle();
-      if (error || !server) return NextResponse.json({ success: false, error: "Server not found" }, { status: 404 });
-      const { data: environment } = await supabase.from("environments").select("project_id").eq("id", server.environment_id).maybeSingle();
-      if (!environment) return NextResponse.json({ success: false, error: "Server project not found" }, { status: 403 });
-      const role = await requireProjectOperator(supabase, user.id, environment.project_id);
-      if (!["owner", "admin"].includes(role)) return NextResponse.json({ success: false, error: "Administrator approval required" }, { status: 403 });
-      if (!server.cloud_provider || !server.cloud_instance_id) return NextResponse.json({ success: false, error: "Server has no configured cloud resource" }, { status: 400 });
-      // Operator-managed allowlist prevents customer-supplied enrollment metadata from targeting other accounts.
-      const allowed = (process.env.RYVIX_CLOUD_TARGETS || "").split(",");
-      if (!allowed.includes(`${server.id}:${server.cloud_provider}:${server.cloud_instance_id}`)) return NextResponse.json({ success: false, error: "Cloud resource is not enabled for recovery" }, { status: 403 });
-      const bridge = new CloudRecoveryBridge();
-      const result = await bridge.executePowerAction(
-        server.cloud_provider as SupportedCloudProvider,
-        server.cloud_instance_id,
-        "hard_reset",
-        operationAuthorization(supabase, user.id, environment.project_id)
-      );
-
-      return NextResponse.json({
-        success: true,
-        result,
-      }, { status: result.status === "dispatched" ? 202 : 200 });
+      return NextResponse.json({ success: false,
+        error: "Cloud recovery is unavailable until persisted human approval is implemented. No operation was performed." }, { status: 409 });
     }
 
     if (action === "diagnose_threat_neural") {

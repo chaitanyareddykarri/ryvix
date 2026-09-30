@@ -2,6 +2,12 @@
 
 ## Implemented in this continuation
 
+- High-impact cloud reset now fails closed with HTTP 409 until the platform has
+  a persisted approval request/decision/dispatch workflow. The servers page no
+  longer presents a clickable reset action, and a regression test confirms
+  `approved: true` cannot reach a cloud operation. Remote in-agent commands
+  remain unavailable pending authenticated dispatch and persisted approval.
+
 - Observability logs now read curated tenant-scoped audit/security records and
   latest recorded health-check snapshots. The previously missing API validates
   filters and limits, excludes raw evidence/credentials, and reports storage errors.

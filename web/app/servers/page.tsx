@@ -98,30 +98,6 @@ export default function ServersPage() {
     }
   }
 
-  async function triggerOobReboot(serverId: string, provider: string) {
-    if (!window.confirm("Reboot this server through its cloud provider? Running services will be interrupted.")) return;
-    setActionMessage(`Dispatching Out-of-Band Cloud Reboot via ${provider}...`);
-    try {
-      const res = await fetch("/api/servers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "oob_cloud_reboot",
-          serverId,
-          approved: true,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setActionMessage(`✓ Out-of-Band Action Dispatched: ${data.result.providerMessage}`);
-      } else {
-        setActionMessage(`❌ Cloud API Error: ${data.error}`);
-      }
-    } catch (err: any) {
-      setActionMessage(`❌ Out-of-Band reboot failed: ${err.message}`);
-    }
-  }
-
   const filteredServers = servers.filter((s) => {
     if (activeTab === "all") return true;
     return s.status === activeTab;
@@ -383,7 +359,8 @@ export default function ServersPage() {
                   Restart Service
                 </button>
                 <button
-                  onClick={() => triggerOobReboot(server.id, server.provider ?? "")}
+                  disabled
+                  title="Unavailable until the persisted human approval workflow is implemented"
                   style={{
                     flex: 1,
                     padding: "0.45rem 0.5rem",
@@ -392,11 +369,12 @@ export default function ServersPage() {
                     background: "rgba(239, 68, 68, 0.15)",
                     border: "1px solid rgba(239, 68, 68, 0.3)",
                     color: "#fca5a5",
-                    cursor: "pointer",
+                    cursor: "not-allowed",
+                    opacity: 0.65,
                     fontWeight: 600,
                   }}
                 >
-                  Out-of-Band Reset
+                  Reset unavailable
                 </button>
               </div>
             </div>
