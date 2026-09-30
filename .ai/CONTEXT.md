@@ -1,8 +1,19 @@
 # Ryvix Current Project Context
 
+> Latest checkpoint (2026-09-30): see docs/verification/COMPLETION_2026_09_30.md.
+> The local task API now queues work for a dedicated worker. New OTP/queue/RLS
+> migrations must precede deployment. Historical completion claims remain invalid;
+> Docker isolation/egress/preview tests now pass. Verified database TLS works with
+> the official CA, but intermittent connectivity and migration drift block rollout;
+> public preview and live integration configuration remain incomplete.
+>
+> Database counts and completion statements in the historical architecture notes
+> below are not current live verification. Use the checkpoint for measured status.
+
 > Remediation status (2026-09-29): historical completion claims below are not
 > production certification. Read CURRENT_TASK.md and
-> docs/verification/PRODUCTION_REMEDIATION.md for the active uncommitted work,
+> docs/verification/PRODUCTION_REMEDIATION.md for checkpoint `3038b27` (pushed to
+> `fix/production-remediation`) and subsequent uncommitted review fixes,
 > pending migrations and missing live verification. The user's current scope
 > prioritizes real dashboard/task/sandbox/PR/preview/connection/telemetry/AI flows.
 

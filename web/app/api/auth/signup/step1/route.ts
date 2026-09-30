@@ -3,6 +3,7 @@ import { queryDirectDb } from "@/utils/direct-db";
 import { generateRandomOtp, createSignupChallenge } from "@/utils/auth-security";
 import { maskEmail } from "@/utils/email-display";
 import { sendOtpEmail } from "@/utils/email-service";
+import { registerAuthChallenge } from "@/utils/auth-challenge-store";
 
 function getDbUrl(): string {
   return process.env.DATABASE_URL || "";
@@ -62,6 +63,9 @@ export async function POST(request: Request) {
     // 3. Generate a genuine cryptographically random 6-digit OTP
     const randomOtp = generateRandomOtp();
     const challengeToken = createSignupChallenge({ email, fullName, password, otp: randomOtp });
+    if (!await registerAuthChallenge(challengeToken, email, 'signup')) {
+      return NextResponse.json({ error: 'Too many verification requests. Please wait before trying again.' }, { status: 429 });
+    }
 
     // 4. Dispatch OTP email directly via Resend
     const emailRes = await sendOtpEmail({

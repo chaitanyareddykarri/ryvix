@@ -10,6 +10,12 @@ const reviewedFixtures = JSON.parse(fs.readFileSync(new URL('./secret-scan-fixtu
 // Reports locations and rules only, never matched credential material.
 export function scanText(file, text) {
   const findings = [];
+  // Catch credential-guessing lists, including multiline arrays, without echoing values.
+  for (const match of text.matchAll(/\b(?:const|let|var)\s+(?:passwords|passwordCandidates|candidatePasswords)\s*=\s*\[([^\]]*)\]/gi)) {
+    if (/['"][^'"\r\n]+['"]/.test(match[1])) findings.push({
+      file, line: text.slice(0, match.index).split('\n').length, rule: 'hardcoded-password-candidates',
+    });
+  }
   const fixture = /(^|\/)(tests|docs)\//.test(file) || file.endsWith('.md') || file === '.env.example';
   for (const [index, line] of text.split('\n').entries()) {
     // Exact, reviewed test lines only. Editing their content invalidates the exception.

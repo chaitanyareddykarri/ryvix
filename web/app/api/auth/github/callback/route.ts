@@ -1,8 +1,12 @@
 ﻿import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
+import { requireTenant, requireOperator, RequestError } from '@/utils/tenant-context';
+import { safeOAuthReturn } from '@/utils/oauth-return';
 
 export async function GET(request: Request) {
+  try { const tenant = await requireTenant(); requireOperator(tenant.role); }
+  catch (error) { return NextResponse.json({ error: 'GitHub connection permission required.' }, { status: error instanceof RequestError ? error.status : 503 }); }
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const state = searchParams.get("state");
@@ -11,14 +15,14 @@ export async function GET(request: Request) {
 
   const cookieStore = await cookies();
   const savedState = cookieStore.get("gh_oauth_state")?.value;
-  const returnTo = cookieStore.get("gh_oauth_return")?.value || "/dashboard";
+  const returnTo = safeOAuthReturn(cookieStore.get("gh_oauth_return")?.value);
 
   // Clean up oauth state cookie
   cookieStore.delete("gh_oauth_state");
   cookieStore.delete("gh_oauth_return");
 
   if (error) {
-    console.error("[GitHub OAuth Error]:", error, errorDescription);
+    console.error("GitHub OAuth authorization was rejected.");
     return NextResponse.redirect(
       new URL(`${returnTo}?error=${encodeURIComponent(errorDescription || error)}`, request.url)
     );
@@ -43,6 +47,7 @@ export async function GET(request: Request) {
     // 1. Exchange code for GitHub access token
     const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
       method: "POST",
+      redirect: 'error', signal: AbortSignal.timeout(15000),
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
@@ -56,8 +61,8 @@ export async function GET(request: Request) {
 
     const tokenData = await tokenResponse.json();
 
-    if (tokenData.error || !tokenData.access_token) {
-      console.error("[GitHub Token Error]:", tokenData);
+    if (!tokenResponse.ok || tokenData.error || typeof tokenData.access_token !== 'string' || !tokenData.access_token) {
+      console.error("GitHub OAuth token exchange failed.");
       return NextResponse.redirect(
         new URL(`${returnTo}?error=${encodeURIComponent(tokenData.error_description || "Token Exchange Failed")}`, request.url)
       );
@@ -68,6 +73,7 @@ export async function GET(request: Request) {
 
     // 2. Fetch authenticated GitHub user details
     const ghUserRes = await fetch("https://api.github.com/user", {
+      redirect: 'error', signal: AbortSignal.timeout(15000),
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "User-Agent": "Ryvix-Platform",
@@ -85,6 +91,7 @@ export async function GET(request: Request) {
     const {
       data: { user: supabaseUser },
     } = await supabase.auth.getUser();
+    if (!supabaseUser) throw new Error('Session expired during GitHub authorization.');
 
     if (supabaseUser) {
       const { data: profile } = await supabase
@@ -94,10 +101,11 @@ export async function GET(request: Request) {
         .single();
 
       const orgId = profile?.organization_id;
+      if (!orgId) throw new Error('Organization unavailable during GitHub authorization.');
 
       if (orgId) {
         // Upsert repository installation matching exact schema
-        await supabase.from("repository_installations").upsert(
+        const installation = await supabase.from("repository_installations").upsert(
           {
             organization_id: orgId,
             installation_id: Number(ghUser.id),
@@ -112,6 +120,7 @@ export async function GET(request: Request) {
           },
           { onConflict: "organization_id,installation_id" }
         );
+        if (installation.error) throw new Error('GitHub installation persistence failed.');
       }
     }
 
@@ -136,9 +145,9 @@ export async function GET(request: Request) {
       new URL(`${returnTo}?github=connected&user=${encodeURIComponent(ghUser.login)}`, request.url)
     );
   } catch (err: any) {
-    console.error("[GitHub Callback Fatal Error]:", err);
+    console.error("GitHub OAuth callback failed.");
     return NextResponse.redirect(
-      new URL(`${returnTo}?error=${encodeURIComponent(err.message || "Failed to complete GitHub authorization")}`, request.url)
+      new URL(`${returnTo}?error=Failed+to+complete+GitHub+authorization`, request.url)
     );
   }
 }

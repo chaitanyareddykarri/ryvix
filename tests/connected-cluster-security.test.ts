@@ -11,7 +11,7 @@
  */
 
 import assert from 'node:assert/strict';
-import { InternalAgent } from '../services/src/connector/internal-agent';
+import { InternalAgent } from './helpers/internal-agent-fixture';
 import { ClusterSecurityCoordinator } from '../services/src/connector/cluster-security.coordinator';
 import { ServerEventData } from '../ai/src/local-security-engine';
 

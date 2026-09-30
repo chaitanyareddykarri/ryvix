@@ -14,8 +14,10 @@ export function getDirectDbPool(): Pool {
       throw new Error("[PostgreSQL Pool] DATABASE_URL environment variable is not set. Configure it in .env.local.");
     }
 
+    const verifiedUrl = new URL(connectionString);
+    for (const option of ['sslmode', 'sslcert', 'sslkey', 'sslrootcert']) verifiedUrl.searchParams.delete(option);
     pool = new Pool({
-      connectionString,
+      connectionString: verifiedUrl.toString(),
       ssl: { rejectUnauthorized: true, ...(process.env.DATABASE_CA_CERT ? { ca: process.env.DATABASE_CA_CERT } : {}) },
       max: 5,
       idleTimeoutMillis: 30000,

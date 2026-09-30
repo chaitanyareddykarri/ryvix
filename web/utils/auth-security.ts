@@ -62,6 +62,17 @@ function matchesOtp(expected: string, submitted: string): boolean {
     crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(submitted.trim()));
 }
 
+/** Validated metadata only; passwords and OTPs never enter the durable ledger. */
+export function challengeMetadata(token: string, email: string, kind: ChallengeKind) {
+  const data = readChallenge(token, email, kind);
+  if (!data) return null;
+  return {
+    subjectHash: crypto.createHmac('sha256', challengeKey()).update(`${kind}:${data.email}`).digest('hex'),
+    tokenHash: crypto.createHash('sha256').update(token).digest('hex'),
+    expiresAt: new Date(data.timestamp + CHALLENGE_TTL_MS).toISOString(),
+  };
+}
+
 export function createSignupChallenge(params: { email: string; fullName: string; password: string; otp: string }): string {
   return encryptData({ ...params, kind: 'signup', email: params.email.trim().toLowerCase(),
     fullName: params.fullName.trim(), otp: params.otp.trim(), timestamp: Date.now() });

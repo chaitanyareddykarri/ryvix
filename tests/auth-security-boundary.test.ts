@@ -15,7 +15,7 @@ export function loadSecurity(secret?: string) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true },
   }).outputText;
   vm.runInNewContext(code, {
-    exports, Buffer, process: { env }, Date: { now: () => now },
+    exports, Buffer, process: { env }, Date: class extends Date { static now() { return now; } },
     require: (name: string) => {
       if (name === 'server-only') return {};
       if (name === 'crypto' || name === 'node:crypto') return crypto;

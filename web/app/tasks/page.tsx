@@ -34,6 +34,8 @@ export default function TasksPage() {
   const [repositoryId, setRepositoryId] = useState("");
 
   const [supabase] = useState(() => createClient());
+  const activeTaskId = activeTask?.id;
+  const activeTaskStatus = activeTask?.status;
 
   useEffect(() => {
     async function checkUser() {
@@ -49,6 +51,29 @@ export default function TasksPage() {
       setConnectedRepos(data.repositories || []);
     }).catch(error => setErrorMessage(error.message));
   }, [supabase]);
+
+  useEffect(() => {
+    if (!activeTaskId || !activeTaskStatus || !['queued','planning','executing','verifying'].includes(activeTaskStatus)) return;
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout>;
+    const refresh = async () => {
+      try {
+        const response = await fetch('/api/tasks', { cache: 'no-store', signal: controller.signal });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Task status unavailable.');
+        const task = data.tasks?.find((item: any) => item.id === activeTaskId);
+        if (task) {
+          setActiveTask({ id: task.id, prompt: task.user_prompt, title: task.summary || 'Repository task',
+            status: task.status, steps: task.plans?.find((plan: any) => plan.id === task.active_plan_id)?.steps || [],
+            previewUrl: task.workspace?.previewUrl });
+          if (task.status === 'failed') setErrorMessage(task.error_details || 'Task failed.');
+        }
+      } catch (error) { if (!controller.signal.aborted) setErrorMessage(error instanceof Error ? error.message : 'Task status unavailable.'); }
+      finally { if (!controller.signal.aborted) timer = setTimeout(refresh,3000); }
+    };
+    void refresh();
+    return () => { controller.abort(); clearTimeout(timer); };
+  }, [activeTaskId, activeTaskStatus]);
 
   async function handleSubmitPrompt(e: React.FormEvent) {
     e.preventDefault();

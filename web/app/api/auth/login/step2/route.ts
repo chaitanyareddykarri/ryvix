@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { verifyLoginOtpChallenge } from "@/utils/auth-security";
+import { consumeAuthChallenge } from "@/utils/auth-challenge-store";
 
 const supabaseUrl =
   process.env.NEXT_PUBLIC_SUPABASE_URL ||
@@ -43,7 +44,8 @@ export async function POST(request: Request) {
 
     // 1. Verify random OTP against challenge
     const challengeCheck = verifyLoginOtpChallenge(challengeCookie, email, token);
-    if (!challengeCheck.valid || !challengeCheck.password) {
+    const accepted = await consumeAuthChallenge(challengeCookie, email, 'login', !!(challengeCheck.valid && challengeCheck.password));
+    if (!accepted || !challengeCheck.valid || !challengeCheck.password) {
       return NextResponse.json(
         { error: challengeCheck.error || "The verification code is incorrect. Please try again." },
         { status: 400 }

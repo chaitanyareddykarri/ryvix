@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { getDirectDbPool } from "@/utils/direct-db";
 import { createServerClient } from "@supabase/ssr";
 import { verifySignupChallenge } from "@/utils/auth-security";
+import { consumeAuthChallenge } from "@/utils/auth-challenge-store";
 
 const supabaseUrl =
   process.env.NEXT_PUBLIC_SUPABASE_URL ||
@@ -41,7 +42,8 @@ export async function POST(request: Request) {
 
     // 1. Verify 6-digit OTP against encrypted challenge
     const check = verifySignupChallenge(challengeCookie, email, token);
-    if (!check.valid || !check.userData) {
+    const accepted = await consumeAuthChallenge(challengeCookie, email, 'signup', !!(check.valid && check.userData));
+    if (!accepted || !check.valid || !check.userData) {
       return NextResponse.json(
         { error: check.error || "The verification code is incorrect. Please try again." },
         { status: 400 }

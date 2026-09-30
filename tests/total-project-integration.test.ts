@@ -1,3 +1,4 @@
+import { InternalAgent } from './helpers/internal-agent-fixture';
 import { fakeCloud, testApproval, healthyProbe as fixtureProbe } from './helpers/execution-fixtures';
 /**
  * Master End-to-End Total Project Integration Test Suite
@@ -23,7 +24,6 @@ import {
   ServerEventData,
 } from '../ai/src/orchestrator';
 import {
-  InternalAgent,
   ClusterSecurityCoordinator,
   CloudRecoveryBridge,
   ApiKeySecurityService,

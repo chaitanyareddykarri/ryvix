@@ -17,6 +17,7 @@ function loadRoute(relativePath: string, user: any, rows: any[] = []) {
     from: (table: string) => { calls.push({ name: 'from', args: [table] }); return query; },
   };
   const exports: any = {};
+  class RequestError extends Error { constructor(message: string, readonly status: number) { super(message); } }
   const code = ts.transpileModule(fs.readFileSync(path.resolve(relativePath), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
@@ -25,6 +26,14 @@ function loadRoute(relativePath: string, user: any, rows: any[] = []) {
     require: (name: string) => {
       if (name === 'next/server') return { NextResponse: { json: (body: any, init?: any) => ({ body, status: init?.status || 200 }) } };
       if (name === 'next/headers') return { cookies: async () => ({}) };
+      if (name === '@/utils/tenant-context') return { RequestError,
+        requireTenant: async () => { if (!user) throw new RequestError('Authentication required', 401); return { user, organizationId: 'own-org', role: 'developer' }; },
+        requireOperator: () => {},
+      };
+      if (name === '@/utils/task-lifecycle') return { changeTaskLifecycle: async (...args: any[]) => {
+        calls.push({ name: 'lifecycle', args });
+        if (!rows.length) throw new RequestError('Task not found', 404);
+      } };
       if (name === '@/utils/supabase/server') return { createClient: () => supabase };
       if (name === '@/utils/direct-db') return {
         queryDirectDb: async (...args: any[]) => { calls.push({ name: 'sql', args }); return rows; },
@@ -47,8 +56,7 @@ export async function testTaskRouteAuthorization() {
 
     const unauthorized = loadRoute(taskPath, { id: 'user-a' });
     assert.equal((await unauthorized.route[method](request)).status, 404);
-    assert.ok(unauthorized.calls.some(call => call.name === 'eq' && call.args[0] === 'created_by' && call.args[1] === 'user-a'));
-    assert.ok(unauthorized.calls.every(call => call.name !== 'from' || call.args[0] === 'tasks'));
+    assert.ok(unauthorized.calls.some(call => call.name === 'lifecycle' && call.args[2] === 'user-a' && call.args[3] === 'own-org'));
 
     const authorized = loadRoute(taskPath, { id: 'user-a' }, [{ id: 'own-task' }]);
     assert.equal((await authorized.route[method](request)).status, 200);

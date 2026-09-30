@@ -6,10 +6,12 @@ import ts from 'typescript';
 import { loadSecurity } from './auth-security-boundary.test';
 
 // Execute production handlers, replacing only external database/auth/mail I/O.
-function loadRoute(file: string, security: any, token: string, signInResult: any) {
+function loadRoute(file: string, security: any, token: string, signInResult: any, ledgerAllowed = true, mail: 'success' | 'failure' | 'throw' = 'success') {
   const exports: any = {};
   let sent = 0;
   let signIns = 0;
+  const cookieWrites: Array<{ name: string; value: string }> = [];
+  let reservedToken = '';
   const cookieStore = { get: () => ({ value: token }), getAll: () => [], set: () => {}, delete: () => {} };
   const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
@@ -18,11 +20,15 @@ function loadRoute(file: string, security: any, token: string, signInResult: any
     exports, console, process: { env: { DATABASE_URL: 'provided-by-test-adapter' } },
     require: (name: string) => {
       if (name === 'next/server') return { NextResponse: { json: (body: unknown, init?: { status: number }) => ({
-        body, status: init?.status || 200, cookies: { set: () => {}, delete: () => {} },
+        body, status: init?.status || 200, cookies: { set: (name: string, value: string) => cookieWrites.push({ name, value }), delete: () => {} },
       }) } };
       if (name === 'next/headers') return { cookies: async () => cookieStore };
       if (name === '@/utils/auth-security') return security;
-      if (name === '@/utils/email-service') return { sendOtpEmail: async () => { sent++; return { success: true }; } };
+      if (name === '@/utils/auth-challenge-store') return {
+        registerAuthChallenge: async (next: string) => { if (ledgerAllowed) reservedToken = next; return ledgerAllowed; },
+        consumeAuthChallenge: async (_token: string, _email: string, _kind: string, correct: boolean) => ledgerAllowed && correct,
+      };
+      if (name === '@/utils/email-service') return { sendOtpEmail: async () => { sent++; if (mail === 'throw') throw new Error('mail transport failed'); return { success: mail === 'success' }; } };
       if (name === '@supabase/ssr') return { createServerClient: () => ({ auth: {
         signInWithPassword: async () => { signIns++; return signInResult; },
       } }) };
@@ -32,7 +38,7 @@ function loadRoute(file: string, security: any, token: string, signInResult: any
       throw new Error(`Unexpected dependency: ${name}`);
     },
   });
-  return { post: exports.POST, sent: () => sent, signIns: () => signIns };
+  return { post: exports.POST, sent: () => sent, signIns: () => signIns, cookieWrites, reservedToken: () => reservedToken };
 }
 
 export async function testAuthRouteSecurity() {
@@ -66,6 +72,26 @@ export async function testAuthRouteSecurity() {
     const validResend = loadRoute(resendFile, api, token, null);
     assert.equal((await validResend.post(request)).status, 200);
     assert.equal(validResend.sent(), 1);
+    for (const mode of ['failure', 'throw'] as const) {
+      const failedMail = loadRoute(resendFile, api, token, null, true, mode);
+      const failedResponse = await failedMail.post(request);
+      assert.equal(failedResponse.status, 502);
+      assert.notEqual(failedResponse.body.success, true);
+      const cookie = failedMail.cookieWrites.find(item => item.name === `ryvix_${kind}_challenge`);
+      assert.ok(cookie, 'Delivery failure must return the challenge reserved in the ledger');
+      assert.equal(cookie.value, failedMail.reservedToken());
+      assert.notEqual(cookie.value, token, 'Never revive the superseded OTP');
+      assert.equal(api.challengeMetadata(cookie.value, 'owner@example.test', kind).expiresAt,
+        api.challengeMetadata(token, 'owner@example.test', kind).expiresAt, 'Resends preserve original expiry');
+      const retry = loadRoute(resendFile, api, cookie.value, null);
+      assert.equal((await retry.post(request)).status, 200, 'Renewed cookie remains usable for a later allowed retry');
+    }
+    const replay = loadRoute(file, api, token, null, false);
+    assert.equal((await replay.post(request)).status, 400);
+    assert.equal(replay.signIns(), 0, 'Consumed or exhausted challenges cannot create sessions');
+    const throttled = loadRoute(resendFile, api, token, null, false);
+    assert.equal((await throttled.post(request)).status, 429);
+    assert.equal(throttled.sent(), 0, 'Rate-limited resends must not dispatch mail');
   }
   const emptyPassword = loadRoute('web/app/api/auth/login/step2/route.ts', {
     verifyLoginOtpChallenge: () => ({ valid: true, password: '' }),

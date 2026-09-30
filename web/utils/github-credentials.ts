@@ -2,10 +2,11 @@ import 'server-only';
 import { cookies } from 'next/headers';
 import { getDirectDbPool } from './direct-db';
 import { RequestError } from './tenant-context';
+import type { PoolClient } from 'pg';
 
 /** Only call after authorizing the task/project. Never return this value to clients or AI. */
-export async function githubTokenForProject(projectId: string, organizationId: string, userId: string): Promise<string> {
-  const connected = await getDirectDbPool().query(`SELECT secret.decrypted_secret FROM connectors c
+export async function githubTokenForProject(projectId: string, organizationId: string, userId: string, client?: Pick<PoolClient, 'query'>): Promise<string> {
+  const connected = await (client || getDirectDbPool()).query(`SELECT secret.decrypted_secret FROM connectors c
     JOIN environments e ON e.id=c.environment_id JOIN projects p ON p.id=e.project_id
     JOIN organization_members m ON m.organization_id=p.organization_id
     JOIN connector_credentials credential ON credential.connector_id=c.id AND credential.credential_type='oauth_token'

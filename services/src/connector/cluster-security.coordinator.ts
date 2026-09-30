@@ -11,12 +11,13 @@
 
 import { LocalSecurityEngine, ServerEventData, LocalAnalysisResult } from '@ryvix/ai';
 import { InternalAgent, CapabilityExecutionResult } from './internal-agent';
+type ClusterAgent = Pick<InternalAgent, 'executeCapability'> & { isIpBlocked?: (ip: string) => boolean };
 
 export interface ClusterNodeRecord {
   nodeId: string;
   hostname: string;
   clusterId: string;
-  agent: InternalAgent;
+  agent: ClusterAgent;
   lastSeen: string;
   status: 'online' | 'degraded' | 'offline';
 }
@@ -49,7 +50,7 @@ export class ClusterSecurityCoordinator {
   /**
    * Registers a connected server node into the cluster.
    */
-  registerNode(nodeId: string, hostname: string, agent: InternalAgent): void {
+  registerNode(nodeId: string, hostname: string, agent: ClusterAgent): void {
     this.nodes.set(nodeId, {
       nodeId,
       hostname,
@@ -100,7 +101,7 @@ export class ClusterSecurityCoordinator {
 
     const offendingIp = analysis.extractedAttackerIp || params.ip;
     // Ensure target node local firewall drops the offending IP if extracted
-    if (offendingIp && !node.agent.isIpBlocked(offendingIp)) {
+    if (offendingIp && !node.agent.isIpBlocked?.(offendingIp)) {
       await node.agent.executeCapability('firewall.block_ip', {
         ip: offendingIp,
         reason: analysis.threatType,

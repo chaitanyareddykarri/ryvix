@@ -88,28 +88,32 @@ func (a *AgentDaemon) Run(ctx context.Context) error {
 	log.Printf("[Ryvix Agent] Starting native in-band daemon on host '%s' (ServerID: %s)", a.config.Hostname, a.config.ServerID)
 	log.Printf("[Ryvix Agent] Polling interval: %s | Control Plane: %s", a.config.Interval, a.config.ControlPlaneURL)
 
-	ticker := time.NewTicker(a.config.Interval)
-	defer ticker.Stop()
-
-	// Initial heartbeat
-	a.tick()
-
+	delay := a.config.Interval
 	for {
+		if a.tick() {
+			delay = a.config.Interval
+		} else {
+			delay *= 2
+			if delay > time.Minute {
+				delay = time.Minute
+			}
+		}
+		timer := time.NewTimer(delay)
 		select {
 		case <-ctx.Done():
+			timer.Stop()
 			log.Println("[Ryvix Agent] Daemon shutting down gracefully...")
 			return nil
-		case <-ticker.C:
-			a.tick()
+		case <-timer.C:
 		}
 	}
 }
 
-func (a *AgentDaemon) tick() {
+func (a *AgentDaemon) tick() bool {
 	payload, collectErr := a.GatherSnapshot()
 	if collectErr != nil {
 		log.Printf("[Ryvix Agent] %v", collectErr)
-		return
+		return false
 	}
 	log.Printf("[Ryvix Agent] Heartbeat #%d: CPU=%.1f%% RAM=%.1f%% Disk=%.1f%% (Cores: %d, Load: %.2f)",
 		payload.HeartbeatSeq,
@@ -123,7 +127,7 @@ func (a *AgentDaemon) tick() {
 	resp, err := a.dispatcher.SendTelemetry(payload)
 	if err != nil {
 		log.Printf("[Ryvix Agent] Telemetry dispatch note: %v", err)
-		return
+		return false
 	}
 
 	if resp != nil && len(resp.Commands) > 0 {
@@ -131,6 +135,7 @@ func (a *AgentDaemon) tick() {
 			a.executeCommand(cmd)
 		}
 	}
+	return true
 }
 
 func (a *AgentDaemon) executeCommand(cmd dispatcher.RemoteCommand) {

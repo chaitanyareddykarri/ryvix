@@ -1,0 +1,4 @@
+FROM node:22-alpine
+COPY --chown=node:node egress-proxy.cjs /opt/ryvix/egress-proxy.cjs
+USER 1000:1000
+ENTRYPOINT ["node", "/opt/ryvix/egress-proxy.cjs"]

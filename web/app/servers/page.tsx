@@ -29,12 +29,21 @@ interface ServerItem {
 export default function ServersPage() {
   const [servers, setServers] = useState<ServerItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [enrolling, setEnrolling] = useState(false);
-  const [enrollCommand, setEnrollCommand] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"all" | "healthy" | "degraded">("all");
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [showEnrollModal, setShowEnrollModal] = useState(false);
+
+  useEffect(() => {
+    const events = new EventSource('/api/telemetry/stream');
+    events.addEventListener('telemetry', event => {
+      try { const data = JSON.parse((event as MessageEvent).data); setServers(data.servers); setLoading(false); }
+      catch { setActionMessage('Telemetry response could not be read.'); }
+    });
+    events.addEventListener('unavailable', () => { setServers([]); setActionMessage('Telemetry unavailable. Reconnecting…'); });
+    events.onerror = () => { setActionMessage('Telemetry stream interrupted. Reconnecting…'); };
+    return () => events.close();
+  }, []);
 
   useEffect(() => {
     async function loadData() {
@@ -61,28 +70,6 @@ export default function ServersPage() {
       setActionMessage(err instanceof Error ? err.message : "Server telemetry unavailable.");
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function generateEnrollment() {
-    setEnrolling(true);
-    try {
-      const res = await fetch("/api/servers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "generate_enrollment",
-          environmentId: "env_prod_ecommerce",
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setEnrollCommand(data.installScript);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setEnrolling(false);
     }
   }
 
@@ -229,7 +216,7 @@ export default function ServersPage() {
         {/* Enroll Button */}
         <button
           onClick={() => setShowEnrollModal(true)}
-          disabled={enrolling}
+
           className="btn-primary"
           style={{
             padding: "0.5rem 1.25rem",
@@ -242,49 +229,9 @@ export default function ServersPage() {
             fontWeight: 600,
           }}
         >
-          {enrolling ? "Generating Command..." : "+ Enroll New Server"}
+          + Enroll New Server
         </button>
       </div>
-
-      {/* Enrollment Command Card */}
-      {enrollCommand && (
-        <div className="glass-panel glow-indigo" style={{ padding: "1.5rem", marginBottom: "2rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-            <h3 style={{ fontSize: "1.05rem", fontWeight: 600, color: "#a5b4fc" }}>
-              ⚡ One-Click Server Enrollment Command
-            </h3>
-            <button
-              onClick={() => setEnrollCommand(null)}
-              style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", fontSize: "1rem" }}
-            >
-              ✕
-            </button>
-          </div>
-          <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "0.75rem" }}>
-            Run this command as <code>root</code> or with <code>sudo</code> on your Linux host. No inbound ports or SSH keys required.
-          </p>
-          <div style={{ background: "rgba(0,0,0,0.6)", borderRadius: "8px", padding: "0.85rem 1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem" }}>
-            <code style={{ fontSize: "0.85rem", color: "#34d399", wordBreak: "break-all", fontFamily: "var(--font-mono)" }}>
-              {enrollCommand}
-            </code>
-            <button
-              onClick={() => navigator.clipboard.writeText(enrollCommand)}
-              style={{
-                padding: "0.35rem 0.75rem",
-                borderRadius: "6px",
-                background: "rgba(255,255,255,0.1)",
-                color: "#f3f4f6",
-                border: "none",
-                cursor: "pointer",
-                fontSize: "0.78rem",
-                whiteSpace: "nowrap",
-              }}
-            >
-              Copy
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Action Notification Banner */}
       {actionMessage && (
@@ -429,7 +376,7 @@ export default function ServersPage() {
               {/* Action Buttons */}
               <div style={{ display: "flex", gap: "0.5rem", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "1rem" }}>
                 <button
-                  onClick={() => restartService(server.id, server.services[0]?.name || "nginx")}
+                  onClick={() => restartService(server.id, server.services[0]?.name || "")}
                   className="btn-secondary"
                   style={{ flex: 1, padding: "0.45rem 0.5rem", fontSize: "0.78rem" }}
                 >
@@ -456,6 +403,7 @@ export default function ServersPage() {
           ))}
         </div>
       )}
+      <ConnectServerModal isOpen={showEnrollModal} onClose={() => setShowEnrollModal(false)} />
     </div>
   );
 }

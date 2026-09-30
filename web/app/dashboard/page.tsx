@@ -1084,25 +1084,7 @@ export default function DashboardPage() {
 
   // Launch Ephemeral Docker Sandbox
   async function handleLaunchSandbox() {
-    setIsLaunchingSandbox(true);
-    try {
-      const res = await fetch("/api/workspace", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "create" }),
-      });
-      const data = await res.json();
-      if (data.session) {
-        setWorkspaceSessions((prev) => [data.session, ...prev]);
-        if (data.session.preview_url) {
-          setActivePreviewUrlState(data.session.preview_url);
-        }
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsLaunchingSandbox(false);
-    }
+    window.location.assign('/tasks');
   }
 
   // Settings Actions
@@ -1230,9 +1212,9 @@ export default function DashboardPage() {
           setActivePreviewUrlState(data.workspace.previewUrl);
         }
 
-        setAnalyzingStep(4);
-        setPreviewState(data.workspace?.previewUrl ? "preview_ready" : "none");
-        setStatusMessage(data.workspace?.previewUrl ? "PREVIEW READY" : "Preview unavailable.");
+        setAnalyzingStep(data.task.status === 'queued' ? 1 : 4);
+        setPreviewState(data.task.status === 'queued' ? 'analyzing' : data.workspace?.previewUrl ? "preview_ready" : "none");
+        setStatusMessage(data.task.status === 'queued' ? 'QUEUED FOR ANALYSIS' : data.workspace?.previewUrl ? "PREVIEW READY" : "Preview unavailable.");
         setActiveTab("previews");
       }
     } catch (err: any) {
@@ -1244,6 +1226,43 @@ export default function DashboardPage() {
       setIsProcessing(false);
     }
   }
+
+  useEffect(() => {
+    if (!activeTask?.id || !['queued','planning','executing','verifying'].includes(activeTask.status)) return;
+    const taskId = activeTask.id;
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout>;
+    const refresh = async () => {
+      try {
+        const response = await fetch('/api/tasks', { cache: 'no-store', signal: controller.signal });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Task status unavailable.');
+        const task = data.tasks?.find((item: any) => item.id === taskId);
+        if (task) {
+          setTasks(data.tasks);
+          setActiveTask(task);
+          setTaskSteps(task.plans?.find((plan: any) => plan.id === task.active_plan_id)?.steps || []);
+          setActivePreviewUrlState(task.workspace?.previewUrl || null);
+          const running = ['queued','planning','executing','verifying'].includes(task.status);
+          setPreviewState(running ? 'analyzing' : task.workspace?.previewUrl ? 'preview_ready' : 'none');
+          setStatusMessage(running ? task.status.toUpperCase() : task.status === 'failed' ? 'TASK FAILED' : task.workspace?.previewUrl ? 'PREVIEW READY' : 'TASK READY FOR REVIEW');
+          if (task.status === 'failed') setDeployError(task.error_details || 'Task failed.');
+          if (task.result?.files) {
+            const files: CodeChangeFile[] = task.result.files;
+            const change: CodeChangeItem = { id:task.id,taskId:task.id,commitSha:task.pullRequest?.commitSha || '',
+              message:task.summary || task.user_prompt,author:task.created_by || '',timestamp:new Date(task.created_at).toLocaleString(),
+              dateGroup:'Today',branch:task.result.branch,repository:task.repository?.full_name || '',filesChanged:files,
+              additions:files.reduce((sum,file) => sum+file.additions,0),deletions:files.reduce((sum,file) => sum+file.deletions,0),
+              previewUrl:task.workspace?.previewUrl || '' };
+            setCodeChanges(previous => [change,...previous.filter(item => item.id !== task.id)]);
+          }
+        }
+      } catch (error) { if (!controller.signal.aborted) setDeployError(error instanceof Error ? error.message : 'Task status unavailable.'); }
+      finally { if (!controller.signal.aborted) timer=setTimeout(refresh,3000); }
+    };
+    void refresh();
+    return () => { controller.abort(); clearTimeout(timer); };
+  }, [activeTask?.id,activeTask?.status]);
 
   // Approval requests a real PR; the customer's pipeline controls deployment.
   async function handleApproveDeployment() {

@@ -1,16 +1,17 @@
-﻿import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/utils/supabase/server";
 import { queryDirectDb } from "@/utils/direct-db";
 import { requireTenant, RequestError } from "@/utils/tenant-context";
 import { serverTelemetry } from "@/utils/server-telemetry";
+import { issueEnrollment } from "@/utils/device-ingestion";
+import { DeviceError } from "../../../../backend/src/services/device-protocol";
+import { agentReleaseConfiguration } from "../../../../backend/src/services/agent-installer";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import {
-  InternalAgent,
   CloudRecoveryBridge,
   ServerAccessManager,
   ServerClassifier,
 } from "@ryvix/services";
-import { LocalSecurityEngine } from "@ryvix/ai";
 import { requireProjectOperator, operationAuthorization } from "@/utils/operation-access";
 import type { SupportedCloudProvider } from "@ryvix/services";
 
@@ -28,8 +29,8 @@ export async function GET() {
        JOIN projects p ON p.id = e.project_id
        JOIN organization_members m ON m.organization_id = p.organization_id AND m.user_id = $2
        LEFT JOIN connectors c ON c.id = s.connector_id AND c.environment_id = s.environment_id
-       LEFT JOIN LATERAL (SELECT bucket_timestamp, cpu_avg, ram_percent, disk_used_percent
-         FROM telemetry_metric_rollups WHERE server_id = s.id
+       LEFT JOIN LATERAL (SELECT last_sample_at AS bucket_timestamp, cpu_avg, ram_percent, disk_used_percent
+         FROM telemetry_metric_rollups WHERE server_id = s.id AND authenticated=true
          ORDER BY bucket_timestamp DESC LIMIT 1) t ON true
        WHERE p.organization_id = $1 ORDER BY s.hostname, s.created_at DESC`,
       [organizationId, user.id],
@@ -66,34 +67,17 @@ export async function POST(req: Request) {
 
     // Action A: Real single-line agent enrollment script
     if (action === "generate_enrollment") {
-      const secret = process.env.CONNECTOR_ENROLLMENT_SECRET;
-      if (!secret) return NextResponse.json({ success: false, error: "Connector enrollment is not configured" }, { status: 503 });
-      const token = InternalAgent.generateEnrollmentToken(
-        environmentId || "env_prod_ecommerce",
-        secret,
-        24
-      );
-      const installScript = InternalAgent.generateInstallScript(token);
-
-      return NextResponse.json({
-        success: true,
-        token,
-        installScript,
-        expiresIn: "24 hours",
-      });
+      const tenant = await requireTenant();
+      const { origin } = agentReleaseConfiguration();
+      const enrollment = await issueEnrollment({ organizationId: tenant.organizationId, userId: tenant.user.id }, environmentId, body.hostname);
+      return NextResponse.json({ success: true, ...enrollment, installScript: `curl --proto '=https' --tlsv1.2 -fsS '${origin}/api/install' | sudo bash` },
+        { headers: { 'Cache-Control': 'no-store' } });
     }
 
-    // Action B: Real capability execution against internal agent
+    // A simulated local agent must never stand in for an enrolled device command.
     if (action === "execute_capability") {
-      const agent = new InternalAgent(serverId, "target-host");
-      const result = await agent.executeCapability(capability, params || {});
-
-      return NextResponse.json({
-        success: true,
-        result,
-      });
+      return NextResponse.json({ success: false, error: "Remote command delivery and persisted approval are not configured. No operation was performed." }, { status: 503 });
     }
-
     // Action C: Real out-of-band cloud recovery reboot
     if (action === "oob_cloud_reboot") {
       if (body.approved !== true || !serverId) return NextResponse.json({ success: false, error: "Server ID and explicit approval required" }, { status: 400 });
@@ -121,34 +105,9 @@ export async function POST(req: Request) {
       }, { status: result.status === "dispatched" ? 202 : 200 });
     }
 
-    // Action D: Real-time Neural Threat & Metric Diagnosis (<0.02ms)
     if (action === "diagnose_threat_neural") {
-      const rawMetrics = params?.metrics || params?.metric_snapshot || {};
-      const safeParams = {
-        serverId: serverId || params?.serverId || "srv_web_edge_01",
-        metrics: {
-          cpuPercent: rawMetrics.cpuPercent ?? rawMetrics.cpu ?? 45,
-          memPercent: rawMetrics.memPercent ?? rawMetrics.mem ?? rawMetrics.memory ?? 50,
-          socketCount: rawMetrics.socketCount ?? 120,
-        },
-        openPorts: params?.openPorts || [80, 443],
-        recentLogs: params?.recentLogs || ["System telemetry nominal"],
-        ...params,
-      };
-      if (!safeParams.metrics || typeof safeParams.metrics.memPercent !== "number") {
-        safeParams.metrics = {
-          cpuPercent: 45,
-          memPercent: 50,
-          socketCount: 120,
-        };
-      }
-      const analysis = LocalSecurityEngine.analyze(safeParams);
-      return NextResponse.json({
-        success: true,
-        analysis,
-      });
+      return NextResponse.json({ success: false, error: "Use authenticated chat diagnostics to inspect measured server data. No threat diagnosis was fabricated." }, { status: 422 });
     }
-
     // Action E: Real Ed25519 SSH Keypair Generation
     if (action === "generate_ssh_keypair") {
       const keypair = ServerAccessManager.generateSshKeypair(
@@ -182,70 +141,15 @@ export async function POST(req: Request) {
       });
     }
 
-    // Action H: Create Real Server Node in Supabase
     if (action === "create_server") {
-      const cookieStore = await cookies();
-      const supabase = createClient(cookieStore);
-
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("organization_id")
-        .eq("id", user.id)
-        .single();
-
-      const orgId = profile?.organization_id;
-
-      let envId = params?.environmentId;
-      if (!envId && orgId) {
-        const { data: env } = await supabase
-          .from("environments")
-          .select("id")
-          .eq("organization_id", orgId)
-          .limit(1)
-          .single();
-        envId = env?.id;
-      }
-
-      if (envId) {
-        const { data: newServer, error: createError } = await supabase
-          .from("servers")
-          .insert({
-            environment_id: envId,
-            hostname: params?.hostname || "web-edge-node-01",
-            ip_address: params?.ip || "198.51.100.50",
-            cloud_provider: params?.provider || "aws",
-            status: "healthy",
-          })
-          .select()
-          .single();
-
-        if (!createError && newServer) {
-          return NextResponse.json({
-            success: true,
-            server: newServer,
-          });
-        }
-      }
-
-      return NextResponse.json({
-        success: true,
-        message: "Server connected successfully",
-      });
+      return NextResponse.json({ success: false, error: "Use single-use enrollment to connect and verify a real server." }, { status: 422 });
     }
-
     return NextResponse.json(
       { success: false, error: `Unknown action: ${action}` },
       { status: 400 }
     );
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Internal Server Error";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ success: false, error: err instanceof DeviceError || err instanceof RequestError ? err.message : 'Server operation unavailable.' },
+      { status: err instanceof DeviceError || err instanceof RequestError ? err.status : 503 });
   }
 }

@@ -39,6 +39,8 @@ export class DockerWorkspaceManager {
   private allocatedPorts = new Set<number>();
   private busy = new Set<string>();
   private prepared = new Set<string>();
+  private relays = new Set<string>();
+  private egress = new Set<string>();
   constructor(private readonly run: DockerRunner = runDocker,
     private readonly allowedImages = (process.env.RYVIX_WORKSPACE_IMAGES || '').split(',').filter(Boolean).concat(DEFAULT_IMAGES)) {}
 
@@ -82,13 +84,17 @@ export class DockerWorkspaceManager {
       await this.checked(['network', 'create', '--internal', '--label', 'ryvix.workspace=true', network]);
       networkCreated = true;
       await this.checked(['run', '--detach', '--rm', '--name', container,
-        '--label', 'ryvix.workspace=true', '--user', '1000:1000', '--cap-drop', 'ALL',
+        '--label', 'ryvix.workspace=true', '--label', `ryvix.session=${id}`,
+        '--label', `ryvix.task=${options.taskId}`, '--label', `ryvix.project=${options.projectId}`,
+        '--user', '1000:1000', '--cap-drop', 'ALL',
         '--security-opt', 'no-new-privileges', '--read-only', '--pids-limit', '128',
         '--cpus', String(cpu), '--memory', `${ram}m`, '--memory-swap', `${ram}m`,
-        '--network', network, '--publish', `127.0.0.1:${port}:3000`,
+        '--network', network,
         '--tmpfs', '/tmp:rw,nosuid,nodev,size=256m',
         '--tmpfs', '/workspace:rw,nosuid,nodev,uid=1000,gid=1000,mode=0700,size=1024m',
-        '--workdir', '/workspace', '--env', 'HOME=/tmp', '--entrypoint', '/bin/sh',
+        '--workdir', '/workspace', '--env', 'HOME=/tmp',
+        '--env', `HTTPS_PROXY=http://${container}_egress:3128`, '--env', `https_proxy=http://${container}_egress:3128`,
+        '--env', 'NO_PROXY=localhost,127.0.0.1', '--env', 'no_proxy=localhost,127.0.0.1', '--entrypoint', '/bin/sh',
         image, '-c', `sleep ${Math.ceil(ttl * 60)}`], 120000);
       const now = Date.now();
       const session: WorkspaceSession = {
@@ -115,14 +121,24 @@ export class DockerWorkspaceManager {
   }
   async withRestrictedEgress<T>(id: string, operation: () => Promise<T>): Promise<T> {
     const session = this.session(id);
-    const network = process.env.RYVIX_WORKSPACE_EGRESS_NETWORK;
-    if (!network || !/^[a-zA-Z0-9_-]+$/.test(network)) throw new Error('A restricted workspace egress network is required');
-    const inspection = await this.checked(['network', 'inspect', '--format', '{{index .Labels "ryvix.egress"}}', network]);
-    if (inspection.stdout.trim() !== 'restricted') throw new Error('Workspace egress network is not approved');
-    await this.checked(['network', 'connect', network, session.container_id]);
-    try { return await operation(); }
+    const image = process.env.RYVIX_WORKSPACE_EGRESS_IMAGE;
+    if (!image || !this.allowedImages.includes(image)) throw new Error('An approved workspace egress broker image is required');
+    if (this.egress.has(id)) throw new Error('Workspace egress phase is already active');
+    const name = `${session.container_id}_egress`;
+    await this.checked(['run','--detach','--rm','--name',name,
+      '--label','ryvix.workspace=true','--label',`ryvix.session=${id}`,'--label','ryvix.role=egress-broker',
+      '--user','1000:1000','--cap-drop','ALL','--security-opt','no-new-privileges','--read-only',
+      '--pids-limit','32','--memory','128m','--memory-swap','128m','--cpus','0.5',
+      '--network','bridge','--env',`RYVIX_EGRESS_TTL_MS=${Math.max(1,Date.parse(session.expires_at)-Date.now())}`,image],120000);
+    this.egress.add(id);
+    try {
+      await this.checked(['network','connect',`${session.container_id}_net`,name]);
+      await this.checked(['exec',name,'node','-e',
+        "const n=require('net');let tries=0;function check(){const s=n.connect(3128,'127.0.0.1',()=>{s.destroy();process.exit(0)});s.on('error',()=>{s.destroy();if(++tries===30)process.exit(1);setTimeout(check,100)})}check()"],10000);
+      return await operation();
+    }
     finally {
-      try { await this.checked(['network', 'disconnect', network, session.container_id]); }
+      try { await this.checked(['rm','--force',name]); this.egress.delete(id); }
       catch { await this.terminateSession(id); throw new Error('Workspace egress isolation failed; sandbox terminated'); }
     }
   }
@@ -144,7 +160,8 @@ export class DockerWorkspaceManager {
   }
   async deleteFile(id: string, filename: string) {
     const session = this.session(id), target = this.filePath(filename);
-    await this.checked(['exec', session.container_id, 'rm', '--', target]);
+    await this.checked(['exec', session.container_id, '/bin/sh', '-c',
+      'path="$1"; while [ "$path" != /workspace ]; do [ ! -L "$path" ] || exit 1; path=$(dirname -- "$path"); done; rm -- "$1"', 'delete-file', target]);
   }
   async applyDiff(id: string, file: string | { filePath: string; patchContent?: string; newContent?: string; isNewFile?: boolean }, newContent?: string): Promise<AppliedDiffResult> {
     const session = this.session(id);
@@ -154,12 +171,13 @@ export class DockerWorkspaceManager {
     if (content.startsWith('diff --git ') || content.startsWith('--- ')) throw new Error('Unified patches must be resolved to full file contents before writing');
     const target = this.filePath(relative);
     await this.checked(['exec', '-i', session.container_id, '/bin/sh', '-c',
-      'parent=$(dirname -- "$1"); mkdir -p -- "$parent" || exit 1; resolved=$(realpath "$parent") || exit 1; case "$resolved" in /workspace|/workspace/*) ;; *) exit 1;; esac; [ ! -L "$1" ] || exit 1; cat > "$1"', 'write-file', target], 10000, content);
+      'path="$1"; while [ "$path" != /workspace ]; do [ ! -L "$path" ] || exit 1; path=$(dirname -- "$path"); done; parent=$(dirname -- "$1"); mkdir -p -- "$parent" || exit 1; cat > "$1"', 'write-file', target], 10000, content);
     return { filePath: relative, applied: true, bytesWritten: Buffer.byteLength(content), timestamp: new Date().toISOString() };
   }
   async readFile(id: string, file: string): Promise<string | null> {
     const session = this.session(id), target = this.filePath(file);
-    const result = await this.run(['exec', session.container_id, 'cat', '--', target], 10000);
+    const result = await this.run(['exec', session.container_id, '/bin/sh', '-c',
+      'path="$1"; while [ "$path" != /workspace ]; do [ ! -L "$path" ] || exit 1; path=$(dirname -- "$path"); done; cat -- "$1"', 'read-file', target], 10000);
     if (result.exitCode !== 0) throw new Error('Unable to read workspace file');
     return result.stdout;
   }
@@ -192,6 +210,22 @@ export class DockerWorkspaceManager {
     if (!command || command.length > 1024 || !origin.startsWith('https://')) throw new Error('Invalid preview configuration');
     await this.checked(['exec', '-d', '--env', 'PORT=3000', '--env', 'HOST=0.0.0.0', session.container_id,
       '/bin/sh', '-lc', `${command} > /tmp/ryvix-preview.log 2>&1`]);
+    // Docker does not publish ports for internal-only networks. A trusted relay
+    // bridges inbound traffic; the customer container never joins the public bridge.
+    const relay = `${session.container_id}_preview`;
+    const relayImage = process.env.RYVIX_PREVIEW_RELAY_IMAGE || 'node:22-alpine';
+    if (!this.allowedImages.includes(relayImage)) throw new Error('Preview relay image is not approved');
+    const lifetime = Math.max(1,Date.parse(session.expires_at)-Date.now());
+    const relayCode = `const net=require('node:net');const server=net.createServer(client=>{const upstream=net.connect(3000,${JSON.stringify(session.container_id)});client.setTimeout(15000);upstream.setTimeout(15000);const close=()=>{client.destroy();upstream.destroy()};client.on('error',close);upstream.on('error',close);client.on('timeout',close);upstream.on('timeout',close);client.on('close',()=>upstream.destroy());upstream.on('close',()=>client.destroy());client.pipe(upstream).pipe(client)});server.maxConnections=128;server.listen(3000,'0.0.0.0');setTimeout(()=>process.exit(0),${lifetime});`;
+    await this.checked(['run','--detach','--rm','--name',relay,
+      '--label','ryvix.workspace=true','--label',`ryvix.session=${id}`,'--label','ryvix.role=preview-relay',
+      '--user','1000:1000','--cap-drop','ALL','--security-opt','no-new-privileges','--read-only',
+      '--pids-limit','32','--memory','128m','--memory-swap','128m','--cpus','0.5',
+      '--network','bridge','--publish',`127.0.0.1:${session.preview_port}:3000`,
+      '--entrypoint','node',relayImage,'-e',relayCode],120000);
+    this.relays.add(id);
+    try { await this.checked(['network','connect',`${session.container_id}_net`,relay]); }
+    catch (error) { await this.run(['rm','--force',relay],10000); this.relays.delete(id); throw error; }
     const deadline = Math.min(Date.now() + 30000, Date.parse(session.expires_at));
     while (Date.now() < deadline) {
       try {
@@ -227,12 +261,90 @@ export class DockerWorkspaceManager {
     if (session.status === 'destroyed') return { ...session };
     session.status = 'terminating';
     clearTimeout(this.timers.get(id)); this.timers.delete(id);
+    if (this.egress.has(id)) {
+      const removed = await this.run(['rm','--force',`${session.container_id}_egress`],10000);
+      if (removed.exitCode !== 0 && !removed.stderr.includes('No such container')) throw new Error('Egress broker cleanup failed');
+      this.egress.delete(id);
+    }
+    if (this.relays.has(id)) {
+      const removedRelay = await this.run(['rm','--force',`${session.container_id}_preview`],10000);
+      if (removedRelay.exitCode !== 0 && !removedRelay.stderr.includes('No such container')) throw new Error('Preview relay cleanup failed');
+      this.relays.delete(id);
+    }
     const removed = await this.run(['rm', '--force', session.container_id], 10000);
     if (removed.exitCode !== 0 && !removed.stderr.includes('No such container')) throw new Error('Workspace container cleanup failed');
     const network = await this.run(['network', 'rm', `${session.container_id}_net`], 10000);
     if (network.exitCode !== 0 && !network.stderr.includes('not found')) throw new Error('Workspace network cleanup failed');
-    session.status = 'destroyed'; if (session.preview_port) this.allocatedPorts.delete(session.preview_port);
+    session.status = 'destroyed'; session.preview_url = null;
+    this.prepared.delete(id);
+    if (session.preview_port) this.allocatedPorts.delete(session.preview_port);
     return { ...session };
+  }
+
+  /** Restore only a persisted session whose Docker identity matches this worker. */
+  async restoreSession(persisted: WorkspaceSession): Promise<WorkspaceSession> {
+    const existing = this.activeSessions.get(persisted.id);
+    if (existing) {
+      if (existing.task_id !== persisted.task_id || existing.project_id !== persisted.project_id)
+        throw new Error('Workspace identity mismatch');
+      return { ...existing };
+    }
+    if (!/^[a-f0-9-]{36}$/.test(persisted.id) ||
+        persisted.container_id !== `ryvix_sbx_${persisted.id.replace(/-/g, '')}` ||
+        !Number.isFinite(Date.parse(persisted.expires_at))) throw new Error('Invalid persisted workspace');
+    const inspection = await this.checked(['inspect', persisted.container_id]);
+    const container = JSON.parse(inspection.stdout)[0];
+    const labels = container?.Config?.Labels;
+    if (labels?.['ryvix.workspace'] !== 'true' || labels?.['ryvix.session'] !== persisted.id ||
+        labels?.['ryvix.task'] !== persisted.task_id || labels?.['ryvix.project'] !== persisted.project_id ||
+        !container.State?.Running || container.Config.User !== '1000:1000')
+      throw new Error('Workspace is not available on this worker');
+    if (persisted.preview_url) {
+      const relayInspection = await this.checked(['inspect',`${persisted.container_id}_preview`]);
+      const relay = JSON.parse(relayInspection.stdout)[0];
+      const binding = relay?.NetworkSettings?.Ports?.['3000/tcp'];
+      if (relay?.Config?.Labels?.['ryvix.session'] !== persisted.id || relay.Config.Labels['ryvix.role'] !== 'preview-relay' ||
+          !Array.isArray(binding) || binding.length!==1 || binding[0].HostIp!=='127.0.0.1' || Number(binding[0].HostPort)!==persisted.preview_port)
+        throw new Error('Preview relay identity mismatch');
+      this.relays.add(persisted.id);
+    }
+    const session = { ...persisted };
+    this.activeSessions.set(session.id, session);
+    if (session.preview_port) this.allocatedPorts.add(session.preview_port);
+    const timer = setTimeout(() => { void this.terminateSession(session.id).catch(() => console.error('Workspace expiry cleanup failed')); },
+      Math.max(1, Date.parse(session.expires_at) - Date.now()));
+    timer.unref(); this.timers.set(session.id, timer);
+    return { ...session };
+  }
+  async cleanupPersistedSession(session: WorkspaceSession): Promise<void> {
+    if (!/^[a-f0-9-]{36}$/.test(session.id) || session.container_id !== `ryvix_sbx_${session.id.replace(/-/g, '')}`)
+      throw new Error('Invalid persisted workspace');
+    if (this.activeSessions.has(session.id)) { await this.terminateSession(session.id); return; }
+    // A worker can crash between creating a broker and persisting preview_url.
+    // Recover deterministic names only after verifying their ownership labels.
+    for (const [suffix, role] of [['egress','egress-broker'],['preview','preview-relay']]) {
+      const name = `${session.container_id}_${suffix}`;
+      const result = await this.run(['inspect',name],10000);
+      if (result.exitCode === 0) {
+        const labels = JSON.parse(result.stdout)[0]?.Config?.Labels;
+        if (labels?.['ryvix.workspace'] !== 'true' || labels?.['ryvix.session'] !== session.id || labels?.['ryvix.role'] !== role)
+          throw new Error('Workspace broker identity mismatch');
+        await this.checked(['rm','--force',name]);
+      } else if (!/No such (object|container)/i.test(result.stderr)) throw new Error('Workspace broker cleanup unavailable');
+    }
+    const inspected = await this.run(['inspect',session.container_id],10000);
+    if (inspected.exitCode === 0) {
+      await this.restoreSession({...session,preview_url:null});
+      await this.terminateSession(session.id);
+      return;
+    }
+    if (!/No such (object|container)/i.test(inspected.stderr)) throw new Error('Workspace worker unavailable');
+    const network = `${session.container_id}_net`;
+    const inspection = await this.run(['network','inspect','--format','{{index .Labels "ryvix.workspace"}}',network],10000);
+    if (inspection.exitCode === 0) {
+      if (inspection.stdout.trim() !== 'true') throw new Error('Workspace network identity mismatch');
+      await this.checked(['network','rm',network]);
+    } else if (!/not found|No such network/i.test(inspection.stderr)) throw new Error('Workspace network cleanup unavailable');
   }
   listSessions(): WorkspaceSession[] { return [...this.activeSessions.values()].map(session => ({ ...session })); }
   getSession(id: string): WorkspaceSession | null { const session = this.activeSessions.get(id); return session ? { ...session } : null; }

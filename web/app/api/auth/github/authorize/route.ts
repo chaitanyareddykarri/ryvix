@@ -1,10 +1,14 @@
 ﻿import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import crypto from "node:crypto";
+import { requireTenant, requireOperator, RequestError } from '@/utils/tenant-context';
+import { safeOAuthReturn } from '@/utils/oauth-return';
 
 export async function GET(request: Request) {
+  try { const tenant = await requireTenant(); requireOperator(tenant.role); }
+  catch (error) { return NextResponse.json({ error: 'GitHub connection permission required.' }, { status: error instanceof RequestError ? error.status : 503 }); }
   const { searchParams } = new URL(request.url);
-  const returnTo = searchParams.get("return_to") || "/dashboard";
+  const returnTo = safeOAuthReturn(searchParams.get("return_to"));
 
   const clientId = process.env.GITHUB_CLIENT_ID;
   const baseUrl = process.env.APP_BASE_URL || "http://localhost:3000";

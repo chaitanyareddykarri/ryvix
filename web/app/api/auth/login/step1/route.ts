@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { generateRandomOtp, createLoginOtpChallenge } from "@/utils/auth-security";
 import { maskEmail } from "@/utils/email-display";
 import { sendOtpEmail } from "@/utils/email-service";
+import { registerAuthChallenge } from "@/utils/auth-challenge-store";
 
 const supabaseUrl =
   process.env.NEXT_PUBLIC_SUPABASE_URL ||
@@ -55,6 +56,9 @@ export async function POST(request: Request) {
     // 4. Generate genuine cryptographically random 6-digit OTP and send via Resend
     const randomOtp = generateRandomOtp();
     const challengeToken = createLoginOtpChallenge(email, randomOtp, password);
+    if (!await registerAuthChallenge(challengeToken, email, 'login')) {
+      return NextResponse.json({ error: 'Too many verification requests. Please wait before trying again.' }, { status: 429 });
+    }
     const emailRes = await sendOtpEmail({
       to: email,
       otp: randomOtp,

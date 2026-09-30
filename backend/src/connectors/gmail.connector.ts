@@ -12,10 +12,7 @@
  * 3. Auditability: All inbound instructions and outbound alerts are logged to audit_events.
  */
 
-import { taskRepository } from '../repositories/task.repository';
-import { auditRepository } from '../repositories/audit.repository';
-import { db } from '../db';
-import type { Task, TaskType } from '@ryvix/database';
+import type { Task } from '@ryvix/database';
 
 export interface InboundEmailPayload {
   messageId: string;
@@ -48,91 +45,18 @@ export class GmailConnector {
     taskId?: string;
     error?: string;
   }> {
-    const cleanEmail = payload.senderEmail.trim().toLowerCase();
-
-    // 1. Locate the authorized user profile and organization in Supabase
-    // Using Supabase Auth user lookup via backend admin client
-    const { data: userData, error: userError } = await db
-      .from('profiles')
-      .select('id, organization_id, full_name, role')
-      .limit(1);
-
-    // In a multi-user environment, we resolve by matching profile id with auth.users
-    // For Phase 1, query the profile linked to the sender's auth record
-    if (userError || !userData || userData.length === 0) {
-      return {
-        success: false,
-        error: `Unauthorized sender: ${cleanEmail}. Email is not registered to an active Ryvix organization.`,
-      };
-    }
-
-    const profile = userData[0];
-
-    // 2. Locate the default or targeted project for this organization
-    const { data: projectData } = await db
-      .from('projects')
-      .select('id, name')
-      .eq('organization_id', profile.organization_id)
-      .limit(1);
-
-    if (!projectData || projectData.length === 0) {
-      return {
-        success: false,
-        error: `No active project found for organization ${profile.organization_id}.`,
-      };
-    }
-
-    const project = projectData[0];
-
-    // 3. Infer task type from subject or content
-    let taskType: TaskType = 'operational';
-    const lowerSubject = payload.subject.toLowerCase();
-    const lowerBody = payload.bodyText.toLowerCase();
-
-    if (lowerSubject.includes('bug') || lowerSubject.includes('fix') || lowerBody.includes('code') || lowerBody.includes('pr')) {
-      taskType = 'coding';
-    } else if (lowerSubject.includes('investigate') || lowerBody.includes('why') || lowerBody.includes('slow')) {
-      taskType = 'investigation';
-    } else if (lowerSubject.includes('restart') || lowerSubject.includes('reboot') || lowerBody.includes('recover')) {
-      taskType = 'recovery';
-    }
-
-    // 4. Create the Task record in Supabase
-    const newTask = await taskRepository.createTask({
-      project_id: project.id,
-      created_by: profile.id,
-      channel: 'gmail',
-      task_type: taskType,
-      user_prompt: `${payload.subject}\n\n${payload.bodyText.trim()}`,
-      status: 'queued',
-    });
-
-    if (!newTask) {
-      return { success: false, error: 'Failed to create task from email.' };
-    }
-
-    // 5. Immutably record the inbound email interaction
-    await auditRepository.recordEvent({
-      project_id: project.id,
-      actor_id: profile.id,
-      actor_type: 'user',
-      action_name: 'connector.gmail.inbound_task_received',
-      parameters_hash: `msg_${payload.messageId}`,
-      diff_summary: null,
-      status: 'success',
-      ip_address: null,
-    });
-
-    return {
-      success: true,
-      taskId: newTask.id,
-    };
+    // Raw sender headers are not proof of identity. No verified Gmail transport
+    // is configured here; do not resolve the first profile or enqueue any work.
+    return { success: false, error: 'Verified Gmail OAuth delivery and project sender mapping are not configured.' };
   }
 
   /**
    * Generates a clean HTML email notification digest for completed tasks or approval requests.
    */
   generateDigestHtml(payload: OutboundDigestPayload): string {
+    const escape = (value: string) => value.replace(/[&<>"']/g, character => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[character]!));
+    let diffUrl = '';
+    try { const url = new URL(payload.diffUrl || ''); if (url.protocol === 'https:' && !url.username && !url.password) diffUrl = escape(url.toString()); } catch {}
     const statusColor = payload.status === 'completed' ? '#10b981' : payload.status === 'failed' ? '#ef4444' : '#6366f1';
     
     return `
@@ -152,11 +76,11 @@ export class GmailConnector {
       </head>
       <body>
         <div class="container">
-          <span class="badge">${payload.status}</span>
-          <h2>${payload.taskTitle}</h2>
-          <p>${payload.taskSummary}</p>
-          ${payload.diffUrl ? `<p><a href="${payload.diffUrl}" class="btn">View Unified Diff & Preview</a></p>` : ''}
-          ${payload.requiresApproval ? `<p><strong>Action Required:</strong> Please reply directly to this email with <em>"Approved"</em> to proceed.</p>` : ''}
+          <span class="badge">${escape(payload.status)}</span>
+          <h2>${escape(payload.taskTitle)}</h2>
+          <p>${escape(payload.taskSummary)}</p>
+          ${diffUrl ? `<p><a href="${diffUrl}" class="btn">View Unified Diff & Preview</a></p>` : ''}
+          ${payload.requiresApproval ? `<p><strong>Action Required:</strong> Open Ryvix to review the changes and approve the action.</p>` : ''}
           <div class="footer">
             Ryvix Autonomous Software &amp; Infrastructure Operations Platform
           </div>

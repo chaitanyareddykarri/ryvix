@@ -34,13 +34,16 @@ export function verifyPreviewGrant(value: string, sessionId: string, now = Date.
 /** TLS terminates at the configured reverse proxy; the listener is loopback-only. */
 export async function ensurePreviewGateway() {
   key(); const base = domain();
+  const parent = new URL(process.env.RYVIX_PUBLIC_URL || '');
+  if (parent.protocol !== 'https:' || parent.username || parent.password || parent.pathname !== '/' || parent.search || parent.hash)
+    throw new Error('A public HTTPS application origin is required');
   if (gateway?.listening) return;
   if (gateway) throw new Error('Preview gateway is starting; retry');
   gateway = createServer((request, response) => {
     response.setHeader('Cache-Control', 'no-store');
     response.setHeader('Referrer-Policy', 'no-referrer');
     response.setHeader('X-Content-Type-Options', 'nosniff');
-    response.setHeader('Content-Security-Policy', "sandbox allow-scripts allow-forms; object-src 'none'; base-uri 'self'; frame-ancestors 'self' https:");
+    response.setHeader('Content-Security-Policy', `sandbox allow-scripts allow-forms; object-src 'none'; base-uri 'self'; frame-ancestors ${parent.origin}`);
     const host = request.headers.host || '';
     const id = host.endsWith(`.${base}`) ? host.slice(0, -(base.length + 1)) : '';
     const session = /^[a-f0-9-]{36}$/.test(id) ? dockerWorkspaceManager.getSession(id) : null;
@@ -67,6 +70,11 @@ export async function ensurePreviewGateway() {
       }
       for (const name of ['content-type', 'content-encoding', 'location']) if (result.headers[name]) response.setHeader(name, result.headers[name]!);
       response.writeHead(result.statusCode || 502);
+      let bytes = 0;
+      result.on('data', (chunk: Buffer) => {
+        bytes += chunk.length;
+        if (bytes > 32 * 1024 * 1024) { result.destroy(); response.destroy(); }
+      });
       result.pipe(response); // Node streams propagate downstream backpressure.
     });
     upstream.on('timeout', () => upstream.destroy(new Error('Preview timeout')));
@@ -75,6 +83,10 @@ export async function ensurePreviewGateway() {
     upstream.end();
   });
   gateway.on('upgrade', (_request, socket) => socket.destroy());
+  gateway.maxConnections = 128;
+  gateway.headersTimeout = 10000;
+  gateway.requestTimeout = 15000;
+  gateway.keepAliveTimeout = 5000;
   try {
     await new Promise<void>((resolve, reject) => {
       gateway!.once('error', reject);
@@ -85,7 +97,7 @@ export async function ensurePreviewGateway() {
 }
 export function previewOrigin(sessionId: string) { return `https://${sessionId}.${domain()}`; }
 export async function previewLaunchUrl(sessionId: string) {
-  await ensurePreviewGateway();
+  // The dedicated workspace worker owns the listener. Web processes only sign grants.
   const session = dockerWorkspaceManager.getSession(sessionId);
   if (!session?.preview_url || Date.parse(session.expires_at) <= Date.now()) throw new Error('Preview unavailable');
   return `${previewOrigin(sessionId)}/?__ryvix_grant=${signPreviewGrant(sessionId, Math.min(Date.now() + 60000, Date.parse(session.expires_at)))}`;

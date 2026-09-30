@@ -1,8 +1,41 @@
 # Current Task & Implementation State
 
-## Current priority: production remediation (2026-09-29)
+## Latest continuation: 2026-09-30
+
+Read [the current checkpoint](../docs/verification/COMPLETION_2026_09_30.md)
+before the historical notes below. Local work now includes durable OTP limits,
+repository job queue/worker, lifecycle cleanup, Docker session recovery, UI task
+polling, durable pre-GitHub approval, OAuth hardening and protected workflow-table
+migrations. Native agent simulations are test-only. Unverified Gmail inbound
+fails closed. These changes form the user-authorized review-branch checkpoint;
+migrations remain unapplied. OTP resend delivery failures now return the renewed
+encrypted challenge matching the ledger, preserving expiry and retry budgets.
+Next: persist GitHub selection credentials to the project Vault, reject failed
+repository saves in the UI, and restore Connect Server presentation.
+Official CA configuration enabled verified-TLS read-only database inspection;
+connections remain intermittent. The ledger contains only three 20260921 entries
+although task_artifacts already exists: reconcile drift before applying migrations.
+Real Docker isolation, egress broker, preview relay and crash cleanup checks pass;
+the native agent collected real metrics in Linux. Public preview/agent settings remain missing.
+Gmail/WhatsApp, deployment-result ingestion, authenticated operational dispatch
+and full live verification are still outstanding. Do not call the project complete.
+
+## Historical notes: production remediation (2026-09-29 and earlier)
+
+The progress notes and suite counts below preserve the earlier work history. Some
+of their next-step and pending statements were superseded by the 2026-09-30
+checkpoint above. For current status, use that checkpoint and the updated production
+remediation inventory; the completion of local work does not imply live rollout.
 
 Work is on `fix/production-remediation`, recovered from `1dc1aa9`.
+Checkpoint `3038b27` was pushed to that branch at the user's request. Subsequent
+dispatcher and Antigravity review fixes remain local. The dispatcher now requires
+HTTPS, rejects redirects, bounds request/response sizes and rejects unsuccessful
+or malformed acknowledgements. This does not establish device authentication.
+Antigravity's Vault migration error suppression was removed; duplicate ad-hoc
+migration entry points are disabled to preserve the canonical migration history.
+Its development-origin setting was preserved. No live migration/rotation success
+has been established. Password candidate arrays are now covered by the secret scanner.
 The user prioritized dashboard, diffs, PR shipping, repository sandboxes, previews,
 connections, telemetry/streaming, installer, tenant-scoped AI diagnostics and demo
 identity removal. The user has now requested a checkpoint commit and push, followed
@@ -21,16 +54,28 @@ Connection local gates passed (48 suites, typecheck, lint, all builds, secret sc
 Server display now reads scoped rollups with null/stale states (49 suites passed;
 typecheck/lint/build/secret scan passed). Agent collection failures and unsupported
 platforms no longer fabricate measurements; Go tests/vet and Linux cross-build passed.
-Next: authenticated ingestion and stream, secure
-enrollment, installer and diagnostics. Also resolve worker durability, preview reload/routing,
-and task lifecycle cleanup. Database migrations are NOT applied. Runtime credentials,
-Docker infrastructure, preview DNS/TLS and actual credential rotation remain unverified.
+At this earlier checkpoint, authenticated ingestion, enrollment, installer and
+diagnostics were listed as next steps. The latest checkpoint records those local
+implementations, their verification limits and the migrations/configuration still
+required before rollout.
+
+Update: signed-device enrollment/ingestion is implemented locally (ADR-009 and
+20260929000002 migration). Invitations are one-use, expire in ten minutes and bind
+one reserved server. Ed25519 requests enforce replay/rate/size/freshness limits;
+only authenticated minute rollups are displayed. Native agent stores a private
+device identity and signs requests. 51 suites, typecheck/lint/all builds, Go
+tests/vet and secret scan passed. A verified-TLS live database probe failed;
+preview domain and agent release manifest were unconfigured. No migration was
+applied or live enrollment certified. SSE/installer/UI wiring is the next phase.
 
 See [the remediation checklist](../docs/verification/PRODUCTION_REMEDIATION.md)
 for findings, dependencies, verification evidence and external blockers. The
 completion and test-count claims below are historical, not current certification.
 
-## Active Milestone: Phase 1–4 Completed, 39 Test Suites Passing, Frontier Deep Learning & Zero-Collision Architecture Active
+## Historical milestone heading
+
+The following milestone claims and test counts are historical project notes, not
+current production-readiness claims. See the latest checkpoint linked above.
 
 ### 1. Completed Deliverables
 - [x] **Path 1 (The AI Coding & Workspace Pipeline)**:

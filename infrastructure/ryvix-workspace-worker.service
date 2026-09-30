@@ -1,0 +1,25 @@
+[Unit]
+Description=Ryvix repository workspace worker
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+User=ryvix-worker
+Group=ryvix-worker
+SupplementaryGroups=docker
+WorkingDirectory=/opt/ryvix/current
+EnvironmentFile=/etc/ryvix/worker.env
+ExecStart=/usr/bin/node --import tsx scripts/workspace-worker.ts
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=960
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/ryvix/current/ai/data
+
+[Install]
+WantedBy=multi-user.target

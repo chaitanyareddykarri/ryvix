@@ -1,3 +1,4 @@
+import { seedHealthFixtures } from './health-fixtures';
 import { testFrontierDeepLearning } from './frontier-deep-learning.test';
 import { testAiSelfUnderstandingAndCodingSpace } from './ai-self-understanding-and-coding-space.test';
 import { testDeepCognitiveArchitecture } from './deep-cognitive-architecture.test';
@@ -57,7 +58,18 @@ async function runAllTests() {
   let passed = 0;
   let failed = 0;
 
+  seedHealthFixtures();
   const testCases: { name: string; fn: () => Promise<void> }[] = [
+    { name: 'PR Approval Durability, Reauthorization and Retry', fn: (await import('./pr-shipping-approval.test')).testPrShippingApproval },
+    { name: 'Durable Repository Job Queue and Lease Boundaries', fn: (await import('./repository-job-store.test')).testRepositoryJobStore },
+    { name: 'Gmail Unverified Sender and Digest Escaping', fn: (await import('./gmail-boundary.test')).testGmailBoundary },
+    { name: 'Durable OTP Consumption, Resend and Secret Isolation', fn: (await import('./auth-challenge-store.test')).testAuthChallengeStore },
+    { name: 'Task Cancellation, Authorization and Cleanup Retry', fn: (await import('./task-lifecycle.test')).testTaskLifecycle },
+    { name: 'Signed Device Protocol and Measured Telemetry', fn: (await import('./device-protocol.test')).testDeviceProtocol },
+    { name: 'Pinned Agent Installer and Integrity Boundaries', fn: (await import('./agent-installer.test')).testAgentInstaller },
+    { name: 'Telemetry SSE Authentication and Backpressure', fn: (await import('./telemetry-stream.test')).testTelemetryStream },
+    { name: 'Diagnostic Context Tenant Scope and Missing Data', fn: (await import('./diagnostic-context.test')).testDiagnosticContext },
+    { name: 'Device Ingestion Transactions, Replay and Revocation', fn: (await import('./device-ingestion.test')).testDeviceIngestion },
     { name: 'Server Telemetry Freshness and Tenant Authorization', fn: testServerTelemetry },
     { name: 'Dashboard Tenant Scoping, Empty Results and Honest Failures', fn: testDashboardData },
     { name: 'Measured Task Artifact Diffs', fn: testTaskArtifacts },

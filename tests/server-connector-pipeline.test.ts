@@ -1,6 +1,6 @@
 import { fakeCloud, testApproval, healthyProbe as fixtureProbe } from './helpers/execution-fixtures';
 import assert from 'node:assert/strict';
-import { InternalAgent } from '../services/src/connector/internal-agent';
+import { InternalAgent } from './helpers/internal-agent-fixture';
 import { CloudRecoveryBridge } from '../services/src/connector/cloud-recovery.bridge';
 
 export async function testServerConnectorPipeline() {

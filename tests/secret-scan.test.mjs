@@ -4,6 +4,19 @@ import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import { scanText } from '../scripts/check-secrets.mjs';
 
+test('password candidate arrays are rejected without revealing candidates', () => {
+  const secret = randomBytes(24).toString('hex');
+  for (const name of ['passwords', 'passwordCandidates', 'candidatePasswords']) {
+    for (const separator of ['', '\n']) {
+      const source = `const ${name} = [${separator}'${secret}'${separator}];`;
+      const findings = scanText('scripts/probe.js', source);
+      assert.equal(findings[0]?.rule, 'hardcoded-password-candidates');
+      assert.equal(JSON.stringify(findings).includes(secret), false);
+    }
+  }
+  assert.equal(scanText('scripts/check.js', 'const passwords = [process.env.DATABASE_PASSWORD];').length, 0);
+});
+
 test('database credentials are rejected without returning their value', () => {
   const secret = randomBytes(24).toString('hex');
   const url = ['postgresql:', '//postgres:', secret, '@db.example.test:5432/postgres'].join('');

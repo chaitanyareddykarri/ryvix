@@ -2,11 +2,13 @@ import { RepositoryAnalyzer } from '../../../backend/src/connectors/github.conne
 import { codingAssistant } from '@ryvix/ai';
 import { dockerWorkspaceManager as manager } from './docker-workspace.manager';
 import { previewOrigin, ensurePreviewGateway } from './preview-gateway';
+import { repositoryPreviewCommand } from './preview-command';
 
 /** Worker orchestration; customer commands are executed exclusively by DockerWorkspaceManager. */
 export async function executeRepositoryTask(input: {
   taskId: string; projectId: string; fullName: string; branch: string; githubToken: string; prompt: string;
   onPlan: (summary: string, steps: string[]) => Promise<void>;
+  onSession?: (session: Awaited<ReturnType<typeof manager.createSession>>) => Promise<void>;
 }) {
   if (!/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+$/.test(input.fullName)) throw new Error('Invalid GitHub repository');
   const api = async (suffix: string) => {
@@ -39,6 +41,7 @@ export async function executeRepositoryTask(input: {
   if (!image) throw new Error(`Approved workspace image is not configured for ${profile.stack}`);
   const session = await manager.createSession({ taskId: input.taskId, projectId: input.projectId, baseImage: image });
   try {
+    await input.onSession?.(session);
     await manager.cloneRepository(session.id, input.fullName, input.branch, input.githubToken, baseSha);
     const terms = input.prompt.toLowerCase().split(/\W+/).filter(term => term.length > 3);
     const candidates = entries.filter((f: any) => /\.(tsx?|jsx?|py|go|rs|css|html|md)$/.test(f.path) &&
@@ -77,7 +80,7 @@ export async function executeRepositoryTask(input: {
       try {
         await ensurePreviewGateway();
         // PORT=3000 is supplied to the detected application's own start script.
-        const command = profile.stack === 'nextjs' ? 'npm run dev -- --hostname 0.0.0.0 --port 3000' : 'npm run start';
+        const command = repositoryPreviewCommand(profile.stack,profile.packageManager,pkg)!;
         await manager.startPreview(session.id, command, previewOrigin(session.id));
       } catch { previewError = 'Preview unavailable. Check the gateway configuration and application startup logs.'; }
     }

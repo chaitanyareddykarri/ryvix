@@ -91,6 +91,27 @@ export default function WebChatPage() {
   const [activeTab, setActiveTab] = useState<"chat" | "diff" | "preview">("chat");
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [activeDiff, setActiveDiff] = useState<DiffPayload | null>(null);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [selectedTask, setSelectedTask] = useState('');
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [taskError, setTaskError] = useState('');
+  useEffect(() => {
+    const abort = new AbortController();
+    fetch('/api/tasks', { signal: abort.signal }).then(async response => {
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Tasks unavailable.');
+      setTasks(data.tasks);
+    }).catch(error => { if (!abort.signal.aborted) setTaskError(error.message); });
+    return () => abort.abort();
+  }, []);
+  function selectTask(id: string) {
+    setSelectedTask(id);
+    const task = tasks.find(task => task.id === id);
+    const files = task?.result?.files;
+    setActiveDiff(files?.length ? { diff: files.map((file: any) => file.diff).join('\n'), filesChanged: files.map((file: any) => file.filename) } : null);
+    setPreviewUrl(task?.workspace?.previewUrl || null);
+    setTaskError(id && !files?.length ? 'Diff not available.' : '');
+  }
   const [expandedThoughts, setExpandedThoughts] = useState<Record<string, boolean>>({});
   const [approvedActions, setApprovedActions] = useState<Record<string, boolean>>({});
 
@@ -122,7 +143,7 @@ export default function WebChatPage() {
     const systemAckMsg: ChatMessage = {
       id: `ack_${Date.now()}`,
       role: "system",
-      content: `✅ **Action Authorized & Executed**: ` + actionName + `\nExecution status dispatched to Ryvix Cluster Orchestrator with audit record created.`,
+      content: `This chat card cannot execute ${actionName}. Use the task or server approval workflow. No operation was performed.`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
     setMessages(prev => [...prev, systemAckMsg]);
@@ -166,7 +187,8 @@ export default function WebChatPage() {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: Failed to communicate with Ryvix AGI.`);
+        const failure = await response.json().catch(() => null);
+        throw new Error(failure?.error || `Chat request failed (HTTP ${response.status}).`);
       }
 
       if (!response.body) {
@@ -299,7 +321,10 @@ export default function WebChatPage() {
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.85rem", color: "#94a3b8" }}>
             <span>Project:</span>
             <span style={{ color: "#f1f5f9", fontWeight: 600, background: "rgba(255,255,255,0.06)", padding: "0.2rem 0.5rem", borderRadius: "4px" }}>
-              prod-core-infrastructure (main)
+              <select aria-label="Task" value={selectedTask} onChange={event => selectTask(event.target.value)}>
+                <option value="">Select a task for diff / preview</option>
+                {tasks.map(task => <option key={task.id} value={task.id}>{task.summary || task.user_prompt}</option>)}
+              </select>
             </span>
           </div>
         </div>
@@ -310,10 +335,9 @@ export default function WebChatPage() {
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", fontSize: "0.78rem" }}>
             <span style={{ display: "flex", alignItems: "center", gap: "0.35rem", color: "#34d399", background: "rgba(16, 185, 129, 0.15)", padding: "0.2rem 0.55rem", borderRadius: "9999px", border: "1px solid rgba(16, 185, 129, 0.3)" }}>
               <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#34d399", boxShadow: "0 0 8px #34d399" }} />
-              Cluster Healthy
+              Diagnostics on request
             </span>
-            <span style={{ color: "#94a3b8" }}>CPU: <strong style={{ color: "#cbd5e1" }}>18%</strong></span>
-            <span style={{ color: "#94a3b8" }}>RAM: <strong style={{ color: "#cbd5e1" }}>32%</strong></span>
+            {taskError && <span role="alert">{taskError}</span>}
           </div>
 
           <div style={{ height: "18px", width: "1px", background: "rgba(255, 255, 255, 0.15)" }} />
@@ -684,15 +708,17 @@ export default function WebChatPage() {
                       <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#10b981" }} />
                     </div>
                     <span style={{ fontSize: "0.75rem", color: "#94a3b8", background: "rgba(0,0,0,0.3)", padding: "0.15rem 0.5rem", borderRadius: "4px", flex: 1, textAlign: "center" }}>
-                      http://localhost:3000/preview/temp-ws-4819
+                      {previewUrl || 'Preview unavailable.'}
                     </span>
                   </div>
 
-                  <iframe
-                    src="/"
+                  {previewUrl ? <iframe
+                    src={previewUrl}
                     title="Live App Preview"
+                    sandbox="allow-scripts allow-forms allow-same-origin"
+                    referrerPolicy="no-referrer"
                     style={{ flex: 1, border: "none", width: "100%", background: "#fff" }}
-                  />
+                  /> : <p>Preview unavailable.</p>}
                 </div>
               </div>
             )}

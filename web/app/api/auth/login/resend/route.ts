@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { generateRandomOtp, renewLoginChallenge } from "@/utils/auth-security";
 import { sendOtpEmail } from "@/utils/email-service";
+import { registerAuthChallenge } from "@/utils/auth-challenge-store";
 
 export async function POST(request: Request) {
   try {
@@ -33,23 +34,23 @@ export async function POST(request: Request) {
     } catch {
       return NextResponse.json({ error: "Invalid or expired session. Please sign in again." }, { status: 401 });
     }
+    if (!await registerAuthChallenge(newChallenge, email, 'login', challengeCookie)) {
+      return NextResponse.json({ error: 'Verification request expired or rate limited. Please wait and restart login.' }, { status: 429 });
+    }
     const emailRes = await sendOtpEmail({
       to: email,
       otp: newOtp,
       type: "login",
-    });
+    }).catch(() => ({ success: false }));
 
-    if (!emailRes.success) {
-      return NextResponse.json(
-        { error: "Failed to resend verification code. Please wait a moment and try again." },
-        { status: 500 }
-      );
-    }
-
-    const response = NextResponse.json({
+    // The ledger already replaced the old token. Return its matching cookie even
+    // when delivery fails, so a later resend can pass the token-hash check.
+    const response = emailRes.success ? NextResponse.json({
       success: true,
       message: "A fresh 6-digit verification code has been dispatched to your email.",
-    });
+    }) : NextResponse.json({
+      error: "Could not deliver the code. Wait one minute before resending; if the session expires, restart login.",
+    }, { status: 502 });
 
     response.cookies.set("ryvix_login_challenge", newChallenge, {
       httpOnly: true,
