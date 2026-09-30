@@ -1,5 +1,14 @@
 # Current Task & Implementation State
 
+## Worker deployment readiness follow-up (2026-10-01)
+
+The runtime check preserves deployment-injected environment values and requires
+a supported cloud LLM credential, without claiming provider availability. See
+`docs/infrastructure/WORKER_DEPLOYMENT.md`: production Compose starts web only;
+the existing systemd unit starts the worker separately on the Docker host.
+Customer code stays inside containers after deployment. Live worker/provider
+execution, production settings and multi-host routing remain unverified.
+
 ## Latest continuation: 2026-09-30
 
 Audit continuation: fixed the workspace route's wrong-process command path and

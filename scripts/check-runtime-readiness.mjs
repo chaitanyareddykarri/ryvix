@@ -1,11 +1,12 @@
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
-import { parseEnv } from 'node:util';
+import { loadRuntimeEnvironment, hasCloudModelCredential } from './runtime-environment.mjs';
 const require = createRequire(import.meta.url);
-// Same precedence as local application configuration. Never print values/errors.
-for (const file of ['.env', '.env.local', 'web/.env.local']) {
-  if (fs.existsSync(file)) Object.assign(process.env, parseEnv(fs.readFileSync(file, 'utf8')));
-}
+// Never override deployment-injected settings or print their values.
+loadRuntimeEnvironment();
+const cloudModelConfigured = hasCloudModelCredential();
+console.log(`Cloud coding model credential: ${cloudModelConfigured ? 'configured (provider availability not tested)' : 'missing'}`);
+if (!cloudModelConfigured) process.exitCode = 1;
 const required = ['DATABASE_URL', 'AUTH_CHALLENGE_SECRET', 'PREVIEW_BASE_DOMAIN',
   'PREVIEW_SIGNING_SECRET', 'RYVIX_PUBLIC_URL', 'RYVIX_AGENT_RELEASE_MANIFEST',
   'RYVIX_WORKSPACE_NODE_IMAGE', 'RYVIX_WORKSPACE_EGRESS_IMAGE'];
