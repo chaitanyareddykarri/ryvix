@@ -1,5 +1,11 @@
 # Supabase migration rollout — 2026-09-30
 
+Subsequent continuation applied `20260930000005_verified_deployment_events.sql`.
+The expanded verifier passes 35 checks, including deployment records and browser
+repository mutation denial. `npm run verify:deployment` verifies real SQL event/
+audit insertion and deduplication with synthetic fixtures, then rolls them back.
+Earlier Vault create/decrypt and OTP attempt-budget transaction checks also passed.
+
 User explicitly authorized live migration. Used Supabase CLI 2.118.0 against the
 configured cloud database with verify-full TLS and the official CA. Credentials
 were supplied through the child process environment, not command arguments,

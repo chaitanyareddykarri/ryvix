@@ -1,6 +1,9 @@
 # Ryvix Current Project Context
 
 > Latest checkpoint (2026-09-30): see docs/verification/COMPLETION_2026_09_30.md.
+> Deployment events are now persisted from signed GitHub webhooks (ADR-016), with
+> migration 20260930000005 applied and 35 database-boundary checks passing.
+> Provider event delivery and runtime-health correlation are not yet certified.
 > Live migration rollout now completed through 20260930000004; all 31 read-only
 > database-boundary checks pass. Prior missing-migration notes below are historical.
 > Production preview/release/image configuration and live integration tests remain.

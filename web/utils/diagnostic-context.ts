@@ -7,7 +7,7 @@ export async function diagnosticContext(organizationId: string, userId: string) 
   const args = [organizationId, userId];
   const scope = `JOIN environments e ON e.id=s.environment_id JOIN projects p ON p.id=e.project_id
     JOIN organization_members m ON m.organization_id=p.organization_id AND m.user_id=$2`;
-  const [servers, health, incidents, security, deploymentAudit] = await Promise.all([
+  const [servers, health, incidents, security, deploymentAudit, deploymentEvents] = await Promise.all([
     queryDirectDb(`SELECT s.id,s.hostname,s.status,c.last_heartbeat_at,t.last_sample_at AS bucket_timestamp,
       t.cpu_avg,t.ram_percent,t.disk_used_percent FROM servers s ${scope}
       LEFT JOIN connectors c ON c.id=s.connector_id AND c.environment_id=s.environment_id
@@ -27,10 +27,18 @@ export async function diagnosticContext(organizationId: string, userId: string) 
       JOIN organization_members m ON m.organization_id=p.organization_id AND m.user_id=$2
       WHERE p.organization_id=$1 AND (a.action_name LIKE 'deployment.%' OR a.action_name LIKE 'deploy.%')
       ORDER BY a.timestamp DESC LIMIT 10`, args),
+    queryDirectDb(`SELECT d.github_deployment_id,d.github_status_id,d.commit_sha,d.environment,d.state,
+      d.provider_created_at,d.received_at,r.full_name FROM deployment_events d
+      JOIN repositories r ON r.id=d.repository_id JOIN projects p ON p.id=r.project_id
+      JOIN organization_members m ON m.organization_id=p.organization_id AND m.user_id=$2
+      WHERE p.organization_id=$1 ORDER BY d.provider_created_at DESC,d.github_status_id DESC LIMIT 20`, args),
   ]);
   return { observedAt: new Date().toISOString(), servers: servers.map(server => ({ id: server.id,
     hostname: server.hostname, recordedStatus: server.status, lastHeartbeat: server.last_heartbeat_at,
     ...serverTelemetry(server) })), healthChecks: health, incidents, securityEvents: security,
-    deployments: { recordsAvailable: false, explanation: 'No persisted deployment result integration is configured. Audit actions do not prove deployment success.',
+    deployments: { recordsAvailable: deploymentEvents.length > 0, records: deploymentEvents,
+      runtimeHealthVerified: false,
+      explanation: deploymentEvents.length ? 'Verified GitHub provider observations; these do not prove runtime health. Status history may include older states.'
+        : 'No verified deployment status events have been received for this organization. Audit actions do not prove deployment success.',
       auditActivity: deploymentAudit } };
 }

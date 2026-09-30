@@ -75,10 +75,10 @@ export class RepositoryConnectionStore {
       await client.query(`INSERT INTO connector_credentials(connector_id,credential_type,vault_secret_ref)
         VALUES($1,'oauth_token',$2)`, [connectionId, secret.rows[0].id]);
       await client.query("UPDATE connectors SET status='active',updated_at=now() WHERE id=$1", [connectionId]);
-      const saved = await client.query(`INSERT INTO repositories(project_id,github_repo_id,full_name,default_branch,clone_url,is_private)
-        VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT (project_id, github_repo_id) DO UPDATE SET
+      const saved = await client.query(`INSERT INTO repositories(project_id,github_repo_id,full_name,default_branch,clone_url,is_private,github_verified_at)
+        VALUES($1,$2,$3,$4,$5,$6,now()) ON CONFLICT (project_id, github_repo_id) DO UPDATE SET
         full_name=EXCLUDED.full_name,default_branch=EXCLUDED.default_branch,clone_url=EXCLUDED.clone_url,
-        is_private=EXCLUDED.is_private,updated_at=now()
+        is_private=EXCLUDED.is_private,github_verified_at=now(),updated_at=now()
         RETURNING id,project_id,github_repo_id,full_name,default_branch,clone_url,is_private,detected_stack`,
       [projectId, repository.id, repository.full_name, branch, `https://github.com/${repository.full_name}.git`, repository.private]);
       await client.query(`INSERT INTO audit_events(project_id,actor_id,actor_type,action_name,parameters_hash,diff_summary,status)

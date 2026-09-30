@@ -2,6 +2,15 @@
 
 ## Latest continuation: 2026-09-30
 
+Deployment continuation: ADR-016 and migration 20260930000005 are implemented
+and applied. `/api/webhooks/github` persists signed deployment_status events for
+verified repositories, with deduplication and atomic audits. Tenant diagnostics
+read provider status history without claiming runtime health. 61 project suites,
+typecheck/lint/build, 35 live database-boundary checks and the rolled-back live
+SQL deployment smoke test pass. Public GitHub delivery remains unverified.
+Remaining implementation includes Gmail/WhatsApp, authenticated server commands,
+runtime-health correlation and the broader historical API/tenant review.
+
 Live migration update: the user authorized migration. Supabase CLI repaired the
 verified artifact-history entry and applied the six remaining migrations through
 20260930000004. The pending Vault migration needed a non-suppressing ACL fix for

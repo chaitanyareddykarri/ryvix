@@ -1,5 +1,10 @@
 # Production remediation progress
 
+Deployment continuation: ADR-016/migration 20260930000005 add signed GitHub
+deployment-status persistence, deduplication, audits and tenant diagnostic reads.
+The migration is applied; 61 suites and 35 database-boundary checks pass, along
+with a rolled-back real SQL smoke test. Public delivery/runtime health remain open.
+
 Live rollout supersedes pending-migration notes below:
 [migration rollout](MIGRATION_ROLLOUT_2026_09_30.md). The artifact ledger entry was
 repaired and six pending migrations applied; all 31 database-boundary checks pass.

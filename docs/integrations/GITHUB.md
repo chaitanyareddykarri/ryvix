@@ -24,6 +24,14 @@ Ryvix integrates with GitHub via a registered **GitHub App**. Using a GitHub App
 
 ## 3. Webhook Handling & Lifecycle Events
 
+Current implementation (ADR-016): `/api/webhooks/github` verifies bounded raw
+JSON bodies using HMAC-SHA256 and persists `deployment_status` events. Ping is
+acknowledged; other event types below are planned, not implemented by this route.
+Only repositories reverified through the connection service receive events.
+Configure a server-only random `GITHUB_WEBHOOK_SECRET` of at least 32 characters
+and subscribe to deployment statuses on the authorized GitHub webhook/App.
+Provider success is displayed as a provider observation, not verified runtime health.
+
 Ryvix registers a webhook listener in the Backend API (`/api/webhooks/github`):
 - `push`: Detects when code is deployed by developers or CI/CD to initiate runtime health verification.
 - `pull_request`: Tracks when PRs opened by Ryvix are reviewed, approved, or merged.

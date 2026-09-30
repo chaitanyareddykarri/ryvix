@@ -21,6 +21,7 @@
     "worker:workspaces": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/workspace-worker.ts",
     "verify:runtime": "node scripts/check-runtime-readiness.mjs",
     "verify:database": "node scripts/verify-database-boundaries.mjs",
+    "verify:deployment": "tsx scripts/verify-deployment-live.ts",
     "train": "npm run train:ai && npm run train:deep",
     "train:all": "npm run train:ai && npm run train:deep",
     "train:ai": "tsx ai/scripts/train-local-model.ts",

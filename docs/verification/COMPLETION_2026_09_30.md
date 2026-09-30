@@ -2,6 +2,11 @@
 
 ## Implemented in this continuation
 
+- Deployment status ingestion (ADR-016): bounded HMAC-verified GitHub webhook,
+  verified repository mapping, durable deduplicated events and atomic audits.
+  Tenant diagnostics expose curated provider facts; runtime health is explicitly
+  unverified. Migration 20260930000005 is applied. Existing repositories must be
+  reconnected before receiving trusted events; no trust was backfilled.
 - Durable OTP ledger: one-use consumption, five-attempt budget, resend replacement,
   cooldown and send limits. Plaintext passwords/OTPs never enter ledger rows.
   Resend delivery failures (including thrown transport errors) return the renewed
@@ -110,7 +115,7 @@ with the Node and egress image variables configured before rollout.
 
 ## Local verification
 
-- `npm test`: 60 project suites passed, zero failed; 10 Node scanner/proxy tests passed.
+- `npm test`: 61 project suites passed, zero failed; 10 Node scanner/proxy tests passed.
 - `npm run typecheck`: passed across all workspaces.
 - `npm run lint`: passed with no ESLint warnings/errors (Next lint CLI deprecation notice).
 - Real Docker workspace and native Linux agent checks passed as detailed above.
@@ -120,7 +125,12 @@ with the Node and egress image variables configured before rollout.
 - All 12 AI runtime-data files restored byte-for-byte from the pre-test backup;
   no AI runtime-data diff remains. User authorized committing and pushing this
   checkpoint to the review branch; the Git history records publication.
-- `npm run verify:database`: all 31 live read-only boundary checks passed.
+- `npm run verify:database`: all 35 live read-only boundary checks passed.
+- `npm run verify:deployment`: real SQL event/audit persistence and redelivery
+  deduplication passed; all synthetic fixtures were rolled back. This does not
+  claim actual GitHub delivery or application deployment.
+- Vault create/decrypt and OTP five-attempt SQL smoke tests passed in a rolled-back
+  transaction; temporary secret absence was verified afterward.
 - `npm run verify:runtime`: not ready; required production settings
   are missing. Database TLS, required tables and migration history checks passed. The check exits nonzero
   for missing settings/tables/migration ledger entries, even when TLS connects.
@@ -134,7 +144,8 @@ with the Node and egress image variables configured before rollout.
   outstanding; typecheck/build do not establish visual/browser correctness.
 - Gmail OAuth/provider delivery, authorized sender mapping and idempotent inbound
   processing; WhatsApp signed gateway and approved commands.
-- Durable deployment-result ingestion and verified runtime health correlation.
+- Live GitHub deployment webhook delivery and verified runtime health correlation;
+  durable signed-event ingestion is implemented and SQL-verified.
 - Authenticated server-command dispatch with persisted approvals and execution receipts.
 - Full tenant/RLS review beyond the protected tables; supported Supabase signup
   provisioning and other historical API paths still need review.

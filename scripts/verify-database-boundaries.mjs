@@ -38,11 +38,11 @@ try {
       EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
         WHERE n.nspname='vault' AND c.relkind IN ('r','v','m') AND has_table_privilege($1,c.oid,'SELECT')) AS secret_access`, [role]);
     check(`${role}: no Vault access`, Object.values(vault.rows[0]).every(value => value === false));
-    for (const table of ['auth_challenge_limits','repository_jobs','connector_enrollments','connector_telemetry_receipts','connector_credentials']) {
+    for (const table of ['auth_challenge_limits','repository_jobs','connector_enrollments','connector_telemetry_receipts','connector_credentials','deployment_events']) {
       const result = await client.query(`SELECT has_table_privilege($1,$2,'SELECT,INSERT,UPDATE,DELETE') AS allowed`, [role, `public.${table}`]);
       check(`${role}: ${table} is backend-only`, !result.rows[0].allowed);
     }
-    for (const table of ['tasks','plans','approval_requests','workspace_sessions','pull_requests','connectors','telemetry_metric_rollups']) {
+    for (const table of ['tasks','plans','approval_requests','workspace_sessions','pull_requests','connectors','telemetry_metric_rollups','repositories']) {
       const result = await client.query(`SELECT has_table_privilege($1,$2,'INSERT,UPDATE,DELETE') AS allowed`, [role, `public.${table}`]);
       check(`${role}: no direct ${table} mutations`, !result.rows[0].allowed);
     }
