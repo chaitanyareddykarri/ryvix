@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { RepositoryAnalyzer } from "@/utils/repository-analyzer";
+import { requireTenant, RequestError } from '@/utils/tenant-context';
 
 export const dynamic = "force-dynamic";
 
 async function handleAnalysis(owner: string | null, repo: string | null, requestedBranch: string | null) {
+  try { await requireTenant(); } catch (error) {
+    return NextResponse.json({ success: false, error: 'Authentication or organization access required.' },
+      { status: error instanceof RequestError ? error.status : 503 });
+  }
   if (!owner || !repo) {
     return NextResponse.json(
       { success: false, error: "Repository owner and name are required." },

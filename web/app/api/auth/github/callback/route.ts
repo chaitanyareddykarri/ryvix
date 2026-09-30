@@ -1,6 +1,5 @@
 ﻿import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { createClient } from "@/utils/supabase/server";
 import { requireTenant, requireOperator, RequestError } from '@/utils/tenant-context';
 import { safeOAuthReturn } from '@/utils/oauth-return';
 
@@ -69,7 +68,7 @@ export async function GET(request: Request) {
     }
 
     const accessToken = tokenData.access_token;
-    const tokenScope = tokenData.scope || "";
+
 
     // 2. Fetch authenticated GitHub user details
     const ghUserRes = await fetch("https://api.github.com/user", {
@@ -86,43 +85,10 @@ export async function GET(request: Request) {
 
     const ghUser = await ghUserRes.json();
 
-    // 3. Link with Supabase User & Organization
-    const supabase = createClient(cookieStore);
-    const {
-      data: { user: supabaseUser },
-    } = await supabase.auth.getUser();
-    if (!supabaseUser) throw new Error('Session expired during GitHub authorization.');
-
-    if (supabaseUser) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("organization_id")
-        .eq("id", supabaseUser.id)
-        .single();
-
-      const orgId = profile?.organization_id;
-      if (!orgId) throw new Error('Organization unavailable during GitHub authorization.');
-
-      if (orgId) {
-        // Upsert repository installation matching exact schema
-        const installation = await supabase.from("repository_installations").upsert(
-          {
-            organization_id: orgId,
-            installation_id: Number(ghUser.id),
-            account_login: ghUser.login,
-            account_type: ghUser.type === "Organization" ? "organization" : "user",
-            permissions: {
-              scope: tokenScope,
-              connected_at: new Date().toISOString(),
-              target_login: ghUser.login,
-            },
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "organization_id,installation_id" }
-        );
-        if (installation.error) throw new Error('GitHub installation persistence failed.');
-      }
-    }
+    // OAuth user IDs are not GitHub App installation IDs. Persist the credential
+    // at repository selection, when the authorized project is known.
+    const currentTenant = await requireTenant();
+    requireOperator(currentTenant.role);
 
     // 4. Set secure session cookie containing the token
     cookieStore.set("gh_session_token", accessToken, {

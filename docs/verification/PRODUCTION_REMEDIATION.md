@@ -4,6 +4,12 @@ Latest continuation: [2026-09-30 checkpoint](COMPLETION_2026_09_30.md) supersede
 the older inventory below. Durable OTP limits, repository queue/worker, lifecycle
 cleanup and additional security fixes are now implemented locally. External
 verification and the explicitly listed remaining integrations are not complete.
+Checkpoint `8203118` is pushed. The following batch fixes repository-selection
+Vault persistence and schema-key errors, removes fictitious App installation
+records from OAuth/PAT flows, checks wizard save errors, and restores the signed
+server enrollment modal's styling/copy controls. See ADR-014 for shared-project
+limitations. The latest verified-TLS read-only database probe passed, but six
+migration ledger entries and required production settings are still absent.
 
 Status (2026-09-29): Phase 0 audited; implementation in progress across the user's
 prioritized dashboard/task/sandbox/PR/preview/connection batch. This document supersedes historical
@@ -75,7 +81,7 @@ scope and live-readiness status are in the latest checkpoint.
 | Telemetry and installer | Signed device enrollment/telemetry, SSE, pinned installer flow and actual Linux agent measurements are implemented locally | Apply migration, configure/publish release manifest, validate live enrollment and complete authenticated server operations |
 | Gmail and WhatsApp | Gmail sender spoofing is blocked; unsafe digest output is escaped | Verified Gmail provider/OAuth/idempotency and WhatsApp signed gateway/approved commands remain unimplemented |
 
-New design records: ADR-007 through ADR-013. Migrations are prepared locally only.
+New design records: ADR-007 through ADR-014. Migrations are prepared locally only.
 The live migration ledger and pre-existing `task_artifacts` table disagree; reconcile
 that drift before applying migrations. Do not deploy routes depending on these changes
 until migrations and grants are validated. The preview gateway needs a production

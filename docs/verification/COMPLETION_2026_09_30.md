@@ -38,6 +38,17 @@
 - Recovery cleanup verifies broker ownership labels and removes brokers even if
   a worker crashed before persisting the preview URL. Foreign brokers are rejected.
 - Added repeatable opt-in `npm run verify:workspace` against real Docker.
+- Checkpoint `8203118` pushed to `fix/production-remediation` after verification.
+- Repository selection now verifies GitHub metadata/branch and atomically saves
+  its project, environment, connector, Vault credential, repository and audit.
+  The upsert uses the actual schema key. OAuth/PAT sessions no longer write user
+  IDs as App installations. Tenant/operator checks protect connection mutations.
+- The repository wizard checks save failures, passes the persisted UUID to its
+  parent, and reports request-based progress. Optional server setup reuses the
+  signed enrollment modal; the fabricated installer fallback is removed.
+- Connect Server has responsive dark styling, keyboard focus handling, explicit
+  clipboard controls/errors and cancellation of pending enrollment requests on
+  close. Matching signed telemetry remains the condition for connection success.
 
 ## Rollout dependencies
 
@@ -87,7 +98,7 @@ with the Node and egress image variables configured before rollout.
 
 ## Local verification
 
-- `npm test`: 59 project suites passed, zero failed; 10 Node scanner/proxy tests passed.
+- `npm test`: 60 project suites passed, zero failed; 10 Node scanner/proxy tests passed.
 - `npm run typecheck`: passed across all workspaces.
 - `npm run lint`: passed with no ESLint warnings/errors (Next lint CLI deprecation notice).
 - Real Docker workspace and native Linux agent checks passed as detailed above.
@@ -98,15 +109,16 @@ with the Node and egress image variables configured before rollout.
   no AI runtime-data diff remains. User authorized committing and pushing this
   checkpoint to the review branch; the Git history records publication.
 - `npm run verify:runtime`: not ready; required production settings and migrations
-  are missing, and the latest database attempt failed. The check now exits nonzero
+  are missing. The latest database verified-TLS read-only probe passed. The check exits nonzero
   for missing settings/tables/migration ledger entries, even when TLS connects.
 
 ## Remaining implementation and integration work
 
-- GitHub repository selection must persist the OAuth/PAT credential to the scoped
-  Vault connector used by background jobs. Its UI must reject failed saves.
-- Restore Connect Server presentation while preserving signed enrollment and
-  explicit missing-release configuration errors.
+- Live OAuth/PAT-to-Vault-to-worker verification after migration reconciliation;
+  shared multi-repository projects retain Connections management (ADR-014).
+  Per-repository credential bindings within shared projects remain unimplemented.
+- Browser interaction verification for the restored onboarding modals remains
+  outstanding; typecheck/build do not establish visual/browser correctness.
 - Gmail OAuth/provider delivery, authorized sender mapping and idempotent inbound
   processing; WhatsApp signed gateway and approved commands.
 - Durable deployment-result ingestion and verified runtime health correlation.

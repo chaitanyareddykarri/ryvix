@@ -1,8 +1,12 @@
 ﻿import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { createClient } from "@/utils/supabase/server";
+import { requireTenant, requireOperator, RequestError } from '@/utils/tenant-context';
 
 export async function GET(request: Request) {
+  try { await requireTenant(); } catch (error) {
+    return NextResponse.json({ connected: false, error: 'Authentication or organization access required.' },
+      { status: error instanceof RequestError ? error.status : 503 });
+  }
   const { searchParams } = new URL(request.url);
   const repoName = searchParams.get("repo");
   const owner = searchParams.get("owner");
@@ -130,24 +134,25 @@ export async function GET(request: Request) {
       repositories,
     });
   } catch (err: any) {
-    console.error("[GitHub Repos Fetch Error]:", err);
     return NextResponse.json(
       {
-        connected: true,
-        error: err.message || "Failed to query GitHub repositories",
+        connected: false,
+        error: "Failed to query GitHub repositories. Please retry.",
         repositories: [],
       },
-      { status: 500 }
+      { status: err instanceof RequestError ? err.status : 503 }
     );
   }
 }
 
 export async function POST(request: Request) {
   try {
+    const { role } = await requireTenant();
+    requireOperator(role);
     const body = await request.json();
     const { token } = body;
 
-    if (!token || typeof token !== "string" || !token.trim()) {
+    if (!token || typeof token !== "string" || !token.trim() || token.length > 4096 || /[\r\n]/.test(token)) {
       return NextResponse.json(
         { success: false, error: "Please provide a valid GitHub personal access token" },
         { status: 400 }
@@ -158,6 +163,7 @@ export async function POST(request: Request) {
 
     // Verify token with GitHub User API
     const ghUserRes = await fetch("https://api.github.com/user", {
+      redirect: "error", signal: AbortSignal.timeout(15000),
       headers: {
         Authorization: `Bearer ${cleanToken}`,
         Accept: "application/vnd.github.v3+json",
@@ -195,38 +201,6 @@ export async function POST(request: Request) {
       path: "/",
     });
 
-    // Also persist installation in Supabase if user is authenticated
-    const supabase = createClient(cookieStore);
-    const {
-      data: { user: supabaseUser },
-    } = await supabase.auth.getUser();
-
-    if (supabaseUser) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("organization_id")
-        .eq("id", supabaseUser.id)
-        .single();
-
-      if (profile?.organization_id) {
-        await supabase.from("repository_installations").upsert(
-          {
-            organization_id: profile.organization_id,
-            installation_id: Number(ghUser.id),
-            account_login: ghUser.login,
-            account_type: ghUser.type === "Organization" ? "organization" : "user",
-            permissions: {
-              scope: "repo,read:org",
-              connected_at: new Date().toISOString(),
-              target_login: ghUser.login,
-            },
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "organization_id,installation_id" }
-        );
-      }
-    }
-
     return NextResponse.json({
       success: true,
       message: `Connected successfully as @${ghUser.login}`,
@@ -234,8 +208,8 @@ export async function POST(request: Request) {
     });
   } catch (err: any) {
     return NextResponse.json(
-      { success: false, error: err.message || "Failed to verify token" },
-      { status: 500 }
+      { success: false, error: err instanceof RequestError ? err.message : "Failed to verify GitHub credentials." },
+      { status: err instanceof RequestError ? err.status : 503 }
     );
   }
 }

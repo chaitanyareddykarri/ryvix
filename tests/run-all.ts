@@ -62,6 +62,7 @@ async function runAllTests() {
   const testCases: { name: string; fn: () => Promise<void> }[] = [
     { name: 'PR Approval Durability, Reauthorization and Retry', fn: (await import('./pr-shipping-approval.test')).testPrShippingApproval },
     { name: 'Durable Repository Job Queue and Lease Boundaries', fn: (await import('./repository-job-store.test')).testRepositoryJobStore },
+    { name: 'Repository Selection and Vault Transaction', fn: (await import('./repository-connection.test')).testRepositoryConnection },
     { name: 'Gmail Unverified Sender and Digest Escaping', fn: (await import('./gmail-boundary.test')).testGmailBoundary },
     { name: 'Durable OTP Consumption, Resend and Secret Isolation', fn: (await import('./auth-challenge-store.test')).testAuthChallengeStore },
     { name: 'Task Cancellation, Authorization and Cleanup Retry', fn: (await import('./task-lifecycle.test')).testTaskLifecycle },

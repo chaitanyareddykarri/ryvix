@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import type { RepositoryAnalysisResult } from "@/utils/repository-analyzer";
+import ConnectServerModal from './ConnectServerModal';
 
 interface RepositoryItem {
   id: number;
@@ -36,6 +37,7 @@ export default function ConnectRepositoryModal({
   const [repositories, setRepositories] = useState<RepositoryItem[]>([]);
   const [search, setSearch] = useState("");
   const [selectedRepo, setSelectedRepo] = useState<RepositoryItem | null>(null);
+  const [savedRepo, setSavedRepo] = useState<any>(null);
   const [analysisProgress, setAnalysisProgress] = useState<number>(0);
   const [analysisResult, setAnalysisResult] = useState<RepositoryAnalysisResult | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -45,22 +47,20 @@ export default function ConnectRepositoryModal({
   const [patToken, setPatToken] = useState("");
   const [verifyingPat, setVerifyingPat] = useState(false);
 
-  // Server connect step state
-  const [serverEnrollmentScript, setServerEnrollmentScript] = useState<string | null>(null);
-  const [copiedScript, setCopiedScript] = useState(false);
-
   useEffect(() => {
     if (isOpen) {
       checkGitHubConnection();
     } else {
       // Reset wizard state on close
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         setStep("connect_github");
         setErrorMessage(null);
         setSelectedRepo(null);
+        setSavedRepo(null);
         setAnalysisResult(null);
         setAnalysisProgress(0);
       }, 300);
+      return () => clearTimeout(timer);
     }
   }, [isOpen]);
 
@@ -124,14 +124,10 @@ export default function ConnectRepositoryModal({
 
   async function handleSelectWebsite(repo: RepositoryItem) {
     setSelectedRepo(repo);
+    setSavedRepo(null);
     setStep("analyzing");
     setErrorMessage(null);
     setAnalysisProgress(1);
-
-    // Step-by-step progress simulation while real backend analysis runs
-    const pTimer1 = setTimeout(() => setAnalysisProgress(2), 350);
-    const pTimer2 = setTimeout(() => setAnalysisProgress(3), 700);
-    const pTimer3 = setTimeout(() => setAnalysisProgress(4), 1100);
 
     try {
       const res = await fetch(
@@ -139,31 +135,24 @@ export default function ConnectRepositoryModal({
       );
       const data = await res.json();
 
-      clearTimeout(pTimer1);
-      clearTimeout(pTimer2);
-      clearTimeout(pTimer3);
-
-      setAnalysisProgress(5);
-      await new Promise((r) => setTimeout(r, 400));
-      setAnalysisProgress(6);
-      await new Promise((r) => setTimeout(r, 400));
-      setAnalysisProgress(7);
-
-      if (data.success && data.analysis) {
+      if (res.ok && data.success && data.analysis) {
         setAnalysisResult(data.analysis);
+        setAnalysisProgress(2);
 
         // Automatically connect repository in database with real analyzed stack
-        await fetch("/api/github/repositories/connect", {
+        const savedResponse = await fetch("/api/github/repositories/connect", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             repo: data.repository || repo,
             branch: repo.defaultBranch || "main",
-            analysis: data.analysis,
           }),
         });
-
-        await new Promise((r) => setTimeout(r, 500));
+        const saved = await savedResponse.json();
+        if (!savedResponse.ok || !saved.success || !saved.repository?.id)
+          throw new Error(saved.error || 'Repository connection could not be saved. Please retry.');
+        setSavedRepo(saved.repository);
+        setAnalysisProgress(3);
         setStep("connected_summary");
       } else {
         setErrorMessage(data.error || "Unable to inspect repository configuration.");
@@ -175,26 +164,16 @@ export default function ConnectRepositoryModal({
     }
   }
 
-  async function handlePrepareServerConnect() {
-    setStep("connect_server");
-    try {
-      const res = await fetch("/api/servers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "generate_enrollment" }),
-      });
-      const data = await res.json();
-      if (data.success && data.installScript) {
-        setServerEnrollmentScript(data.installScript);
-      }
-    } catch {
-      // fallback
-    }
+  function handlePrepareServerConnect() {
+    if (onOpenServerConnect) {
+      handleFinishOnboarding();
+      onOpenServerConnect();
+    } else setStep('connect_server');
   }
 
   function handleFinishOnboarding() {
-    if (selectedRepo && onConnected) {
-      onConnected(selectedRepo, analysisResult || undefined);
+    if (savedRepo && onConnected) {
+      onConnected(savedRepo, analysisResult || undefined);
     }
     onClose();
   }
@@ -568,34 +547,11 @@ export default function ConnectRepositoryModal({
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", background: "#080C11", padding: "1.25rem", borderRadius: "12px", border: "1px solid #1D2732", fontFamily: "var(--font-mono, monospace)", fontSize: "0.78rem" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", color: analysisProgress >= 1 ? "#45D483" : "#66717F" }}>
-                <span>{analysisProgress >= 1 ? "✓" : "○"}</span>
-                <span>GitHub connected</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", color: analysisProgress >= 2 ? "#45D483" : "#66717F" }}>
-                <span>{analysisProgress >= 2 ? "✓" : "○"}</span>
-                <span>Repository found</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", color: analysisProgress >= 3 ? "#45D483" : "#66717F" }}>
-                <span>{analysisProgress >= 3 ? "✓" : "○"}</span>
-                <span>Reading project structure</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", color: analysisProgress >= 4 ? "#45D483" : "#66717F" }}>
-                <span>{analysisProgress >= 4 ? "✓" : "○"}</span>
-                <span>Detecting technology</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", color: analysisProgress >= 5 ? "#45D483" : "#66717F" }}>
-                <span>{analysisProgress >= 5 ? "✓" : "○"}</span>
-                <span>Checking dependencies</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", color: analysisProgress >= 6 ? "#45D483" : "#66717F" }}>
-                <span>{analysisProgress >= 6 ? "✓" : "○"}</span>
-                <span>Detecting deployment configuration</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", color: analysisProgress >= 7 ? "#45D483" : "#66717F" }}>
-                <span>{analysisProgress >= 7 ? "✓" : "○"}</span>
-                <span>Checking application configuration</span>
-              </div>
+              {['GitHub connected', 'Repository analysis received', 'Repository and credential saved'].map((label, index) => (
+                <div key={label} style={{ display: 'flex', gap: '0.6rem', color: analysisProgress > index ? '#45D483' : '#A5AFBC' }}>
+                  <span>{analysisProgress > index ? '?' : '?'}</span><span>{label}</span>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -694,77 +650,8 @@ export default function ConnectRepositoryModal({
         {/* ========================================================================= */}
         {/* STEP 5: OPTIONAL SERVER CONNECTION (Plain English Explanation)           */}
         {/* ========================================================================= */}
-        {step === "connect_server" && (
-          <div>
-            <div style={{ textAlign: "center", marginBottom: "1.75rem" }}>
-              <div style={{ width: "48px", height: "48px", borderRadius: "12px", background: "rgba(66, 217, 255, 0.15)", color: "#42D9FF", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem", fontSize: "1.4rem" }}>
-                🖥️
-              </div>
-              <h3
-                style={{
-                  fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)",
-                  fontSize: "1.45rem",
-                  fontWeight: 800,
-                  color: "#F5F7FA",
-                }}
-              >
-                Connect your server
-              </h3>
-              <p style={{ fontSize: "0.85rem", color: "#A5AFBC", marginTop: "0.25rem", maxWidth: "420px", margin: "0.25rem auto 0" }}>
-                Ryvix can monitor your server, detect problems and help recover your website automatically.
-              </p>
-            </div>
-
-            <div style={{ background: "#080C11", border: "1px solid #1D2732", borderRadius: "12px", padding: "1.25rem", marginBottom: "1.25rem" }}>
-              <div style={{ fontSize: "0.76rem", color: "#66717F", textTransform: "uppercase", marginBottom: "0.4rem", fontFamily: "var(--font-mono, monospace)" }}>
-                Run this command on your server:
-              </div>
-              <div style={{ padding: "0.75rem", borderRadius: "6px", background: "#121922", border: "1px solid #1D2732", fontFamily: "var(--font-mono, monospace)", fontSize: "0.78rem", color: "#42D9FF", wordBreak: "break-all" }}>
-                {serverEnrollmentScript || "curl -fsSL https://ryvix.sh/install | sudo bash"}
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.75rem" }}>
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(serverEnrollmentScript || "");
-                    setCopiedScript(true);
-                    setTimeout(() => setCopiedScript(false), 2000);
-                  }}
-                  style={{
-                    padding: "0.4rem 0.85rem",
-                    borderRadius: "6px",
-                    background: copiedScript ? "rgba(69, 212, 131, 0.2)" : "#121922",
-                    border: `1px solid ${copiedScript ? "#45D483" : "#1D2732"}`,
-                    color: copiedScript ? "#45D483" : "#F5F7FA",
-                    fontSize: "0.78rem",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
-                >
-                  {copiedScript ? "✓ Copied to clipboard" : "Copy command"}
-                </button>
-                <span style={{ fontSize: "0.74rem", color: "#66717F" }}>Outbound secure HTTPS only • No open ports</span>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", gap: "0.75rem" }}>
-              <button
-                onClick={handleFinishOnboarding}
-                style={{
-                  width: "100%",
-                  padding: "0.75rem",
-                  borderRadius: "8px",
-                  background: "linear-gradient(135deg, #7C6CFF, #42D9FF)",
-                  border: "none",
-                  color: "#ffffff",
-                  fontSize: "0.88rem",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
-              >
-                Finish &amp; Open Workspace &rarr;
-              </button>
-            </div>
-          </div>
+        {step === 'connect_server' && (
+          <ConnectServerModal isOpen onClose={handleFinishOnboarding} />
         )}
       </div>
     </div>

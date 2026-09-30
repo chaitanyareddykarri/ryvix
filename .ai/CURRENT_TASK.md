@@ -10,8 +10,13 @@ migrations. Native agent simulations are test-only. Unverified Gmail inbound
 fails closed. These changes form the user-authorized review-branch checkpoint;
 migrations remain unapplied. OTP resend delivery failures now return the renewed
 encrypted challenge matching the ledger, preserving expiry and retry budgets.
-Next: persist GitHub selection credentials to the project Vault, reject failed
-repository saves in the UI, and restore Connect Server presentation.
+Checkpoint `8203118` was pushed to `fix/production-remediation`. The next batch
+persists GitHub selection credentials to the project Vault, rejects failed
+repository saves in the UI, and restores Connect Server presentation (ADR-014).
+OAuth/PAT user IDs are no longer written as fictitious GitHub App installations.
+The latest read-only verified-TLS probe passed; missing migrations/configuration
+still prevent live rollout. Shared multi-repository projects use Connections
+instead of automatic credential replacement during repository selection.
 Official CA configuration enabled verified-TLS read-only database inspection;
 connections remain intermittent. The ledger contains only three 20260921 entries
 although task_artifacts already exists: reconcile drift before applying migrations.
