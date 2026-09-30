@@ -73,31 +73,6 @@ export default function ServersPage() {
     }
   }
 
-  async function restartService(serverId: string, unit: string) {
-    setActionMessage(`Restarting ${unit} on ${serverId}...`);
-    try {
-      const res = await fetch("/api/servers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "execute_capability",
-          serverId,
-          capability: "service.restart",
-          params: { unit },
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setActionMessage(`✓ Success: ${data.result.message}`);
-        fetchServers();
-      } else {
-        setActionMessage(`❌ Error: ${data.error}`);
-      }
-    } catch (err: any) {
-      setActionMessage(`❌ Request failed: ${err.message}`);
-    }
-  }
-
   const filteredServers = servers.filter((s) => {
     if (activeTab === "all") return true;
     return s.status === activeTab;
@@ -329,19 +304,21 @@ export default function ServersPage() {
                       <span style={{ color: "#f3f4f6" }}>{svc.name}</span>
                       {svc.status === "failed" && (
                         <button
-                          onClick={() => restartService(server.id, svc.name)}
+                          disabled
+                          title="Unavailable until authenticated command dispatch and persisted approval are implemented"
                           style={{
                             border: "none",
                             background: "rgba(239, 68, 68, 0.2)",
                             color: "#f87171",
                             padding: "0.15rem 0.4rem",
                             borderRadius: "4px",
-                            cursor: "pointer",
+                            cursor: "not-allowed",
+                            opacity: 0.65,
                             fontSize: "0.7rem",
                             fontWeight: 600,
                           }}
                         >
-                          Restart
+                          Restart unavailable
                         </button>
                       )}
                     </div>
@@ -352,11 +329,12 @@ export default function ServersPage() {
               {/* Action Buttons */}
               <div style={{ display: "flex", gap: "0.5rem", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "1rem" }}>
                 <button
-                  onClick={() => restartService(server.id, server.services[0]?.name || "")}
+                  disabled
+                  title="Unavailable until authenticated command dispatch and persisted approval are implemented"
                   className="btn-secondary"
-                  style={{ flex: 1, padding: "0.45rem 0.5rem", fontSize: "0.78rem" }}
+                  style={{ flex: 1, padding: "0.45rem 0.5rem", fontSize: "0.78rem", cursor: "not-allowed", opacity: 0.65 }}
                 >
-                  Restart Service
+                  Restart unavailable
                 </button>
                 <button
                   disabled

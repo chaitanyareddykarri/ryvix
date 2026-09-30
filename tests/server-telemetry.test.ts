@@ -60,6 +60,9 @@ export async function testServerTelemetry() {
   assert.equal(reboot.status, 409, 'A browser boolean must not authorize a high-impact cloud action');
   assert.equal(reboot.body.success, false);
   assert.equal(cloudAdapterCalls, 0, 'Unpersisted approval must never reach the provider adapter');
+  const command = await exports.POST({ json: async () => ({ action: 'execute_capability', serverId: 'server-1', capability: 'service.restart' }) });
+  assert.equal(command.status, 503, 'Remote commands stay unavailable until signed dispatch and persisted approval exist');
+  assert.equal(cloudAdapterCalls, 0);
   rows = [{ id: 'persisted-server', hostname: 'stored-host', status: 'healthy', services: [] }];
   const missing = (await exports.GET()).body.servers[0];
   assert.equal(missing.cpuPercent, null);

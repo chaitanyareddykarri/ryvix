@@ -9,6 +9,8 @@ That path now fails closed (409), and the servers page disables the reset action
 Regression coverage verifies no operation is dispatched from the client flag.
 Authenticated internal-agent command dispatch remains pending until its signed
 command protocol, one-use delivery/receipt, and persisted approval flow exist.
+Service-restart controls are disabled too; the API keeps returning an explicit
+unavailable response until that command path is implemented.
 
 Observability/tenant continuation: the missing `/api/observability/logs` route now
 reads curated tenant-scoped audit/security records and latest health snapshots.
