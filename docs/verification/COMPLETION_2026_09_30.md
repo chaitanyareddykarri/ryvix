@@ -58,6 +58,7 @@ including the earlier task-artifact, Vault and signed-telemetry migrations plus:
 1. `20260930000001_auth_challenge_limits.sql`
 2. `20260930000002_repository_jobs.sql`
 3. `20260930000003_protected_workflow_records.sql`
+4. `20260930000004_browser_table_maintenance_boundary.sql`
 
 Do not serve these changed routes before migrating. Run the workspace worker on
 the Docker host: `npm run worker:workspaces`. The service example assumes a
@@ -75,6 +76,12 @@ with the Node and egress image variables configured before rollout.
 
 ## External checks performed
 
+- The subsequent read-only catalog audit is recorded in
+  [MIGRATION_DRIFT_2026_09_30.md](MIGRATION_DRIFT_2026_09_30.md). Inspected artifact
+  objects match; browser maintenance grants require ADR-015's new migration.
+  Seven numbered migrations are now absent from the ledger. No repair was applied.
+- Repository/Vault and enrollment UI checkpoint `8c20fe8` was pushed after all
+  local gates passed. Browser and live provider verification remain outstanding.
 - Resolved the certificate-chain failure with the official Supabase Root 2021 CA,
   configured only in ignored local environment files. TLS verification stays on.
   A transaction-pooler connection on port 6543 authenticated and completed a

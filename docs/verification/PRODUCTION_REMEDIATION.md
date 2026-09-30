@@ -1,5 +1,10 @@
 # Production remediation progress
 
+Latest catalog findings: [migration drift inspection](MIGRATION_DRIFT_2026_09_30.md).
+Checkpoints `8203118` and `8c20fe8` are pushed. An additional migration prepared
+under ADR-015 removes browser table-maintenance grants, bringing pending ledger
+entries to seven. No live migration/history repair has been applied.
+
 Latest continuation: [2026-09-30 checkpoint](COMPLETION_2026_09_30.md) supersedes
 the older inventory below. Durable OTP limits, repository queue/worker, lifecycle
 cleanup and additional security fixes are now implemented locally. External

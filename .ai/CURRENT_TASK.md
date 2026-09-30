@@ -2,6 +2,13 @@
 
 ## Latest continuation: 2026-09-30
 
+Checkpoints `8203118` and `8c20fe8` are pushed. Read-only database inspection
+confirmed the artifact migration's inspected objects match despite the missing
+ledger entry. Browser maintenance grants remain on connectors: ADR-015 and
+migration 20260930000004 prepare their removal. Seven migration ledger entries
+are now pending. See `docs/verification/MIGRATION_DRIFT_2026_09_30.md`; no live
+migration or history repair has been performed.
+
 Read [the current checkpoint](../docs/verification/COMPLETION_2026_09_30.md)
 before the historical notes below. Local work now includes durable OTP limits,
 repository job queue/worker, lifecycle cleanup, Docker session recovery, UI task
