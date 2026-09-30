@@ -1,101 +1,34 @@
-﻿import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { createClient } from "@/utils/supabase/server";
-import { ExternalMonitoringService } from "@ryvix/services";
+import { NextResponse } from 'next/server';
+import { requireTenant, requireOperator, RequestError } from '@/utils/tenant-context';
+import { queryDirectDb } from '@/utils/direct-db';
+import { correlateProbe, probePublicEndpoint, ProbeTargetError } from '../../../../../services/src/monitoring/public-probe';
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { serverId, targetUrl } = body;
-
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
-
-    // 1. Fetch server from DB
-    let serverRecord: any = null;
-    let environmentId: string | null = null;
-
-    if (serverId) {
-      const { data } = await supabase.from("servers").select("*").eq("id", serverId).single();
-      serverRecord = data;
-      environmentId = data?.environment_id;
+    const {organizationId,user,role} = await requireTenant();
+    requireOperator(role);
+    const body = await request.json().catch(() => null);
+    if (typeof body?.targetUrl !== 'string' || !body.targetUrl.trim() || body.targetUrl.length > 2048)
+      throw new RequestError('Provide the public endpoint URL to probe.', 400);
+    let heartbeat: string | null = null;
+    if (body.serverId !== undefined) {
+      if (typeof body.serverId !== 'string' || !/^[a-f0-9-]{36}$/i.test(body.serverId)) throw new RequestError('Invalid server identifier.',400);
+      const rows = await queryDirectDb(`SELECT c.last_heartbeat_at,
+        EXISTS(SELECT 1 FROM health_checks h WHERE h.environment_id=e.id AND h.target_url_or_ip=$4) AS endpoint_registered
+        FROM servers s
+        JOIN environments e ON e.id=s.environment_id JOIN projects p ON p.id=e.project_id
+        JOIN organization_members m ON m.organization_id=p.organization_id AND m.user_id=$2
+        LEFT JOIN connectors c ON c.id=s.connector_id AND c.environment_id=s.environment_id
+          AND c.status='active' AND c.device_public_key IS NOT NULL
+        WHERE p.organization_id=$1 AND s.id=$3`, [organizationId,user.id,body.serverId,body.targetUrl]);
+      if (!rows[0]) throw new RequestError('Server unavailable.',404);
+      heartbeat = rows[0].endpoint_registered && rows[0].last_heartbeat_at ? new Date(rows[0].last_heartbeat_at).toISOString() : null;
     }
-
-    if (!serverRecord) {
-      const { data: defaultSrv } = await supabase.from("servers").select("*").limit(1).maybeSingle();
-      serverRecord = defaultSrv;
-      if (!environmentId && defaultSrv?.environment_id) {
-        environmentId = defaultSrv.environment_id;
-      }
-    }
-
-    if (!environmentId) {
-      const { data: envs } = await supabase.from("environments").select("id").limit(1);
-      environmentId = envs?.[0]?.id || null;
-    }
-
-    const testUrl = targetUrl || (serverRecord?.ip_address ? `http://${serverRecord.ip_address}:80` : "http://localhost:3000/api/servers");
-    const monitor = new ExternalMonitoringService(90);
-
-    // 2. Perform external HTTP reachability probe
-    const probe = await monitor.probeEndpoint(testUrl);
-
-    // 3. Correlate with internal heartbeat
-    const lastHeartbeat = serverRecord?.updated_at || new Date().toISOString();
-    const serverEntity: any = {
-      id: serverRecord?.id || "unregistered",
-      hostname: serverRecord?.hostname || "unknown-server",
-      status: serverRecord?.status || "healthy",
-      environment_id: environmentId || "unregistered",
-      ip_address: serverRecord?.ip_address || "0.0.0.0",
-      created_at: serverRecord?.created_at || new Date().toISOString(),
-      updated_at: lastHeartbeat,
-    };
-
-    const evaluation = monitor.evaluateServerHealth(
-      serverEntity,
-      lastHeartbeat,
-      "f796c1ea-53c0-48f3-9bb1-56fd7841e744",
-      "eadd8016-5d29-40c2-a129-31dc52a2403e",
-      probe,
-      new Date()
-    );
-
-    // 4. Log into public.health_checks table matching exact schema
-    if (environmentId) {
-      await supabase.from("health_checks").insert({
-        environment_id: environmentId,
-        name: `HTTP Probe - ${serverRecord?.hostname || "web-node"}`,
-        check_type: "http",
-        target_url_or_ip: testUrl,
-        interval_seconds: 60,
-        status: probe.isReachable ? "healthy" : "unhealthy",
-        last_latency_ms: Math.round(probe.latencyMs),
-        consecutive_failures: probe.isReachable ? 0 : 1,
-        last_checked_at: new Date().toISOString(),
-      });
-    }
-
-    return NextResponse.json({
-      success: true,
-      probe,
-      evaluation: {
-        diagnosis: evaluation.diagnosis,
-        status: evaluation.newStatus,
-        previousStatus: evaluation.previousStatus,
-        explanation:
-          evaluation.diagnosis === "healthy"
-            ? "Server host and internal connector are both responsive and nominal."
-            : evaluation.diagnosis === "agent_service_crashed"
-            ? "External application is responding, but internal Ryvix agent daemon has stopped emitting heartbeats."
-            : "Complete Server Outage detected: Neither external HTTP probes nor internal agent telemetry are responding.",
-      },
-    });
-  } catch (err: any) {
-    console.error("[Health Probe Error]:", err);
-    return NextResponse.json(
-      { success: false, error: err.message || "Failed to execute health probe" },
-      { status: 500 }
-    );
+    const probe = await probePublicEndpoint(body.targetUrl);
+    return NextResponse.json({success:true,probe,evaluation:correlateProbe(probe.isReachable,heartbeat),persisted:false},
+      {headers:{'Cache-Control':'no-store'}});
+  } catch (error) {
+    return NextResponse.json({success:false,error:error instanceof RequestError || error instanceof ProbeTargetError ? error.message : 'Endpoint probe unavailable.'},
+      {status:error instanceof RequestError ? error.status : error instanceof ProbeTargetError ? 400 : 503});
   }
 }

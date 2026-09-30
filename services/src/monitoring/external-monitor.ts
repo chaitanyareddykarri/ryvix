@@ -19,6 +19,7 @@ import type {
   AuditEvent,
   IncidentSeverity,
 } from '@ryvix/database';
+import { probePublicEndpoint } from './public-probe';
 
 export interface ProbeResult {
   isReachable: boolean;
@@ -48,24 +49,7 @@ export class ExternalMonitoringService {
    * Performs an independent external HTTP/TCP probe against a server's health endpoint.
    */
   async probeEndpoint(endpointUrl: string): Promise<ProbeResult> {
-    const startTime = Date.now();
-    try {
-      const response = await fetch(endpointUrl, {
-        method: 'GET',
-        signal: AbortSignal.timeout(5000),
-      });
-      return {
-        isReachable: response.ok,
-        statusCode: response.status,
-        latencyMs: Date.now() - startTime,
-      };
-    } catch (err: unknown) {
-      return {
-        isReachable: false,
-        latencyMs: Date.now() - startTime,
-        error: err instanceof Error ? err.message : 'Connection timeout / network unreachable',
-      };
-    }
+    return probePublicEndpoint(endpointUrl);
   }
 
   /**

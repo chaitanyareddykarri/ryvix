@@ -1,5 +1,10 @@
 # Production remediation progress
 
+Monitoring continuation (ADR-017): removed unauthenticated arbitrary probing and
+fabricated default host/heartbeat evidence. Public destination validation, DNS
+pinning, redirect denial and tenant-authorized correlation now pass regression
+checks. The suite is at 62 passing project suites; a real public HTTPS probe passed.
+
 Deployment continuation: ADR-016/migration 20260930000005 add signed GitHub
 deployment-status persistence, deduplication, audits and tenant diagnostic reads.
 The migration is applied; 61 suites and 35 database-boundary checks pass, along

@@ -2,6 +2,11 @@
 
 ## Implemented in this continuation
 
+- Public endpoint diagnostics (ADR-017): authenticated operators, explicit targets,
+  public IPv4 validation, pinned DNS, standard ports, no redirects and bounded
+  requests. Removed guessed server/environment, localhost and fabricated heartbeat
+  fallbacks. The endpoint reports measured reachability without writing unverified
+  health records; host health requires registered endpoint/heartbeat evidence.
 - Deployment status ingestion (ADR-016): bounded HMAC-verified GitHub webhook,
   verified repository mapping, durable deduplicated events and atomic audits.
   Tenant diagnostics expose curated provider facts; runtime health is explicitly
@@ -115,7 +120,7 @@ with the Node and egress image variables configured before rollout.
 
 ## Local verification
 
-- `npm test`: 61 project suites passed, zero failed; 10 Node scanner/proxy tests passed.
+- `npm test`: 62 project suites passed, zero failed; 10 Node scanner/proxy tests passed.
 - `npm run typecheck`: passed across all workspaces.
 - `npm run lint`: passed with no ESLint warnings/errors (Next lint CLI deprecation notice).
 - Real Docker workspace and native Linux agent checks passed as detailed above.
@@ -131,6 +136,9 @@ with the Node and egress image variables configured before rollout.
   claim actual GitHub delivery or application deployment.
 - Vault create/decrypt and OTP five-attempt SQL smoke tests passed in a rolled-back
   transaction; temporary secret absence was verified afterward.
+- Public probe regression checks cover destination denial, mixed DNS answers,
+  unauthorized/foreign servers, missing endpoint bindings and stale/missing/future
+  heartbeat evidence. A real HTTPS probe to example.com returned HTTP 200.
 - `npm run verify:runtime`: not ready; required production settings
   are missing. Database TLS, required tables and migration history checks passed. The check exits nonzero
   for missing settings/tables/migration ledger entries, even when TLS connects.

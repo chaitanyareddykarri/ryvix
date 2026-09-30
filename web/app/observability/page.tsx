@@ -20,7 +20,7 @@ export default function ObservabilityPage() {
   const [searchQuery, setSearchQuery] = useState("");
   
   // External Probe State
-  const [probeUrl, setProbeUrl] = useState("http://localhost:3000/api/servers");
+  const [probeUrl, setProbeUrl] = useState("");
   const [probing, setProbing] = useState(false);
   const [probeResult, setProbeResult] = useState<any | null>(null);
 
@@ -181,7 +181,7 @@ export default function ObservabilityPage() {
             type="text"
             value={probeUrl}
             onChange={(e) => setProbeUrl(e.target.value)}
-            placeholder="http://customer-server-ip:port"
+            placeholder="https://your-application.example/health"
             style={{
               flex: 1,
               padding: "0.55rem 0.85rem",
@@ -207,7 +207,7 @@ export default function ObservabilityPage() {
           >
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontWeight: 700, fontSize: "0.9rem", color: probeResult.probe?.isReachable ? "#86efac" : "#fca5a5" }}>
               <span>{probeResult.probe?.isReachable ? "✓" : "⚠️"}</span>
-              Diagnosis: {probeResult.evaluation?.diagnosis.toUpperCase()} (HTTP {probeResult.probe?.statusCode || "N/A"} in {probeResult.probe?.latencyMs}ms)
+              {probeResult.error || `Diagnosis: ${probeResult.evaluation?.diagnosis?.toUpperCase() || 'UNKNOWN'} (HTTP ${probeResult.probe?.statusCode || 'N/A'} in ${probeResult.probe?.latencyMs ?? 'unavailable'}ms)`}
             </div>
             <p style={{ margin: "0.35rem 0 0", fontSize: "0.82rem", color: "#e2e8f0" }}>
               {probeResult.evaluation?.explanation}

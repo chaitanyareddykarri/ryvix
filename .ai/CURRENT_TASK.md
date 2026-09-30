@@ -2,6 +2,13 @@
 
 ## Latest continuation: 2026-09-30
 
+Monitoring continuation (ADR-017): the public probe now requires tenant/operator
+authorization, validates public destinations, pins DNS, rejects redirects and
+removes default-server/localhost/fabricated-heartbeat behavior. Host correlation
+requires an explicitly selected server plus a registered environment endpoint and
+fresh authenticated heartbeat. Unknown evidence stays unknown. 62 suites pass;
+an actual public HTTPS smoke probe returned HTTP 200. No health records were forged.
+
 Deployment continuation: ADR-016 and migration 20260930000005 are implemented
 and applied. `/api/webhooks/github` persists signed deployment_status events for
 verified repositories, with deduplication and atomic audits. Tenant diagnostics
