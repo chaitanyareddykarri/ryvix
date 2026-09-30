@@ -1,5 +1,11 @@
 # Ryvix Complete Authentication Verification & Audit Report
 
+> Historical report: the statements and transcript below predate current live
+> verification. The JavaScript tenant-predicate test is not PostgreSQL RLS
+> evidence. Current catalog/SQL-role evidence and limits are in
+> `COMPLETION_2026_09_30.md`; provider-issued JWT/browser isolation remains
+> unverified.
+
 **Date**: 2026-09-21  
 **Status**: VERIFIED & PASSING (All 20 Safety & Lifecycle Gates)  
 **Test Suite**: `tests/auth-lifecycle.test.ts` via `tests/run-all.ts`
@@ -26,7 +32,7 @@
 | **Part 14** | Authorization vs Auth | **IMPLEMENTED + VERIFIED** | Auth identifies user; PostgreSQL RLS and Backend RBAC gate resource operations. |
 | **Part 15** | Service-Role Security | **IMPLEMENTED + VERIFIED** | Confined strictly to backend servers; never exposed to browser or client bundles. |
 | **Part 16** | AI Isolation | **IMPLEMENTED + VERIFIED** | Zero credentials in `@ryvix/ai`; model interacts strictly via typed tool contracts. |
-| **Part 17** | Row Level Security (RLS)| **IMPLEMENTED + VERIFIED** | 100% table coverage across all 35 tables in `supabase/migrations/`. |
+| **Part 17** | Row Level Security (RLS)| **CATALOG-CHECKED; JWT FLOW PENDING** | Current live catalog and SQL-role fixture evidence is in `COMPLETION_2026_09_30.md`; the JavaScript predicate test below is not an RLS test. |
 | **Part 18** | API Keys & Secrets | **IMPLEMENTED + VERIFIED** | Cryptographic SHA-256 hash-only storage, CSPRNG generation, and timing-safe checks. |
 | **Part 19** | Email Provider Config | **IMPLEMENTED + VERIFIED** | Verified default Supabase link dispatch; supported via callback handler. |
 | **Part 20** | Error UX | **IMPLEMENTED + VERIFIED** | Mapped banners for unconfirmed emails, bad credentials, expired tokens, and duplicates. |
@@ -58,8 +64,8 @@ RYVIX RUNTIME ARCHITECTURE & DATABASE TEST SUITE
 ✓ Coding Workspace Expiry & Container Cleanup Test PASSED (expiry check, container kill, session destroyed, audit log).
 [TEST] Running API Key Cryptographic Security & Lifecycle Test...
 ✓ API Key Security Test PASSED (hash-only storage, scopes, expiry, revocation, timing-safe matching).
-[TEST] Running Cross-Tenant RLS Policy Evaluation Test...
-✓ Cross-Tenant RLS & Audit Immutability Test PASSED (Tenant isolation proven, cross-org access blocked, audit updates blocked).
+[TEST] Running Tenant Predicate Unit Test (not a PostgreSQL RLS test)...
+✓ Tenant predicate and illustrative audit-policy unit cases passed.
 
 ============================================================
 TEST SUMMARY: 7 PASSED | 0 FAILED | DURATION: 23ms

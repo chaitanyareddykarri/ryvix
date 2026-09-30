@@ -13,7 +13,8 @@ export interface TenantResource {
 }
 
 /**
- * Direct evaluation of the PostgreSQL RLS policy predicate defined in migrations:
+ * Unit test only: direct evaluation of a predicate similar to a PostgreSQL policy.
+ * This does not execute PostgreSQL, enable a role, or test provider-issued JWTs.
  * `organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid())`
  */
 export function evaluateRlsPolicy(
@@ -28,8 +29,8 @@ export function evaluateRlsPolicy(
   return userOrgIds.includes(resource.organization_id);
 }
 
-export async function testCrossTenantRls() {
-  console.log('[TEST] Running Cross-Tenant RLS Policy Evaluation Test...');
+export async function testTenantPredicateUnit() {
+  console.log('[TEST] Running Tenant Predicate Unit Test (not a PostgreSQL RLS test)...');
 
   // Setup 2 distinct tenants
   const orgA = 'org_tenant_alpha';
@@ -90,5 +91,5 @@ export async function testCrossTenantRls() {
   const deleteAttempt = simulateAuditModification('DELETE');
   assert.equal(deleteAttempt.allowed, false);
 
-  console.log('✓ Cross-Tenant RLS & Audit Immutability Test PASSED (Tenant isolation proven, cross-org access blocked, audit updates blocked).');
+  console.log('✓ Tenant predicate and illustrative audit-policy unit cases passed (database RLS is verified separately).');
 }

@@ -28,6 +28,7 @@ export async function testServerTelemetry() {
   let dbFailure = false;
   let queries = 0;
   let cloudAdapterCalls = 0;
+  let tenantCalls = 0;
   let rows: Record<string, unknown>[] = [];
   const exports: any = {};
   const code = ts.transpileModule(fs.readFileSync('web/app/api/servers/route.ts', 'utf8'), {
@@ -39,6 +40,7 @@ export async function testServerTelemetry() {
     if (name === 'next/headers') return { cookies: async () => ({}) };
     if (name === '@/utils/server-telemetry') return { serverTelemetry };
     if (name === '@/utils/tenant-context') return { RequestError, requireTenant: async () => {
+      tenantCalls++;
       if (denied) throw new RequestError('Authentication required.', 401);
       return { organizationId: 'authorized-org', user: { id: 'verified-user' } };
     } };
@@ -56,7 +58,9 @@ export async function testServerTelemetry() {
     return {};
   } });
   assert.equal((await exports.GET()).body.servers.length, 0);
+  const authBeforeReboot = tenantCalls;
   const reboot = await exports.POST({ json: async () => ({ action: 'oob_cloud_reboot', serverId: 'server-1', approved: true }) });
+  assert.equal(tenantCalls, authBeforeReboot + 1, 'A POST request must resolve tenant authentication once');
   assert.equal(reboot.status, 409, 'A browser boolean must not authorize a high-impact cloud action');
   assert.equal(reboot.body.success, false);
   assert.equal(cloudAdapterCalls, 0, 'Unpersisted approval must never reach the provider adapter');

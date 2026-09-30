@@ -19,6 +19,7 @@ import type {
   AuditEvent,
   IncidentSeverity,
 } from '@ryvix/database';
+import { randomUUID } from 'node:crypto';
 import { probePublicEndpoint } from './public-probe';
 
 export interface ProbeResult {
@@ -33,8 +34,11 @@ export interface OutageEvaluationResult {
   previousStatus: string;
   newStatus: string;
   diagnosis: 'healthy' | 'agent_service_crashed' | 'complete_server_outage';
+  /** In-memory incident draft only; this evaluator does not persist it. */
   incidentCreated?: Incident;
+  /** In-memory notification draft only; no provider dispatch occurs here. */
   notificationDispatched?: Notification;
+  /** In-memory audit draft only; the database audit pipeline is not invoked. */
   auditEvent?: AuditEvent;
 }
 
@@ -53,7 +57,8 @@ export class ExternalMonitoringService {
   }
 
   /**
-   * Evaluates server health by correlating internal agent heartbeat and external probe.
+   * Pure in-memory evaluation. The caller must persist the incident/audit and
+   * dispatch notifications through authorized production services separately.
    */
   evaluateServerHealth(
     server: Server,
@@ -96,7 +101,7 @@ export class ExternalMonitoringService {
 
     // Build Incident Record
     const incident: Incident = {
-      id: `inc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      id: randomUUID(),
       environment_id: server.environment_id,
       server_id: server.id,
       title: incidentTitle,
@@ -111,7 +116,7 @@ export class ExternalMonitoringService {
 
     // Build Notification with Idempotency Key
     const notification: Notification = {
-      id: `notif_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      id: randomUUID(),
       organization_id: organizationId,
       recipient_id: 'ops_oncall',
       channel: severity === 'P1_critical' ? 'whatsapp' : 'gmail',
@@ -127,7 +132,7 @@ export class ExternalMonitoringService {
 
     // Build Immutable Audit Event
     const auditEvent: AuditEvent = {
-      id: `audit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      id: randomUUID(),
       timestamp: currentTime.toISOString(),
       organization_id: organizationId,
       project_id: projectId,

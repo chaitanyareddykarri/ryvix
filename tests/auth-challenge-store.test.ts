@@ -43,8 +43,11 @@ export async function testAuthChallengeStore() {
   assert.equal(await store.registerAuthChallenge(token,email,'login'),false);
   allowed=true;
   const next=api.renewLoginChallenge(token,email,'654321');
+  assert.equal(api.challengeMetadata(next,email,'login').expiresAt,api.challengeMetadata(token,email,'login').expiresAt,
+    'Resends retain the original deadline rather than extending challenge lifetime');
   assert.equal(await store.registerAuthChallenge(next,email,'login',token),true);
-  assert.ok(calls.at(-1)!.sql.includes('token_hash=$5') && calls.at(-1)!.sql.includes('expires_at=$4'));
+  assert.ok(calls.at(-1)!.sql.includes('token_hash=$4') && !calls.at(-1)!.sql.includes('expires_at=$4'));
+  assert.equal(calls.at(-1)!.params.length,4,'The replacement update binds only the current and previous token metadata');
   const before=calls.length;
   assert.equal(await store.consumeAuthChallenge(token,'other@example.test','login',true),false);
   assert.equal(await store.consumeAuthChallenge(token,email,'signup',true),false);

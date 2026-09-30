@@ -45,7 +45,10 @@ export async function queryDirectDb<T = any>(queryText: string, params?: any[]):
   try {
     const res = await p.query(queryText, params);
     return (res.rows || []) as T[];
-  } catch (err: any) {
-    throw new Error('Database operation failed');
+  } catch (err: unknown) {
+    const code = err && typeof err === 'object' && 'code' in err && typeof err.code === 'string'
+      ? err.code.replace(/[^A-Z0-9_]/gi, '').slice(0, 16) : 'UNKNOWN';
+    console.error('[PostgreSQL Query Failure]', { code });
+    throw new Error('Database operation failed', { cause: err });
   }
 }

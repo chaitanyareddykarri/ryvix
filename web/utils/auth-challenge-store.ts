@@ -12,10 +12,10 @@ export async function registerAuthChallenge(token: string, email: string, purpos
   const previousHash = previous ? createHash('sha256').update(previous).digest('hex') : null;
   const rows = previousHash
     ? await queryDirectDb(`UPDATE auth_challenge_limits SET token_hash=$3, sent_at=now(), sends=sends+1
-        WHERE subject_hash=$1 AND purpose=$2 AND token_hash=$5 AND NOT consumed
+        WHERE subject_hash=$1 AND purpose=$2 AND token_hash=$4 AND NOT consumed
         AND expires_at>now() AND attempts<5 AND sends<5 AND sent_at<=now()-interval '1 minute'
-        AND expires_at=$4::timestamptz RETURNING subject_hash`,
-      [meta.subjectHash, purpose, meta.tokenHash, meta.expiresAt, previousHash])
+        RETURNING subject_hash`,
+      [meta.subjectHash, purpose, meta.tokenHash, previousHash])
     : await queryDirectDb(`INSERT INTO auth_challenge_limits(subject_hash,purpose,token_hash,expires_at)
         VALUES($1,$2,$3,$4) ON CONFLICT(subject_hash,purpose) DO UPDATE SET
         token_hash=EXCLUDED.token_hash, expires_at=EXCLUDED.expires_at, consumed=false,

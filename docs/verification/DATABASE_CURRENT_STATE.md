@@ -1,4 +1,9 @@
-# Step 1: Database Current State & Gap Audit
+# Historical Database State (superseded)
+
+> This document predates the 2026-09-30 live migration rollout. Its table and
+> backend-client inventory is historical; see `COMPLETION_2026_09_30.md` and
+> `MIGRATION_ROLLOUT_2026_09_30.md` for current database evidence. The backend
+> database module remains in use by repository and audit code.
 
 ## 1. Executive Summary
 

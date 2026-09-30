@@ -1,11 +1,9 @@
-import { createClient } from "@/utils/supabase/server";
 import { queryDirectDb } from "@/utils/direct-db";
 import { requireTenant, RequestError } from "@/utils/tenant-context";
 import { serverTelemetry } from "@/utils/server-telemetry";
 import { issueEnrollment } from "@/utils/device-ingestion";
 import { DeviceError } from "../../../../backend/src/services/device-protocol";
 import { agentReleaseConfiguration } from "../../../../backend/src/services/agent-installer";
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import {
   ServerAccessManager,
@@ -56,15 +54,12 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const supabase = createClient(await cookies());
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    const tenant = await requireTenant();
     const body = await req.json();
     const { action, serverId, environmentId, capability, params } = body;
 
     // Action A: Real single-line agent enrollment script
     if (action === "generate_enrollment") {
-      const tenant = await requireTenant();
       const { origin } = agentReleaseConfiguration();
       const enrollment = await issueEnrollment({ organizationId: tenant.organizationId, userId: tenant.user.id }, environmentId, body.hostname);
       return NextResponse.json({ success: true, ...enrollment, installScript: `curl --proto '=https' --tlsv1.2 -fsS '${origin}/api/install' | sudo bash` },

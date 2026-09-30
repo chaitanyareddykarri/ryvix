@@ -37,9 +37,8 @@ import { testAuthLifecycle } from './auth-lifecycle.test';
 import { testServerOutage } from './server-outage.test';
 import { testSelfHealingFlow } from './self-healing.test';
 import { testCircuitBreakerFlow } from './circuit-breaker.test';
-import { testWorkspaceCleanupFlow } from './workspace-cleanup.test';
 import { testApiKeySecurity } from './api-keys.test';
-import { testCrossTenantRls } from './cross-tenant-rls.test';
+import { testTenantPredicateUnit } from './tenant-predicate.test';
 import { testRealExecution } from './real-execution.test';
 import { testAuthSecurityBoundary } from './auth-security-boundary.test';
 import { testAuthRouteSecurity } from './auth-route-security.test';
@@ -62,6 +61,8 @@ async function runAllTests() {
   const testCases: { name: string; fn: () => Promise<void> }[] = [
     { name: 'PR Approval Durability, Reauthorization and Retry', fn: (await import('./pr-shipping-approval.test')).testPrShippingApproval },
     { name: 'Durable Repository Job Queue and Lease Boundaries', fn: (await import('./repository-job-store.test')).testRepositoryJobStore },
+    { name: 'Database Errors Preserve Internal Cause Without Leaking Details', fn: (await import('./direct-db-errors.test')).testDirectDbErrors },
+    { name: 'Workspace Route Uses Worker Boundary and Hides Internal Errors', fn: (await import('./workspace-route.test')).testWorkspaceRouteBoundary },
     { name: 'Repository Selection and Vault Transaction', fn: (await import('./repository-connection.test')).testRepositoryConnection },
     { name: 'Verified Deployment Status Ingestion', fn: (await import('./deployment-ingestion.test')).testDeploymentIngestion },
     { name: 'Public Probe Destination and Evidence Boundaries', fn: (await import('./public-probe.test')).testPublicProbe },
@@ -83,10 +84,9 @@ async function runAllTests() {
     { name: 'OTP Secret, Purpose, Expiry and Resend Boundaries', fn: testAuthSecurityBoundary },
     { name: 'Authentication Handlers Reject Failed Sessions and Cross-Identity Resends', fn: testAuthRouteSecurity },
     { name: 'Authentication Lifecycle & Multi-Tenant Security (20 Points)', fn: testAuthLifecycle },
-    { name: 'Server Outage & Differential Diagnosis', fn: testServerOutage },
+    { name: 'In-Memory Outage Evaluator Unit Cases', fn: testServerOutage },
     { name: 'Self-Healing Engine & Resolution', fn: testSelfHealingFlow },
     { name: '3-Attempt Circuit Breaker & Escalation', fn: testCircuitBreakerFlow },
-    { name: 'Workspace Expiry & Docker Teardown', fn: testWorkspaceCleanupFlow },
     { name: 'Path 1: AI Coding Workspace & PR Pipeline (Phases 1-4)', fn: testCodingWorkspacePipeline },
     { name: 'GitHub App Access & Repository Selection Lifecycle', fn: testGitHubIntegration },
     { name: 'Real-Time Repository Analyzer & Deployment Detector', fn: testRepositoryAnalyzer },
@@ -101,7 +101,7 @@ async function runAllTests() {
 
 
     { name: 'API Key Cryptographic Security & Scopes', fn: testApiKeySecurity },
-    { name: 'Cross-Tenant RLS & Audit Immutability', fn: testCrossTenantRls },
+    { name: 'Tenant Predicate Unit Cases (not database RLS)', fn: testTenantPredicateUnit },
     { name: 'Real Docker, GitHub, Cloud and Authorization Boundaries', fn: testRealExecution },
     { name: 'Deep Server Log Analysis & Root Cause Diagnosis Engine', fn: testLogAnalysisEngine },
     { name: 'Level-5 SRE Autonomous Intelligence Suite (5 Deep Dimensions)', fn: testDeepSreIntelligence },

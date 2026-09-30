@@ -2,6 +2,23 @@
 
 ## Implemented in this continuation
 
+- Follow-up audit fixes: `/api/workspace` no longer attempts execution through
+  the web process's Docker singleton, and unexpected failures return generic
+  client messages. OTP resend replacement now matches the prior token and an
+  unexpired ledger row without comparing redundant expiry parameters; it keeps
+  the original expiry. Server POST auth resolves tenant identity once. Database
+  query errors retain an internal cause and log only the SQLSTATE. Worker claim,
+  completion and failure audit rows are attributed to `system`.
+- Removed the unused in-memory workspace cleanup worker and its object-mutation
+  test. Tests now exercise `RepositoryJobStore.markDestroyed()` persistence and
+  system audit attribution. The backend database-client module and orchestrator
+  compatibility exports are retained because repository code and direct-module
+  callers use them. Tenant predicate tests now say explicitly that they are not
+  PostgreSQL RLS tests.
+- External monitor's constructed record IDs use UUIDs. Its evaluator still only
+  constructs in-memory incident/notification/audit objects; it does not persist
+  incidents or send notifications.
+
 - High-impact cloud reset now fails closed with HTTP 409 until the platform has
   a persisted approval request/decision/dispatch workflow. The servers page no
   longer presents a clickable reset action, and a regression test confirms

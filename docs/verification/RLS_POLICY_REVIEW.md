@@ -1,7 +1,7 @@
 ﻿# Ryvix Row-Level Security (RLS) Policy Review
 
 **Date**: September 23, 2026  
-**Status**: AUDITED & SECURE  
+**Status**: Historical review; see current evidence and limitations below.
 
 ## 1. Scope of Review
 All PostgreSQL tables in the Supabase database were audited for Row-Level Security (RLS) enforcement and multi-tenant isolation.
@@ -27,5 +27,5 @@ All PostgreSQL tables in the Supabase database were audited for Row-Level Securi
 ---
 
 ## 3. Cross-Tenant Isolation Guarantee
-- **Zero Cross-Tenant Leakage**: Tested and verified in `tests/cross-tenant-rls.test.ts`. An authenticated user from Organization A querying Organization B's servers, tasks, or repositories receives zero rows (`[]`) or HTTP 403 Forbidden.
+- **Current evidence and limits**: `tests/tenant-predicate.test.ts` is a JavaScript predicate unit test, not PostgreSQL RLS evidence. See `COMPLETION_2026_09_30.md` for current live catalog checks and rolled-back SQL role fixtures. Provider-issued JWT/browser isolation remains unverified.
 - **Service-Role Boundary**: Service-role keys are never exposed to client browsers or AI model prompts; all client requests authenticate via signed Supabase Auth JWT cookies.

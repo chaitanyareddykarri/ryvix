@@ -1,7 +1,12 @@
-# Ryvix Final Architecture & Operational Verification Report
+# Historical Ryvix Architecture & Operational Verification Report
+
+> This report preserves an earlier checkpoint and test transcript. Its claims
+> of full implementation, end-to-end recovery, and complete verification are
+> not current production evidence. See `COMPLETION_2026_09_30.md` for current
+> verified results and remaining work.
 
 ## 1. Executive Summary
-Both **Path 1 (AI Coding & Workspace Pipeline)** and **Path 2 (Server Connectors & Host Daemons)** have been fully implemented, integrated, and validated across the entire Ryvix monorepo.
+Earlier reports marked both paths complete; production configuration and live integration checks remain outstanding as detailed in the current checkpoint.
 
 ## 2. Master Test Suite Results (9/9 Passed)
 Command: `npm.cmd run test`
@@ -9,11 +14,11 @@ Command: `npm.cmd run test`
 - `End-to-End Server Outage & Differential Diagnosis Test`: **PASSED**
 - `End-to-End Self-Healing Flow Test`: **PASSED**
 - `3-Attempt Circuit Breaker & Anti-Looping Test`: **PASSED**
-- `Coding Workspace Expiry & Container Cleanup Test`: **PASSED**
+- Legacy object-mutation cleanup test: removed; production cleanup persistence is tested through `RepositoryJobStore.markDestroyed()`.
 - `Path 1: AI Coding Workspace & PR Pipeline (Phases 1-4)`: **PASSED**
 - `Path 2: Server Connectors & Autonomous Host Daemons (Phases 1-4)`: **PASSED**
 - `API Key Cryptographic Security & Lifecycle Test`: **PASSED**
-- `Cross-Tenant RLS & Audit Immutability Test`: **PASSED**
+- The legacy tenant-predicate unit test passes; it does not prove PostgreSQL RLS. Current live SQL-role evidence and limits are in `COMPLETION_2026_09_30.md`.
 
 ## 3. Database & Security Audit
 - **Host**: `db.tsoyrpgifovzwqtgpkkb.supabase.co:5432` (PostgreSQL 17.6)

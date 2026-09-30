@@ -3,6 +3,8 @@
 **Date**: September 23, 2026  
 **Status**: 100% OPERATIONAL & VERIFIED  
 
+> Historical report: counts and completion claims below are from September 23, 2026 and are not current verification. The former cross-tenant JavaScript predicate test did not execute PostgreSQL RLS; current evidence and limits are documented in `RLS_POLICY_REVIEW.md`.
+
 ## 1. Automated Test Suite Execution
 - **Command**: `npm run test`
 - **Result**: **39 PASSED | 0 FAILED** (4269ms duration)
@@ -11,7 +13,7 @@
   - `github-integration.test.ts`: 100% verified (JWT app token, installation token, repo discovery, stack detection, PR generation).
   - `server-outage.test.ts`: 100% verified (tri-state differential diagnosis: healthy, agent_crashed, server_outage).
   - `server-connector-pipeline.test.ts`: 100% verified (HMAC token, zero-trust capability whitelist, telemetry stream).
-  - `cross-tenant-rls.test.ts`: 100% verified (tenant isolation across all tables).
+  - `tenant-predicate.test.ts`: unit coverage of a JavaScript predicate only; it does not verify database RLS.
   - `total-project-integration.test.ts`: 100% verified.
 
 ---

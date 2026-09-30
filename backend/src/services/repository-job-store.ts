@@ -16,10 +16,11 @@ export class RepositoryJobStore {
     catch (error) { await client.query('ROLLBACK').catch(() => {}); throw error; }
     finally { client.release(); }
   }
-  private async audit(client: PoolClient, project: string, user: string, task: string, action: string, success = true) {
+  private async audit(client: PoolClient, project: string, actorId: string | null,
+    actorType: 'user' | 'system', task: string, action: string, success = true) {
     await client.query(`INSERT INTO audit_events(project_id,actor_id,actor_type,action_name,parameters_hash,diff_summary,status)
-      VALUES($1,$2,'user',$3,$4,$5,$6)`, [project,user,action,createHash('sha256').update(task).digest('hex'),
-      `Task ${task}`,success ? 'success' : 'failure']);
+      VALUES($1,$2,$3,$4,$5,$6,$7)`, [project,actorId,actorType,action,
+      createHash('sha256').update(task).digest('hex'),`Task ${task}`,success ? 'success' : 'failure']);
   }
   async enqueue(repositoryId: string, organizationId: string, userId: string, prompt: string) {
     return this.transaction(async client => {
@@ -42,7 +43,7 @@ export class RepositoryJobStore {
       const task = await client.query(`INSERT INTO tasks(project_id,created_by,channel,task_type,status,user_prompt)
         VALUES($1,$2,'web','coding','queued',$3) RETURNING id,status,user_prompt`, [repo.rows[0].project_id,userId,prompt]);
       await client.query('INSERT INTO repository_jobs(task_id,repository_id) VALUES($1,$2)', [task.rows[0].id,repositoryId]);
-      await this.audit(client,repo.rows[0].project_id,userId,task.rows[0].id,'task.enqueue');
+      await this.audit(client,repo.rows[0].project_id,userId,'user',task.rows[0].id,'task.enqueue');
       return task.rows[0];
     });
   }
@@ -57,7 +58,7 @@ export class RepositoryJobStore {
       const job = result.rows[0]; if (!job) return null;
       await client.query(`UPDATE repository_jobs SET status='running',worker_id=$2,lease_expires_at=now()+interval '45 seconds',updated_at=now() WHERE task_id=$1`, [job.task_id,workerId]);
       await client.query("UPDATE tasks SET status='planning',updated_at=now() WHERE id=$1", [job.task_id]);
-      await this.audit(client,job.project_id,job.created_by,job.task_id,'task.execute.requested');
+      await this.audit(client,job.project_id,null,'system',job.task_id,'task.execute.requested');
       return job;
     });
   }
@@ -111,7 +112,7 @@ export class RepositoryJobStore {
       await client.query("UPDATE workspace_sessions SET status=$2,preview_url=$3 WHERE id=$1 AND task_id=$4", [result.session.id,result.session.status,result.session.preview_url,job.task_id]);
       await client.query("UPDATE tasks SET status='awaiting_approval',updated_at=now() WHERE id=$1", [job.task_id]);
       await client.query("UPDATE repository_jobs SET status='completed',lease_expires_at=NULL,updated_at=now() WHERE task_id=$1", [job.task_id]);
-      await this.audit(client,job.project_id,job.created_by,job.task_id,'task.execute.success');
+      await this.audit(client,job.project_id,null,'system',job.task_id,'task.execute.success');
     });
   }
   async fail(job: RepositoryJob, workerId: string) {
@@ -122,7 +123,7 @@ export class RepositoryJobStore {
       await client.query(`UPDATE tasks SET status='failed',error_details='Workspace execution interrupted or verification failed. No changes were shipped.',updated_at=now()
         WHERE id=$1 AND status IN ('planning','executing','verifying')`, [job.task_id]);
       await client.query("UPDATE repository_jobs SET status=$2,lease_expires_at=NULL,updated_at=now() WHERE task_id=$1", [job.task_id,valid.rows[0].status==='cancelled'?'cancelled':'failed']);
-      await this.audit(client,job.project_id,job.created_by,job.task_id,'task.execute.failure',false);
+      await this.audit(client,job.project_id,null,'system',job.task_id,'task.execute.failure',false);
     });
   }
   async expireLeases() {

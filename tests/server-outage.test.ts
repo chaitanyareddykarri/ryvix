@@ -3,7 +3,7 @@ import { ExternalMonitoringService } from '../services/src/monitoring/external-m
 import type { Server } from '@ryvix/database';
 
 export async function testServerOutage() {
-  console.log('[TEST] Running End-to-End Server Outage & Differential Diagnosis Test...');
+  console.log('[TEST] Running In-Memory Outage Evaluation Unit Test...');
 
   const monitor = new ExternalMonitoringService(90); // 90-second threshold
   const baseTime = new Date('2026-09-21T12:00:00Z');
@@ -68,6 +68,9 @@ export async function testServerOutage() {
   assert.equal(evaluationTotalOutage.notificationDispatched?.channel, 'whatsapp', 'P1 alerts must dispatch via WhatsApp');
   assert.ok(evaluationTotalOutage.notificationDispatched?.idempotency_key, 'Notification must contain idempotency key');
   assert.equal(evaluationTotalOutage.auditEvent?.action_name, 'incident.created');
+  for (const id of [evaluationTotalOutage.incidentCreated?.id, evaluationTotalOutage.notificationDispatched?.id,
+    evaluationTotalOutage.auditEvent?.id]) assert.match(id || '', /^[a-f\d]{8}(-[a-f\d]{4}){3}-[a-f\d]{12}$/i,
+    'Generated record identifiers must use UUID format accepted by database schemas');
 
-  console.log('✓ End-to-End Server Outage Test PASSED (differential diagnosis, incident creation, idempotency, audit trail).');
+  console.log('✓ In-memory outage evaluator unit cases passed (no database persistence or notification dispatch is exercised).');
 }

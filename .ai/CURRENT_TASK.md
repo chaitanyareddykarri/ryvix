@@ -2,6 +2,17 @@
 
 ## Latest continuation: 2026-09-30
 
+Audit continuation: fixed the workspace route's wrong-process command path and
+raw error response; removed the legacy in-memory cleanup worker and replaced its
+mutation test with repository-store persistence assertions. Simplified OTP
+resend ledger matching while preserving the original expiry. Database errors
+retain an internal cause with SQLSTATE-only logging. Server POST tenant auth now
+runs once; repository-worker audit events identify worker actions as `system`.
+Kept the backend DB module because repository code imports it, and kept
+orchestrator compatibility exports because direct-module callers use them.
+Removed the legacy workspace-cleanup class, corrected the RLS unit-test label,
+and changed legacy monitor IDs to UUIDs.
+
 High-impact server recovery was reviewed after the tenant/observability checkpoint.
 The old cloud reset route treated a client `approved: true` field plus an admin
 role as approval and dispatched a hard reset without a persisted approval record.
