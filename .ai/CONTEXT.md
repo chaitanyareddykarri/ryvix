@@ -1,6 +1,9 @@
 # Ryvix Current Project Context
 
 > Latest checkpoint (2026-09-30): see docs/verification/COMPLETION_2026_09_30.md.
+> Live migration rollout now completed through 20260930000004; all 31 read-only
+> database-boundary checks pass. Prior missing-migration notes below are historical.
+> Production preview/release/image configuration and live integration tests remain.
 > The local task API now queues work for a dedicated worker. New OTP/queue/RLS
 > migrations must precede deployment. Historical completion claims remain invalid;
 > Docker isolation/egress/preview tests now pass. Verified database TLS works with

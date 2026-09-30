@@ -19,3 +19,10 @@ grants on connectors and all browser access to connector credentials and Vault.
 The authenticated backend uses the existing server-only PostgreSQL pool.
 
 Reference: https://supabase.com/docs/guides/database/vault
+
+2026-09-30 rollout correction: the still-unapplied migration's blanket function
+revocation failed with 42501 on a Supabase-owned internal crypto function and
+rolled back. It now revokes the supported create/update entry points, then
+asserts that neither browser role can execute any Vault function, including
+through PUBLIC/inherited grants. Unexpected access aborts the transaction;
+errors are not suppressed and internal function ownership is not changed.

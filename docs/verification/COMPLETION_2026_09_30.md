@@ -52,6 +52,11 @@
 
 ## Rollout dependencies
 
+Update: [live migration rollout](MIGRATION_ROLLOUT_2026_09_30.md) completed through
+20260930000004 after user authorization. The list below describes the applied
+prerequisites for other environments; no local migration entries remain absent
+from this Supabase project's ledger. Production configuration is still required.
+
 Reconcile migration history and apply canonical numbered migrations in order,
 including the earlier task-artifact, Vault and signed-telemetry migrations plus:
 
@@ -115,13 +120,14 @@ with the Node and egress image variables configured before rollout.
 - All 12 AI runtime-data files restored byte-for-byte from the pre-test backup;
   no AI runtime-data diff remains. User authorized committing and pushing this
   checkpoint to the review branch; the Git history records publication.
-- `npm run verify:runtime`: not ready; required production settings and migrations
-  are missing. The latest database verified-TLS read-only probe passed. The check exits nonzero
+- `npm run verify:database`: all 31 live read-only boundary checks passed.
+- `npm run verify:runtime`: not ready; required production settings
+  are missing. Database TLS, required tables and migration history checks passed. The check exits nonzero
   for missing settings/tables/migration ledger entries, even when TLS connects.
 
 ## Remaining implementation and integration work
 
-- Live OAuth/PAT-to-Vault-to-worker verification after migration reconciliation;
+- Live OAuth/PAT-to-Vault-to-worker verification after the completed migration rollout;
   shared multi-repository projects retain Connections management (ADR-014).
   Per-repository credential bindings within shared projects remain unimplemented.
 - Browser interaction verification for the restored onboarding modals remains

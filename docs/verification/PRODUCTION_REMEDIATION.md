@@ -1,5 +1,10 @@
 # Production remediation progress
 
+Live rollout supersedes pending-migration notes below:
+[migration rollout](MIGRATION_ROLLOUT_2026_09_30.md). The artifact ledger entry was
+repaired and six pending migrations applied; all 31 database-boundary checks pass.
+Production preview/release/image configuration and live integrations remain pending.
+
 Latest catalog findings: [migration drift inspection](MIGRATION_DRIFT_2026_09_30.md).
 Checkpoints `8203118` and `8c20fe8` are pushed. An additional migration prepared
 under ADR-015 removes browser table-maintenance grants, bringing pending ledger

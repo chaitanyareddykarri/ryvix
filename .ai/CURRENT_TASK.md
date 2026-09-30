@@ -2,6 +2,17 @@
 
 ## Latest continuation: 2026-09-30
 
+Live migration update: the user authorized migration. Supabase CLI repaired the
+verified artifact-history entry and applied the six remaining migrations through
+20260930000004. The pending Vault migration needed a non-suppressing ACL fix for
+Supabase-owned internal functions (ADR-008). No migration entries remain missing.
+`npm run verify:database` passes all 31 read-only checks, including RLS, Vault,
+browser mutation restrictions and maintenance privileges. Runtime readiness is
+now blocked by production preview/release/image settings, not missing tables.
+See `docs/verification/MIGRATION_ROLLOUT_2026_09_30.md` for current evidence.
+
+The following drift notes describe the state before this rollout:
+
 Checkpoints `8203118` and `8c20fe8` are pushed. Read-only database inspection
 confirmed the artifact migration's inspected objects match despite the missing
 ledger entry. Browser maintenance grants remain on connectors: ADR-015 and
