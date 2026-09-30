@@ -65,6 +65,8 @@ async function runAllTests() {
     { name: 'Repository Selection and Vault Transaction', fn: (await import('./repository-connection.test')).testRepositoryConnection },
     { name: 'Verified Deployment Status Ingestion', fn: (await import('./deployment-ingestion.test')).testDeploymentIngestion },
     { name: 'Public Probe Destination and Evidence Boundaries', fn: (await import('./public-probe.test')).testPublicProbe },
+    { name: 'Tenant-Scoped Observability Records', fn: (await import('./observability-logs.test')).testObservabilityLogs },
+    { name: 'Backend Operation Audit Permission Rechecks', fn: (await import('./operation-audit.test')).testOperationAudit },
     { name: 'Gmail Unverified Sender and Digest Escaping', fn: (await import('./gmail-boundary.test')).testGmailBoundary },
     { name: 'Durable OTP Consumption, Resend and Secret Isolation', fn: (await import('./auth-challenge-store.test')).testAuthChallengeStore },
     { name: 'Task Cancellation, Authorization and Cleanup Retry', fn: (await import('./task-lifecycle.test')).testTaskLifecycle },

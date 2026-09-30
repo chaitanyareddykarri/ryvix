@@ -2,6 +2,14 @@
 
 ## Implemented in this continuation
 
+- Observability logs now read curated tenant-scoped audit/security records and
+  latest recorded health-check snapshots. The previously missing API validates
+  filters and limits, excludes raw evidence/credentials, and reports storage errors.
+  The UI cancels stale requests and distinguishes errors from empty results.
+- ADR-018/migration 20260930000006 protects operational evidence, project and
+  environment writes from browser bypass. Restrictive membership policies close
+  stale-profile access to project-derived data. Operation audit writes now lock/
+  recheck membership and use the backend pool; the migration is applied.
 - Public endpoint diagnostics (ADR-017): authenticated operators, explicit targets,
   public IPv4 validation, pinned DNS, standard ports, no redirects and bounded
   requests. Removed guessed server/environment, localhost and fabricated heartbeat
@@ -120,7 +128,7 @@ with the Node and egress image variables configured before rollout.
 
 ## Local verification
 
-- `npm test`: 62 project suites passed, zero failed; 10 Node scanner/proxy tests passed.
+- `npm test`: 64 project suites passed, zero failed; 10 Node scanner/proxy tests passed.
 - `npm run typecheck`: passed across all workspaces.
 - `npm run lint`: passed with no ESLint warnings/errors (Next lint CLI deprecation notice).
 - Real Docker workspace and native Linux agent checks passed as detailed above.
@@ -130,7 +138,13 @@ with the Node and egress image variables configured before rollout.
 - All 12 AI runtime-data files restored byte-for-byte from the pre-test backup;
   no AI runtime-data diff remains. User authorized committing and pushing this
   checkpoint to the review branch; the Git history records publication.
-- `npm run verify:database`: all 35 live read-only boundary checks passed.
+- `npm run verify:database`: all 63 live read-only boundary checks passed.
+- `npm run verify:tenants`: live SQL database-role fixtures verified cross-tenant
+  isolation, viewer write denial, stale profile-role denial, supported profile
+  display edits and revoked-membership denial. Fixtures were rolled back and their
+  absence checked. This does not certify an actual provider-issued JWT login flow.
+- The production observability query ran against the live schema in a read-only
+  transaction; an unassigned synthetic identity received no records.
 - `npm run verify:deployment`: real SQL event/audit persistence and redelivery
   deduplication passed; all synthetic fixtures were rolled back. This does not
   claim actual GitHub delivery or application deployment.

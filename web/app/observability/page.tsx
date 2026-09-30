@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 
 interface LogEntry {
@@ -16,6 +16,8 @@ interface LogEntry {
 export default function ObservabilityPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [logsError, setLogsError] = useState('');
+  const logRequest = useRef<AbortController | null>(null);
   const [filterSeverity, setFilterSeverity] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   
@@ -26,21 +28,25 @@ export default function ObservabilityPage() {
 
   useEffect(() => {
     loadLogs();
+    return () => logRequest.current?.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterSeverity]);
 
   async function loadLogs() {
+    logRequest.current?.abort();
+    const abort = new AbortController();
+    logRequest.current = abort;
     setLoading(true);
+    setLogsError('');
     try {
-      const res = await fetch(`/api/observability/logs?severity=${filterSeverity}&limit=60`);
+      const res = await fetch(`/api/observability/logs?severity=${filterSeverity}&limit=60`, {signal:abort.signal});
       const data = await res.json();
-      if (data.success && Array.isArray(data.logs)) {
-        setLogs(data.logs);
-      }
+      if (!res.ok || !data.success || !Array.isArray(data.logs)) throw new Error(data.error || 'Observability records unavailable.');
+      if (!abort.signal.aborted) setLogs(data.logs);
     } catch (err) {
-      console.error("Failed to load logs:", err);
+      if (!abort.signal.aborted) { setLogs([]); setLogsError(err instanceof Error ? err.message : 'Observability records unavailable.'); }
     } finally {
-      setLoading(false);
+      if (!abort.signal.aborted) setLoading(false);
     }
   }
 
@@ -55,8 +61,6 @@ export default function ObservabilityPage() {
       });
       const data = await res.json();
       setProbeResult(data);
-      // Reload logs to show new health check entry
-      loadLogs();
     } catch (err: any) {
       setProbeResult({ success: false, error: err.message });
     } finally {
@@ -288,9 +292,9 @@ export default function ObservabilityPage() {
           <div>Source</div>
         </div>
 
-        {loading ? (
+        {logsError ? <div role="alert" style={{padding:'2rem',color:'#fca5a5'}}>{logsError}</div> : loading ? (
           <div style={{ padding: "3rem", textAlign: "center", color: "#64748b", fontSize: "0.85rem" }}>
-            Streaming observability telemetry from Supabase...
+            Loading recent observability records...
           </div>
         ) : filteredLogs.length === 0 ? (
           <div style={{ padding: "3rem", textAlign: "center", color: "#64748b", fontSize: "0.85rem" }}>

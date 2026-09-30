@@ -1,5 +1,12 @@
 # Supabase migration rollout — 2026-09-30
 
+Latest continuation applied `20260930000006_operational_record_boundaries.sql`.
+The expanded verifier passes 63 checks. `npm run verify:tenants` creates synthetic
+fixtures inside a transaction, switches to the authenticated database role with
+test claims, verifies isolation/viewer/stale-role/revocation behavior, and rolls
+everything back. Profile display-field editing remains functional. This is not
+a real provider-issued JWT or HTTP authentication test.
+
 Subsequent continuation applied `20260930000005_verified_deployment_events.sql`.
 The expanded verifier passes 35 checks, including deployment records and browser
 repository mutation denial. `npm run verify:deployment` verifies real SQL event/

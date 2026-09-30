@@ -1,6 +1,9 @@
 # Ryvix Current Project Context
 
 > Latest checkpoint (2026-09-30): see docs/verification/COMPLETION_2026_09_30.md.
+> Latest rollout is through 20260930000006; 64 project suites and 63 database
+> boundary checks pass, including rolled-back tenant-role isolation fixtures.
+> The missing observability logs route is now implemented with tenant scoping.
 > Deployment events are now persisted from signed GitHub webhooks (ADR-016), with
 > migration 20260930000005 applied and 35 database-boundary checks passing.
 > Provider event delivery and runtime-health correlation are not yet certified.

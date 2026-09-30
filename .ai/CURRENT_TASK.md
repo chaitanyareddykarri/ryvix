@@ -2,6 +2,15 @@
 
 ## Latest continuation: 2026-09-30
 
+Observability/tenant continuation: the missing `/api/observability/logs` route now
+reads curated tenant-scoped audit/security records and latest health snapshots.
+Errors no longer masquerade as empty logs; stale requests are cancelled.
+ADR-018/migration 20260930000006 is applied: browser operational-record mutations
+are revoked, project-derived RLS requires current membership, and operation audits
+use an authorized backend transaction. 64 suites and 63 database-boundary checks
+pass. Live SQL fixtures verified tenant/viewer/revocation behavior and were rolled
+back. This is database-role verification, not a real Supabase Auth JWT login test.
+
 Monitoring continuation (ADR-017): the public probe now requires tenant/operator
 authorization, validates public destinations, pins DNS, rejects redirects and
 removes default-server/localhost/fabricated-heartbeat behavior. Host correlation

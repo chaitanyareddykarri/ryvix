@@ -1,5 +1,11 @@
 # Production remediation progress
 
+Observability/tenant continuation: the missing logs endpoint is implemented and
+ADR-018/migration 20260930000006 is applied. Browser operational-record writes and
+stale-membership project access are blocked. 64 suites, 63 privilege checks and
+rolled-back tenant isolation tests pass. Full provider/JWT/browser verification
+and the remaining integration implementations below are not claimed complete.
+
 Monitoring continuation (ADR-017): removed unauthenticated arbitrary probing and
 fabricated default host/heartbeat evidence. Public destination validation, DNS
 pinning, redirect denial and tenant-authorized correlation now pass regression
