@@ -14,7 +14,7 @@ export async function testTaskLifecycle() {
       assert.ok(sql.includes("t.created_by=$2") && sql.includes("m.role IN") && sql.includes('FOR UPDATE'));
       return { rows: mode === 'unauthorized' ? [] : [{ project_id: 'project', status: mode === 'completed' ? 'completed' : action === 'delete' ? 'cancelled' : 'executing' }] };
     }
-    if (sql.includes('SELECT * FROM workspace_sessions')) return { rows: [{ id: 'session', task_id: id }] };
+    if (sql.includes('SELECT * FROM workspace_sessions')) return { rows: mode === 'cleaned' ? [] : [{ id: 'session', task_id: id }] };
     return { rows: [], rowCount: 1 };
   } };
   const exports: any = {};
@@ -31,8 +31,10 @@ export async function testTaskLifecycle() {
   } });
   const id = crypto.randomUUID();
   await exports.changeTaskLifecycle(id, action, 'user', 'org');
-  assert.ok(calls.indexOf('COMMIT') < calls.indexOf('terminate'), 'Cancel must be durable before cleanup');
-  assert.ok(calls.some(sql => sql.includes("SET status='destroyed'")));
+  assert.ok(calls.includes('COMMIT'), 'Cancellation must be durable');
+  assert.ok(calls.some(sql => sql.includes('expires_at=LEAST(expires_at,now())')));
+  assert.ok(!calls.includes('terminate'), 'Web must not execute Docker cleanup');
+  assert.ok(!calls.some(sql => sql.includes("SET status='destroyed'")), 'Only worker confirmation marks destruction');
   for (mode of ['unauthorized', 'completed']) {
     calls.length = 0;
     await assert.rejects(exports.changeTaskLifecycle(id, 'cancel', 'user', 'org'));
@@ -41,7 +43,7 @@ export async function testTaskLifecycle() {
   mode = 'cleanup-failure'; action = 'delete'; calls.length = 0;
   await assert.rejects(exports.changeTaskLifecycle(id, action, 'user', 'org'));
   assert.ok(!calls.some(sql => sql.startsWith('DELETE FROM tasks')), 'Keep records for cleanup retry');
-  mode = 'ok'; calls.length = 0;
+  mode = 'cleaned'; calls.length = 0;
   await exports.changeTaskLifecycle(id, action, 'user', 'org');
-  assert.ok(calls.findIndex(sql => sql.startsWith('DELETE FROM tasks')) > calls.indexOf('terminate'));
+  assert.ok(calls.some(sql => sql.startsWith('DELETE FROM tasks') && sql.includes('NOT EXISTS')));
 }

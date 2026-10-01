@@ -19,7 +19,7 @@ import type {
   AuditEvent,
   IncidentSeverity,
 } from '@ryvix/database';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { probePublicEndpoint } from './public-probe';
 
 export interface ProbeResult {
@@ -141,7 +141,8 @@ export class ExternalMonitoringService {
       action_name: 'incident.created',
       target_entity: 'server',
       target_id: server.id,
-      parameters_hash: 'sha256_hash_eval',
+      parameters_hash: createHash('sha256').update(JSON.stringify({ serverId: server.id,
+        organizationId, projectId, lastHeartbeatAt, externalProbe, evaluatedAt: currentTime.toISOString() })).digest('hex'),
       diff_summary: `Server status transitioned from ${server.status} to unreachable. Incident ${incident.id} created.`,
       status: 'success',
       ip_address: null,

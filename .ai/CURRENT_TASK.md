@@ -1,5 +1,13 @@
 # Current Task & Implementation State
 
+## B1-B12 claim audit (2026-10-01)
+
+Web cancellation now records cleanup for the worker; deletion waits for recorded
+destruction. Settings GET verifies current tenant membership. Settings and analyze
+errors are sanitized; cluster IDs use UUIDs and monitor evaluation hashes use
+SHA-256. See `docs/verification/BUG_CLAIMS_B1_B12.md` for corrected false/stale
+claims, especially signup resend, backend db imports and compatibility exports.
+
 ## Native command boundary follow-up (2026-10-01)
 
 Closed an overlooked Go daemon path that executed command-bearing telemetry

@@ -158,7 +158,7 @@ async function handleAnalysis(owner: string | null, repo: string | null, request
       analysis,
     });
   } catch (err: any) {
-    console.error("[Repository Analyze Error]:", err);
+    console.error("[Repository Analyze Error]: repository inspection failed");
     return NextResponse.json(
       {
         success: false,
@@ -181,7 +181,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
     return handleAnalysis(body.owner || null, body.repo || null, body.branch || null);
-  } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message || "Invalid request body" }, { status: 400 });
+  } catch {
+    return NextResponse.json({ success: false, error: "Invalid repository analysis request." }, { status: 400 });
   }
 }

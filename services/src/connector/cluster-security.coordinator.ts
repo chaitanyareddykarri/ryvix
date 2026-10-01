@@ -11,6 +11,7 @@
 
 import { LocalSecurityEngine, ServerEventData, LocalAnalysisResult } from '@ryvix/ai';
 import { InternalAgent, CapabilityExecutionResult } from './internal-agent';
+import { randomUUID } from 'node:crypto';
 type ClusterAgent = Pick<InternalAgent, 'executeCapability'> & { isIpBlocked?: (ip: string) => boolean };
 
 export interface ClusterNodeRecord {
@@ -133,7 +134,7 @@ export class ClusterSecurityCoordinator {
 
     // 4. Record Incident in Audit Ledger
     const incident: SecurityIncidentTrigger = {
-      incidentId: `inc_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      incidentId: randomUUID(),
       clusterId: this.clusterId,
       targetHost: node.hostname,
       threatType: analysis.threatType,

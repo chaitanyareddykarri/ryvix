@@ -91,7 +91,7 @@ export async function testConnectedClusterSecurity(): Promise<void> {
   // 6. Verify Incident Audit Ledger
   const incidents = coordinator.getIncidents();
   assert.equal(incidents.length, 2, 'Must record both incidents');
-  assert.ok(incidents[0].incidentId.startsWith('inc_'), 'Valid incident ID format');
+  assert.match(incidents[0].incidentId, /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i, 'Incident ID is a UUID');
   console.log(`  ✓ Incident ledger records ${incidents.length} security containment events with full audit trace.`);
 
   console.log('✓ Connected AI Threat Detection, Log Parsing & Cluster IP Blocker Test ALL PASSED!\n');

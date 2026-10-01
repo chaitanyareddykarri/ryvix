@@ -68,6 +68,7 @@ export async function testServerOutage() {
   assert.equal(evaluationTotalOutage.notificationDispatched?.channel, 'whatsapp', 'P1 alerts must dispatch via WhatsApp');
   assert.ok(evaluationTotalOutage.notificationDispatched?.idempotency_key, 'Notification must contain idempotency key');
   assert.equal(evaluationTotalOutage.auditEvent?.action_name, 'incident.created');
+  assert.match(evaluationTotalOutage.auditEvent?.parameters_hash || '', /^[a-f0-9]{64}$/);
   for (const id of [evaluationTotalOutage.incidentCreated?.id, evaluationTotalOutage.notificationDispatched?.id,
     evaluationTotalOutage.auditEvent?.id]) assert.match(id || '', /^[a-f\d]{8}(-[a-f\d]{4}){3}-[a-f\d]{12}$/i,
     'Generated record identifiers must use UUID format accepted by database schemas');

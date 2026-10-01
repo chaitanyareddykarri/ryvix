@@ -3,19 +3,15 @@ import * as crypto from "node:crypto";
 import { queryDirectDb } from "@/utils/direct-db";
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
+import { requireTenant, RequestError } from '@/utils/tenant-context';
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
+    const { user, organizationId } = await requireTenant();
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    let orgId: string | null = null;
+    let orgId: string | null = organizationId;
     let userFullName: string = "Account Owner";
     let userEmail: string = "";
 
@@ -28,9 +24,6 @@ export async function GET() {
         [user.id]
       );
 
-      if (profileRes[0]?.organization_id) {
-        orgId = profileRes[0].organization_id;
-      }
       if (profileRes[0]?.full_name) {
         userFullName = profileRes[0].full_name;
       }
@@ -113,8 +106,8 @@ export async function GET() {
       apiKeys: keyRes || [],
       members: finalMembers,
     });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json({ success: false, error: err instanceof RequestError ? err.message : 'Settings unavailable.' }, { status: err instanceof RequestError ? err.status : 503 });
   }
 }
 
@@ -181,7 +174,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ success: false, error: "Unknown action" }, { status: 400 });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ success: false, error: 'Settings update unavailable.' }, { status: 503 });
   }
 }

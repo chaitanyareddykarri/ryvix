@@ -59,6 +59,7 @@ async function runAllTests() {
 
   seedHealthFixtures();
   const testCases: { name: string; fn: () => Promise<void> }[] = [
+    { name: 'Settings Authentication and Safe Errors', fn: (await import('./settings-boundary.test')).testSettingsBoundary },
     { name: 'PR Approval Durability, Reauthorization and Retry', fn: (await import('./pr-shipping-approval.test')).testPrShippingApproval },
     { name: 'Durable Repository Job Queue and Lease Boundaries', fn: (await import('./repository-job-store.test')).testRepositoryJobStore },
     { name: 'Database Errors Preserve Internal Cause Without Leaking Details', fn: (await import('./direct-db-errors.test')).testDirectDbErrors },
