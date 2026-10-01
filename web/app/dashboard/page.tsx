@@ -494,6 +494,9 @@ export default function DashboardPage() {
   ]);
   const [chatInput, setChatInput] = useState<string>("");
   const [isChatStreaming, setIsChatStreaming] = useState<boolean>(false);
+  const chatConversationRef = useRef<string | undefined>(undefined);
+  const chatAbortRef = useRef<AbortController | null>(null);
+  useEffect(() => () => chatAbortRef.current?.abort(), []);
 
   // Dynamic Observability, Security & Telemetry State
   const [liveLogs, setLiveLogs] = useState<any[]>([]);
@@ -923,16 +926,19 @@ export default function DashboardPage() {
     const assistantMsg = {
       role: "assistant" as const,
       content: "",
-      thoughtTrace: "Synthesizing AST & analyzing codebase topology...",
+      thoughtTrace: "Retrieving authorized project context...",
     };
     setChatMessages((prev) => [...prev, assistantMsg]);
-
+    const chatAbort = new AbortController();
+    chatAbortRef.current = chatAbort;
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
+        signal: chatAbort.signal,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt: message,
+          conversationId: chatConversationRef.current,
           projectId: activeRepo?.project_id || undefined,
           repositoryId: activeRepo?.id || undefined,
           stream: true,
@@ -947,26 +953,26 @@ export default function DashboardPage() {
       const decoder = new TextDecoder();
       let accumulated = "";
       let lastThought = "";
+      let eventBuffer = '';
 
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
         const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n");
+        eventBuffer += chunk;
+        const lines = eventBuffer.split("\n");
+        eventBuffer = lines.pop() || '';
 
         for (const line of lines) {
           if (line.startsWith("data: ")) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              if (data.chunk && typeof data.chunk === "string") {
-                accumulated += data.chunk;
-              } else if (data.content && typeof data.content === "string") {
-                lastThought = data.content;
-              }
-            } catch {
-              if (!line.includes("{")) {
-                accumulated += line.slice(6);
-              }
+            let data;
+            try { data = JSON.parse(line.slice(6)); } catch { continue; }
+            if (data.error) throw new Error('Response interrupted.');
+            if (data.conversationId) chatConversationRef.current = data.conversationId;
+            if (data.chunk && typeof data.chunk === "string") {
+              accumulated += data.chunk;
+            } else if (data.content && typeof data.content === "string") {
+              lastThought = data.content;
             }
           }
         }
@@ -998,6 +1004,8 @@ export default function DashboardPage() {
         return updated;
       });
     } finally {
+      chatAbort.abort();
+      chatAbortRef.current = null;
       setIsChatStreaming(false);
     }
   }
@@ -2240,7 +2248,7 @@ export default function DashboardPage() {
                           </span>
                         )}
                       </div>
-                      <div style={{ whiteSpace: "pre-wrap" }}>{msg.content || (isChatStreaming && idx === chatMessages.length - 1 ? "Synthesizing AST & applying isolated patch..." : "")}</div>
+                      <div style={{ whiteSpace: "pre-wrap" }}>{msg.content || (isChatStreaming && idx === chatMessages.length - 1 ? "Preparing an answer from available evidence..." : "")}</div>
                       {msg.thoughtTrace && (
                         <div style={{ marginTop: "0.55rem", padding: "0.45rem 0.65rem", borderRadius: "6px", background: "#080C11", border: "1px solid #1D2732", fontSize: "0.72rem", color: "#42D9FF", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)" }}>
                           ⚡ {msg.thoughtTrace}

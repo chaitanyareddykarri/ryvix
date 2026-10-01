@@ -60,6 +60,10 @@ export class ContextBuilder {
     return clean;
   }
   private static readonly SECRET_PATTERNS: RegExp[] = [
+    /["']?[\w-]*(?:password|passwd|secret|api[_-]?key|token|private[_-]?key)[\w-]*["']?\s*[:=]\s*["'][^"'\r\n]{8,}["']/gi,
+    /AIza[0-9A-Za-z_-]{35}/g,
+    /(?:gsk_|github_pat_)[0-9A-Za-z_]{20,}/g,
+    /eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g,
     new RegExp('-----BEGIN[ A-Z0-9_-]+PRIVATE KEY-----[\\s\\S]*?-----END[ A-Z0-9_-]+PRIVATE KEY-----', 'gi'),
     new RegExp('(?:password|passwd|pwd|secret|api_key|token|auth_token|service_role_key|jwt_secret)\\s*[:=]\\s*["\']?([a-zA-Z0-9_\\-\\.]{8,})["\']?', 'gi'),
     new RegExp('ghp_[a-zA-Z0-9]{36}', 'gi'),

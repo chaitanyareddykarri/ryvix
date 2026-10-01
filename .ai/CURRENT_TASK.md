@@ -1,5 +1,14 @@
 # Current Task & Implementation State
 
+## Grounded conversation upgrade (2026-10-01)
+
+Added user/tenant-owned SQL history, bounded incident/artifact retrieval, native
+provider streaming, 4096-token answers, validated classifier checkpoint loading
+and evaluation tools. ADR-019 migrations through 20261001000002 are applied.
+Live rolled-back SQL history/isolation checks pass. See
+`docs/verification/AI_UPGRADE_2026_10_01.md` for limits: no provider-quality claim,
+no real holdout dataset, snapshot retrieval only, and no archive browser yet.
+
 ## B1-B12 claim audit (2026-10-01)
 
 Web cancellation now records cleanup for the worker; deletion waits for recorded

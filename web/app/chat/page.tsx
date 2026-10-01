@@ -117,6 +117,8 @@ export default function WebChatPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const conversationIdRef = useRef<string | undefined>(undefined);
+  useEffect(() => () => abortControllerRef.current?.abort(), []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -182,7 +184,7 @@ export default function WebChatPage() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: text, stream: true }),
+        body: JSON.stringify({ prompt: text, stream: true, conversationId: conversationIdRef.current }),
         signal: abortController.signal
       });
 
@@ -229,6 +231,8 @@ export default function WebChatPage() {
             continue;
           }
 
+          if (eventType === 'start') conversationIdRef.current = parsedData.conversationId;
+          if (eventType === 'error') throw new Error(parsedData.error || 'Response interrupted.');
           setMessages(prev =>
             prev.map(msg => {
               if (msg.id !== assistantMsgId) return msg;
@@ -344,6 +348,10 @@ export default function WebChatPage() {
 
           {/* Nav Links */}
           <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button disabled={isStreaming} onClick={() => { conversationIdRef.current = undefined; setMessages([]); }}
+              style={{ padding:'0.3rem 0.75rem',borderRadius:'6px',color:'#cbd5e1',border:'1px solid rgba(255,255,255,0.1)',background:'rgba(255,255,255,0.04)' }}>
+              New conversation
+            </button>
             <Link href="/servers" style={{ padding: "0.3rem 0.75rem", borderRadius: "6px", fontSize: "0.8rem", color: "#cbd5e1", textDecoration: "none", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }}>
               🖥️ Servers
             </Link>

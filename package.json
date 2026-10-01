@@ -11,6 +11,9 @@
     "services"
   ],
   "scripts": {
+    "eval:ai": "tsx scripts/evaluate-ai.ts",
+    "eval:classifier": "tsx scripts/evaluate-classifier.ts",
+    "verify:chat": "tsx scripts/verify-chat-history-live.ts",
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",

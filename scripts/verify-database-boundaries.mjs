@@ -43,7 +43,7 @@ try {
       check(`${role}: ${table} is backend-only`, !result.rows[0].allowed);
     }
     for (const table of ['tasks','plans','approval_requests','workspace_sessions','pull_requests','connectors','telemetry_metric_rollups','repositories',
-      'projects','environments','organization_members','api_keys','servers','services_inventory','security_events','incidents',
+      'projects','environments','organization_members','api_keys','servers','services_inventory','security_events','incidents','chat_conversations','chat_turns',
       'recovery_plans','recovery_runs','plan_steps','tool_calls','health_checks','audit_events']) {
       const result = await client.query(`SELECT has_table_privilege($1,$2,'INSERT,UPDATE,DELETE') AS allowed`, [role, `public.${table}`]);
       check(`${role}: no direct ${table} mutations`, !result.rows[0].allowed);

@@ -18,6 +18,9 @@
  * Latency: Sub-50 microseconds (< 0.05ms) via Float32Array SIMD cache locality.
  */
 
+import { existsSync, readFileSync, statSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 export interface NeuralPrediction {
   predictedClass: string;
   confidence: number;
@@ -958,6 +961,14 @@ export class NeuralThreatClassifier {
   }
 
   public loadWeights(weights: Record<string, any>): void {
+    const expected = this.exportWeights();
+    if (!weights || ['inputDim','hidden1Dim','hidden2Dim','outputDim'].some(key => weights[key] !== expected[key]) ||
+      JSON.stringify(weights.classes) !== JSON.stringify(this.classes)) throw new Error('Incompatible neural weight dimensions or class ordering');
+    for (const key of Object.keys(expected).filter(key => key !== 'classes' && Array.isArray(expected[key]))) {
+      if (!Array.isArray(weights[key]) || weights[key].length !== expected[key].length ||
+        weights[key].some((value: unknown) => typeof value !== 'number' || !Number.isFinite(value) || Math.abs(value) > 1e6))
+        throw new Error('Invalid neural weight tensor');
+    }
     if (weights.inputDim === this.inputDim && weights.W_res) {
       if (weights.W1 && weights.W1.length === this.W1.length) this.W1.set(weights.W1);
       if (weights.b1 && weights.b1.length === this.b1.length) this.b1.set(weights.b1);
@@ -988,3 +999,14 @@ export class NeuralThreatClassifier {
 }
 
 export const neuralThreatClassifier = new NeuralThreatClassifier();
+export const neuralWeightsStatus: { loaded: boolean; reason: string } = { loaded:false, reason:'Saved weights unavailable' };
+try {
+  const candidates = process.env.RYVIX_NEURAL_WEIGHTS_PATH ? [process.env.RYVIX_NEURAL_WEIGHTS_PATH] :
+    [resolve(process.cwd(),'ai/data/neural_weights.json'),resolve(process.cwd(),'../ai/data/neural_weights.json')];
+  const filename = candidates.find(value => existsSync(value));
+  if (filename) {
+    if (statSync(filename).size > 8*1024*1024) throw new Error('Weight file too large');
+    neuralThreatClassifier.loadWeights(JSON.parse(readFileSync(filename,'utf8')));
+    neuralWeightsStatus.loaded = true; neuralWeightsStatus.reason = 'Validated saved classifier weights loaded';
+  }
+} catch { neuralWeightsStatus.reason = 'Saved weights rejected: invalid or incompatible'; }

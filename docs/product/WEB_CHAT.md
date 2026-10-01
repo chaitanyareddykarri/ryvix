@@ -1,5 +1,10 @@
 # Ryvix Web Chat & Visual Console Specification
 
+> Current implementation: see [AI upgrade](../verification/AI_UPGRADE_2026_10_01.md).
+> The historical Mem0, action execution and reasoning-trace claims below are not
+> current chat behavior. Chat uses scoped PostgreSQL history and native provider
+> text streaming, with read-only grounded explanations and no action execution.
+
 ## 1. Console Layout & Architecture
 
 The **Ryvix Web Console** provides a unified graphical interface combining conversational control with high-density developer tooling.

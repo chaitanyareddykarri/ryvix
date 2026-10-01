@@ -1,5 +1,12 @@
 # Ryvix Current Project Context
 
+> 2026-10-01 AI upgrade: chat now uses tenant/user-owned PostgreSQL conversation
+> history, bounded incident/artifact retrieval and real provider text streaming.
+> Classifier checkpoints load with validation; evaluation tooling is available.
+> See docs/verification/AI_UPGRADE_2026_10_01.md. ADR-019 migrations through
+> 20261001000002 are applied. Historical Mem0/chat and model-quality claims below
+> are not evidence of the current route's behavior or unseen-data accuracy.
+
 > Latest checkpoint (2026-09-30): see docs/verification/COMPLETION_2026_09_30.md.
 > Latest rollout is through 20260930000006; 64 project suites and 63 database
 > boundary checks pass, including rolled-back tenant-role isolation fixtures.

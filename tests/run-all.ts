@@ -59,6 +59,8 @@ async function runAllTests() {
 
   seedHealthFixtures();
   const testCases: { name: string; fn: () => Promise<void> }[] = [
+    { name: 'Chat Retrieval Tenant Scope and Context Budget', fn: (await import('./chat-retrieval.test')).testChatRetrieval },
+    { name: 'AI Streaming, Conversation Ownership and Weight Validation', fn: (await import('./ai-upgrade.test')).testAiUpgrade },
     { name: 'Settings Authentication and Safe Errors', fn: (await import('./settings-boundary.test')).testSettingsBoundary },
     { name: 'PR Approval Durability, Reauthorization and Retry', fn: (await import('./pr-shipping-approval.test')).testPrShippingApproval },
     { name: 'Durable Repository Job Queue and Lease Boundaries', fn: (await import('./repository-job-store.test')).testRepositoryJobStore },
