@@ -104,5 +104,11 @@ func (d *Dispatcher) SendTelemetry(payload telemetry.HostTelemetryPayload) (*Tel
 	if err := json.Unmarshal(body, &res); err != nil || !res.Success {
 		return nil, fmt.Errorf("control plane did not acknowledge telemetry")
 	}
+	// Telemetry authentication does not authorize operational commands. Until a
+	// separate signed, expiring, replay-protected approval protocol exists, no
+	// acknowledgement may carry commands into the daemon.
+	if len(res.Commands) != 0 {
+		return nil, fmt.Errorf("remote commands are unavailable on the telemetry channel")
+	}
 	return &res, nil
 }

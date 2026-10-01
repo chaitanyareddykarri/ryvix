@@ -1,5 +1,13 @@
 # Current Task & Implementation State
 
+## Native command boundary follow-up (2026-10-01)
+
+Closed an overlooked Go daemon path that executed command-bearing telemetry
+acknowledgements without command signature/approval/replay checks. Such responses
+are rejected and the daemon dispatch handler is removed. Remote operations remain
+unimplemented. See `docs/verification/NEXT_FOUR_PHASES_2026_10_01.md` for four-phase
+completion requirements, runtime blockers and the Windows test-policy limitation.
+
 ## Worker deployment readiness follow-up (2026-10-01)
 
 Worker startup now verifies Linux Docker availability and installed, explicitly

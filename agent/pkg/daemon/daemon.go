@@ -9,7 +9,6 @@ import (
 
 	"github.com/ryvix/agent/pkg/container"
 	"github.com/ryvix/agent/pkg/dispatcher"
-	"github.com/ryvix/agent/pkg/firewall"
 	"github.com/ryvix/agent/pkg/systemd"
 	"github.com/ryvix/agent/pkg/telemetry"
 )
@@ -25,7 +24,6 @@ type Config struct {
 type AgentDaemon struct {
 	config     Config
 	collector  telemetry.Collector
-	firewall   *firewall.FirewallManager
 	systemd    *systemd.SystemdManager
 	docker     *container.DockerManager
 	dispatcher *dispatcher.Dispatcher
@@ -46,7 +44,6 @@ func NewAgentDaemon(cfg Config) *AgentDaemon {
 	return &AgentDaemon{
 		config:     cfg,
 		collector:  telemetry.NewCollector(),
-		firewall:   firewall.NewFirewallManager(),
 		systemd:    systemd.NewSystemdManager(),
 		docker:     container.NewDockerManager(),
 		dispatcher: dispatcher.NewDispatcher(cfg.ControlPlaneURL, cfg.Token),
@@ -124,53 +121,11 @@ func (a *AgentDaemon) tick() bool {
 		payload.Metrics.LoadAverage[0],
 	)
 
-	resp, err := a.dispatcher.SendTelemetry(payload)
+	_, err := a.dispatcher.SendTelemetry(payload)
 	if err != nil {
 		log.Printf("[Ryvix Agent] Telemetry dispatch note: %v", err)
 		return false
 	}
 
-	if resp != nil && len(resp.Commands) > 0 {
-		for _, cmd := range resp.Commands {
-			a.executeCommand(cmd)
-		}
-	}
 	return true
-}
-
-func (a *AgentDaemon) executeCommand(cmd dispatcher.RemoteCommand) {
-	log.Printf("[Ryvix Agent] Received authorized control plane command: %s", cmd.Action)
-
-	switch cmd.Action {
-	case "firewall.block_ip":
-		ip, _ := cmd.Params["ip"].(string)
-		reason, _ := cmd.Params["reason"].(string)
-		msg, err := a.firewall.BlockIP(ip, reason)
-		if err != nil {
-			log.Printf("[Ryvix Agent] Error blocking IP %s: %v", ip, err)
-		} else {
-			log.Printf("[Ryvix Agent] %s", msg)
-		}
-
-	case "systemd.restart_service":
-		svc, _ := cmd.Params["service"].(string)
-		msg, err := a.systemd.RestartService(svc)
-		if err != nil {
-			log.Printf("[Ryvix Agent] Error restarting service %s: %v", svc, err)
-		} else {
-			log.Printf("[Ryvix Agent] %s", msg)
-		}
-
-	case "docker.restart_container":
-		cid, _ := cmd.Params["containerId"].(string)
-		err := a.docker.RestartContainer(cid)
-		if err != nil {
-			log.Printf("[Ryvix Agent] Error restarting container %s: %v", cid, err)
-		} else {
-			log.Printf("[Ryvix Agent] Container %s restarted successfully", cid)
-		}
-
-	default:
-		log.Printf("[Ryvix Agent] Unknown or unapproved action: %s", cmd.Action)
-	}
 }

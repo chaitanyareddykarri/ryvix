@@ -23,6 +23,10 @@ func TestTelemetryAcknowledgement(t *testing.T) {
 		valid      bool
 	}{
 		{"accepted", `{"success":true}`, true},
+		{"empty command list", `{"success":true,"commands":[]}`, true},
+		{"unsigned restart", `{"success":true,"commands":[{"action":"systemd.restart_service","params":{"service":"nginx"}}]}`, false},
+		{"unsigned firewall change", `{"success":true,"commands":[{"action":"firewall.block_ip","params":{"ip":"192.0.2.1"}}]}`, false},
+		{"unsigned container restart", `{"success":true,"commands":[{"action":"docker.restart_container","params":{"containerId":"test"}}]}`, false},
 		{"rejected", `{"success":false,"commands":[{"action":"reboot"}]}`, false},
 		{"empty", "", false}, {"html", "<html>gateway failure</html>", false},
 		{"missing acknowledgement", `{}`, false},
