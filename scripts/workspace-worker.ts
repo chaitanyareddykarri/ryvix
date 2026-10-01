@@ -1,9 +1,11 @@
 import { Pool } from 'pg';
 import { RepositoryJobStore } from '../backend/src/services/repository-job-store';
 import { serveRepositoryWorker } from '../services/src/workspace/repository-worker';
+import { verifyWorkerDocker } from '../services/src/workspace/worker-preflight';
 
 async function main() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL required');
+  await verifyWorkerDocker();
   const url = new URL(process.env.DATABASE_URL);
   for (const name of ['sslmode','sslcert','sslkey','sslrootcert']) url.searchParams.delete(name);
   const pool = new Pool({ connectionString: url.toString(), max: 5, connectionTimeoutMillis: 10000,

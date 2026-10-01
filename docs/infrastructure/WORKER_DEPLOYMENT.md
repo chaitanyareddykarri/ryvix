@@ -12,6 +12,11 @@ The supplied service uses `/usr/bin/node`, Docker CLI/daemon access, and
 `/etc/ryvix/worker.env`. Restrict that environment file to trusted operators.
 Docker group access is privileged; only the control-plane worker receives it.
 Customer containers never receive the Docker socket or the worker environment.
+Before connecting to the queue, worker startup checks for a reachable Linux Docker
+engine and locally installed Linux Node/egress images. Both images must appear in
+`RYVIX_WORKSPACE_IMAGES`. Failure exits before claiming a task; systemd retries
+according to its restart policy. This check never pulls or runs an image and does
+not certify image contents, provider connectivity or the remaining stack images.
 The `ai/data` directory must exist and be writable by the worker account.
 
 Supply verified-TLS database configuration, approved workspace images and image

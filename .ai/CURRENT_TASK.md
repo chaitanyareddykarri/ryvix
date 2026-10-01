@@ -2,6 +2,10 @@
 
 ## Worker deployment readiness follow-up (2026-10-01)
 
+Worker startup now verifies Linux Docker availability and installed, explicitly
+allowlisted Node/egress images before connecting to the queue. Misconfigured hosts
+exit without claiming tasks. Cloud provider and real server rollout remain pending.
+
 The runtime check preserves deployment-injected environment values and requires
 a supported cloud LLM credential, without claiming provider availability. See
 `docs/infrastructure/WORKER_DEPLOYMENT.md`: production Compose starts web only;

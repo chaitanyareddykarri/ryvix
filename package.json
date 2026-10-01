@@ -14,7 +14,7 @@
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present && node --test tests/secret-scan.test.mjs tests/egress-proxy.test.mjs tests/runtime-environment.test.mjs && tsx tests/run-all.ts",
+    "test": "npm run test --workspaces --if-present && node --test tests/secret-scan.test.mjs tests/egress-proxy.test.mjs tests/runtime-environment.test.mjs && node --import tsx --test tests/worker-preflight.test.ts && tsx tests/run-all.ts",
     "security:secrets": "node scripts/check-secrets.mjs",
     "test:e2e": "tsx tests/run-all.ts",
     "dev": "npm run dev --workspace=@ryvix/web",
