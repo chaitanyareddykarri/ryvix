@@ -514,49 +514,8 @@ async function runMasterTraining() {
   // =========================================================================
   console.log('--- [AUTONOMOUS BIDIRECTIONAL LLM COMMUNICATION & SELF-LEARNING] ---');
   
-  // Clear transient test store so we can prove fresh end-to-end self-training
-  selfLearningStore.clear();
-
-  const novelZeroDay: ServerEventData = {
-    serverId: 'srv_zero_day',
-    hostname: 'research-edge-01',
-    openPorts: [443],
-    metrics: { cpuPercent: 50, memPercent: 60, diskPercent: 30 },
-    recentLogs: ['ZERO_DAY_ANOMALY: unmapped binary heap corruption payload detected by kernel eBPF probe'],
-  };
-
-  console.log('  1. Encountering Novel Zero-Day Anomaly...');
-  const tStartEnc1 = performance.now();
-  const enc1 = await orchestrator.analyzeServerEvent(novelZeroDay);
-  const tEndEnc1 = performance.now() - tStartEnc1;
-
-  console.log(`     -> Communicated with LLM Gateway: Provider='${enc1.capabilityToInvoke?.action ? 'Gateway' : 'Local'}'`);
-  console.log(`     -> LLM Calls Used: ${enc1.llmCallsUsed} | Source: '${enc1.source}' | Latency: ${tEndEnc1.toFixed(2)}ms`);
-  console.log(`     -> LLM Diagnosis: "${enc1.diagnosis}"`);
-  console.log(`     -> Self-Trained Pattern into Local Disk Memory: true (Fingerprint: ${enc1.fingerprint})`);
-
-  console.log('\n  2. Re-encountering Same Zero-Day Attack with New Random IP/Timestamp...');
-  const repeatAttackWithVariation: ServerEventData = {
-    ...novelZeroDay,
-    recentLogs: [
-      'ZERO_DAY_ANOMALY: unmapped binary heap corruption payload detected by kernel eBPF probe from 198.51.100.77 at 2026-09-22T14:30:00Z',
-    ],
-  };
-
-  const tStartEnc2 = performance.now();
-  const enc2 = await orchestrator.analyzeServerEvent(repeatAttackWithVariation);
-  const tEndEnc2 = performance.now() - tStartEnc2;
-
-  console.log(`     -> Resolved Locally via Self-Learned Memory: ${enc2.resolvedLocally}`);
-  console.log(`     -> Source: '${enc2.source}' | LLM Calls Used: ${enc2.llmCallsUsed} | Latency: ${tEndEnc2.toFixed(3)}ms`);
-  console.log(`     -> Diagnosis: "${enc2.diagnosis}"`);
-
-  if (enc2.llmCallsUsed === 0 && enc2.source === 'learned_memory') {
-    console.log('\n  ✓ PROVEN REAL-TIME SELF-LEARNING:');
-    console.log('     Communication with LLM immediately trained the local engine to handle all repeat attacks with 0 LLM calls!\n');
-  } else {
-    throw new Error('Self-learning validation failed: Encounter 2 did not resolve with 0 LLM calls');
-  }
+  // Synthetic training must not clear runtime memory or claim live provider learning.
+  console.log('  Live provider learning check skipped during offline training; provider evidence remains unverified.');
 
   // =========================================================================
   // EXPORT UNIFIED KNOWLEDGE ARTIFACTS

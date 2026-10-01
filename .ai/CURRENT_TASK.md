@@ -1,5 +1,13 @@
 # Current Task & Implementation State
 
+## Self-learning evidence correction (2026-10-01)
+
+Legacy anomaly learning is not wired to production telemetry. It now rejects
+missing/fallback providers and malformed diagnoses before memory writes. Offline
+training no longer clears runtime patterns for its provider demonstration.
+See `docs/verification/SELF_LEARNING_2026_10_01.md` for verification and the
+pending tenant-scoped review, worker, persistence and model-promotion pipeline.
+
 ## Grounded conversation upgrade (2026-10-01)
 
 Added user/tenant-owned SQL history, bounded incident/artifact retrieval, native

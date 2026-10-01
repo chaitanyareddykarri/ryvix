@@ -13,6 +13,8 @@
 import { LocalSecurityEngine, ServerEventData } from '../ai/src/local-security-engine';
 import { SelfLearningStore, selfLearningStore } from '../ai/src/self-learning-store';
 import { orchestrator } from '../ai/src/orchestrator';
+import { modelGateway } from '../ai/src/model-gateway';
+import assert from 'node:assert/strict';
 
 export async function runHybridLearningEngineTests(): Promise<void> {
   console.log('[TEST] Running Expanded Hybrid Autonomous Engine & Self-Learning Test...');
@@ -98,7 +100,32 @@ export async function runHybridLearningEngineTests(): Promise<void> {
     recentLogs: ['ZERO_DAY_ANOMALY: unmapped binary heap corruption exploit pattern'],
   };
 
-  const res1 = await orchestrator.analyzeServerEvent(zeroDayEvent);
+  const originalComplete = modelGateway.complete;
+  const diagnosis = { threatType: 'UNMAPPED_HEAP_ANOMALY', diagnosis: 'Heap corruption needs investigation.',
+    remediationAction: 'Collect diagnostic evidence.', action: 'system.diagnostics', params: {} };
+  let res1;
+  try {
+    for (const badContent of ['not JSON', '{}', 'null', JSON.stringify({ ...diagnosis, params: [] })]) {
+      modelGateway.complete = async (_messages, options) => {
+        assert.equal(options?.requireProvider, true);
+        return { content: badContent, providerUsed: 'test_provider', modelUsed: 'fixture', promptTokens: 0,
+          completionTokens: 0, latencyMs: 0, failoverOccurred: false, failedProviders: [] };
+      };
+      await assert.rejects(() => orchestrator.analyzeServerEvent(zeroDayEvent), /Invalid incident diagnosis/);
+      assert.equal(selfLearningStore.getLearnedCount(), 0, 'Invalid evidence must never become memory');
+    }
+    modelGateway.complete = async () => ({ content: JSON.stringify(diagnosis), providerUsed: 'local_deterministic_engine',
+      modelUsed: 'fixture', promptTokens: 0, completionTokens: 0, latencyMs: 0, failoverOccurred: false, failedProviders: [] });
+    await assert.rejects(() => orchestrator.analyzeServerEvent(zeroDayEvent), /real provider/);
+    assert.equal(selfLearningStore.getLearnedCount(), 0);
+    modelGateway.complete = async () => { throw new Error('Provider unavailable'); };
+    await assert.rejects(() => orchestrator.analyzeServerEvent(zeroDayEvent), /Provider unavailable/);
+    assert.equal(selfLearningStore.getLearnedCount(), 0);
+    modelGateway.complete = async () => ({ content: JSON.stringify(diagnosis), providerUsed: 'test_provider',
+      modelUsed: 'fixture', promptTokens: 0, completionTokens: 0, latencyMs: 0, failoverOccurred: false, failedProviders: [] });
+    res1 = await orchestrator.analyzeServerEvent(zeroDayEvent);
+    assert.equal(res1.threatType, diagnosis.threatType);
+  } finally { modelGateway.complete = originalComplete; }
   if (res1.llmCallsUsed !== 1 || res1.source !== 'llm_escalated' || !res1.learnedNewPattern) {
     throw new Error('Expected unknown event to escalate to LLM and trigger autonomous learning');
   }

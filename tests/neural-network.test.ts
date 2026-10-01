@@ -13,12 +13,13 @@
 import assert from 'node:assert/strict';
 import {
   NeuralThreatClassifier,
-  neuralThreatClassifier,
   LocalSecurityEngine,
   ServerEventData,
 } from '../ai/src/orchestrator';
 
 export async function testNeuralNetworkThreatClassifier(): Promise<void> {
+  // Learning convergence must not depend on a user's already-converged checkpoint.
+  const neuralThreatClassifier = new NeuralThreatClassifier();
   console.log('[TEST] Running Embedded Deep Neural Network Threat Classifier Test...');
 
   // =========================================================================
