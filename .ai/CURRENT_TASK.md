@@ -1,5 +1,19 @@
 # Current Task & Implementation State
 
+## Security emails and approved releases (2026-10-02)
+
+Implemented verified-account email preferences/outbox, Resend notification transport,
+signed security ingestion and agent --report-security, plus explicit approved PR
+merge into a protected default branch. Release approval binds the reviewed head and
+deployment mapping version; existing customer CI/CD owns deployment. Notification
+success requires a verified deployment event matching the approved merge SHA.
+Migration `20261002000003` is applied. See
+`docs/verification/EMAIL_RELEASE_2026_10_02.md` and
+`docs/infrastructure/EMAIL_AND_RELEASES.md` for evidence and live prerequisites.
+Actual cloud reboot, WhatsApp delivery, email delivery and authenticated deployed
+browser checks are still blocked by absent provider settings, public URL and a
+designated test host/account. No new real PR was merged or notification sent.
+
 ## Cloud recovery and WhatsApp continuation (2026-10-02)
 
 Added persisted independent cloud approvals, durable one-attempt provider dispatch,

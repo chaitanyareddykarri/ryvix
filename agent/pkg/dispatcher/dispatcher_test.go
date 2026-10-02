@@ -57,6 +57,34 @@ func TestTelemetryAcknowledgement(t *testing.T) {
 	}
 }
 
+func TestSecurityReportSignature(t *testing.T) {
+	pub, key, _ := ed25519.GenerateKey(rand.Reader)
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/connector/security" {
+			t.Error("wrong signed endpoint")
+		}
+		body, _ := io.ReadAll(r.Body)
+		message := fmt.Sprintf("POST\n/api/connector/security\n%s\n%s\n%x", r.Header.Get("X-Ryvix-Timestamp"), r.Header.Get("X-Ryvix-Nonce"), sha256.Sum256(body))
+		signature, _ := base64.StdEncoding.DecodeString(r.Header.Get("X-Ryvix-Signature"))
+		if !ed25519.Verify(pub, []byte(message), signature) {
+			t.Error("invalid security signature")
+		}
+		if !strings.Contains(string(body), `"serverId":"enrolled-server"`) {
+			t.Error("enrolled identity missing")
+		}
+		fmt.Fprint(w, `{"success":true,"received":1}`)
+	}))
+	defer server.Close()
+	d := NewDispatcher(server.URL, base64.StdEncoding.EncodeToString(key.Seed()))
+	d.client = server.Client()
+	if _, err := d.SendSecurityEvents("enrolled-server", []byte(`[{"id":"fixture"}]`)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.SendSecurityEvents("enrolled-server", []byte(`[]`)); err == nil {
+		t.Fatal("empty event batch accepted")
+	}
+}
+
 func TestCredentialsDoNotFollowRedirects(t *testing.T) {
 	_, key, _ := ed25519.GenerateKey(rand.Reader)
 	seed := base64.StdEncoding.EncodeToString(key.Seed())

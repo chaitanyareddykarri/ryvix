@@ -17,7 +17,7 @@ export default function ChannelsPage(){
   }catch(e){setError(e instanceof Error?e.message:'Request failed');}finally{setBusy(false);}}
   const field={padding:8,background:'#111827',color:'#e5e7eb',border:'1px solid #475569',borderRadius:6};
   return <main style={{padding:32,maxWidth:1000,margin:'auto',color:'#e5e7eb'}}>
-    <Link href="/chat">Back to chat</Link> · <Link href="/channels/alerts">WhatsApp alert delivery</Link><h1>Communication inbox</h1>
+    <Link href="/chat">Back to chat</Link> · <Link href="/channels/alerts">WhatsApp alert delivery</Link> · <Link href="/notifications">Email notifications</Link><h1>Communication inbox</h1>
     <p>Review incoming messages before creating a coding task. Accepting a message does not approve a pull request or server operation.</p>
     {error&&<p role="alert">{error}</p>}
     <section><h2>Connect a channel</h2>

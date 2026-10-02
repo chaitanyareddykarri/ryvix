@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/ryvix/agent/pkg/daemon"
+	"github.com/ryvix/agent/pkg/dispatcher"
 )
 
 var (
@@ -32,6 +33,7 @@ func main() {
 	showVersion := flag.Bool("version", false, "Display agent version and exit")
 	configPath := flag.String("config", "", "Private enrolled device configuration file")
 	enroll := flag.Bool("enroll", false, "Enroll with a short-lived token read from stdin")
+	reportSecurity := flag.Bool("report-security", false, "Send a JSON array of measured security events from stdin using --config")
 	flag.Parse()
 
 	if *showVersion {
@@ -61,6 +63,23 @@ func main() {
 		}
 		*serverID, *token, *controlPlane = stored.ServerID, stored.PrivateSeed, stored.ControlPlaneURL
 		commandConfig = stored
+	}
+	if *reportSecurity {
+		if *configPath == "" {
+			fmt.Fprintln(os.Stderr, "Security reporting requires an enrolled --config file")
+			os.Exit(1)
+		}
+		data, err := io.ReadAll(io.LimitReader(os.Stdin, 32769))
+		if err != nil || len(data) > 32768 {
+			fmt.Fprintln(os.Stderr, "Security report input exceeds limit")
+			os.Exit(1)
+		}
+		if _, err := dispatcher.NewDispatcher(*controlPlane, *token).SendSecurityEvents(*serverID, data); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		fmt.Println("Security report acknowledged.")
+		return
 	}
 	cfg := daemon.Config{
 		ServerID:         *serverID,

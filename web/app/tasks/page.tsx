@@ -289,7 +289,7 @@ export default function TasksPage() {
                     ✓ Task Completed &amp; GitHub PR Opened!
                   </div>
                   <p style={{ fontSize: "0.82rem", color: "#cbd5e1" }}>
-                    Customer CI/CD pipeline has been triggered to verify and deploy the changes:
+                    The PR is open. Review its checks, then approve the release to start your existing deployment pipeline.
                   </p>
                   <a
                     href={prCreated || "#"}
@@ -299,6 +299,7 @@ export default function TasksPage() {
                   >
                     {prCreated}
                   </a>
+                  <p><Link href="/releases">Review and approve release</Link> · <Link href="/notifications">Enable deployment email</Link></p>
                 </div>
               )}
             </div>

@@ -1,5 +1,10 @@
 # Gmail Integration Specification
 
+> Account security/deployment notifications now support Gmail recipients through
+> the application's Resend sender; see `../infrastructure/EMAIL_AND_RELEASES.md`.
+> This does not grant Gmail mailbox sending access or implement conversational
+> replies. Existing Gmail OAuth remains the separate read-only task inbox.
+
 > Current implementation: see ../infrastructure/CHANNELS_AND_LEARNING.md and
 > ADR-022. OAuth polling feeds a reviewed inbox. The historical automatic
 > sender-to-task flow below is not enabled; email text cannot authorize actions.

@@ -1,5 +1,12 @@
 # Ryvix Current Project Context
 
+> 2026-10-02 email/release follow-up: migration 20261002000003 is applied.
+> Security report ingestion, verified-account email notifications and explicit
+> protected-branch release approval are implemented. See
+> docs/infrastructure/EMAIL_AND_RELEASES.md and
+> docs/verification/EMAIL_RELEASE_2026_10_02.md. Real delivery/deployment still
+> requires configured providers, approved live targets and browser verification.
+
 > 2026-10-02 operations continuation: see
 > docs/verification/RECOVERY_OUTBOUND_2026_10_02.md and
 > docs/infrastructure/PRODUCTION_PROVIDER_PLAN.md. Cloud recovery approvals and

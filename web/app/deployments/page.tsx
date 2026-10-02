@@ -14,7 +14,7 @@ export default function DeploymentsPage(){
  async function mutate(body:unknown){setBusy(true);setError('');try{
   const r=await fetch('/api/deployments/runtime',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),data=await r.json();if(!r.ok)throw new Error(data.error||'Deployment check unavailable');await refresh();
  }catch(e){setError(e instanceof Error?e.message:'Deployment check unavailable');}finally{setBusy(false);}}
- return <main style={{maxWidth:960,margin:'auto',padding:32,color:'#e5e7eb'}}><Link href="/chat">Back to chat</Link><h1>Deployment runtime checks</h1>
+ return <main style={{maxWidth:960,margin:'auto',padding:32,color:'#e5e7eb'}}><Link href="/chat">Back to chat</Link> · <Link href="/releases">Approve release</Link> · <Link href="/notifications">Deployment emails</Link><h1>Deployment runtime checks</h1>
   <p>Map a GitHub deployment environment to its public health endpoint. Checks measure reachability after a received deployment event; they do not prove which commit is running.</p>
   {error&&<p role="alert">{error}</p>}
   <select aria-label="Repository" value={repositoryId} onChange={e=>setRepository(e.target.value)}><option value="">Select repository</option>{repos.map(r=><option key={r.id} value={r.id}>{r.full_name}</option>)}</select>

@@ -51,6 +51,11 @@ a successful live request and answer quality are separate checks.
 
 ## How communication works
 
+October 2 follow-up: account email notifications and explicit protected-branch
+release approval are now implemented. See `EMAIL_AND_RELEASES.md` for configuration.
+Security and deployment-result emails use Resend to the verified account email;
+they do not require Gmail read/send OAuth. Existing Gmail task polling is separate.
+
 **Gmail:** user connects mailbox → authenticated polling reads new mail → tenant
 inbox proposal → a user reviews and accepts → a coding task is created. Pub/Sub
 push, automatic reply delivery and a free-form email conversation are not part of
