@@ -1,5 +1,20 @@
 # Ryvix Audit & Compliance Architecture
 
+## Implementation checkpoint — 2026-10-02
+
+Settings authorization and mutation share a locked transaction. GitHub execution
+uses project-scoped Vault credentials and chat usage has durable quotas. Signed
+agent security reports persist measured observations; opted-in users can receive
+Resend emails at their confirmed account address. A trusted detector must supply
+reports; this does not install a WAF. Server actions and releases require their
+explicit persisted approval workflows.
+
+See the [current project status](../PROJECT_STATUS.md) for the
+implemented scope, migration checkpoint, verification evidence and remaining work.
+The specification below also includes target design; it is not evidence that
+every described capability is implemented or live-verified.
+
+
 ## 1. End-to-End Audit Chain
 
 Every action executed by Ryvix maintains an uninterrupted, verifiable chain of custody:

@@ -1,5 +1,11 @@
 # Current Task & Implementation State
 
+Current status: [implementation and deployment index](../docs/PROJECT_STATUS.md).
+Code is published through `45b130b`; migration checkpoint is `20261002000003`.
+Documentation synchronized on 2026-10-02. Remaining work is live configuration
+and acceptance plus the explicitly unimplemented items in that index.
+Sections below retain the chronological record; older pending lists are superseded.
+
 ## Security emails and approved releases (2026-10-02)
 
 Implemented verified-account email preferences/outbox, Resend notification transport,
@@ -52,7 +58,8 @@ Production completion is not claimed. Missing live configuration/accounts/hosts
 block provider/browser/webhook/public-TLS/real-task-to-PR/agent rollout and measured
 model quality. Real representative reviewed data was not supplied. Native command
 implementation supports explicitly allowed systemd restarts, not cloud resets;
-the separate durable cloud recovery workflow and drift monitoring remain work.
+the separate cloud workflow was implemented in the later checkpoint above;
+production drift monitoring remains work.
 Do not interpret old completion claims or synthetic suite output as live evidence.
 
 ## Self-learning evidence correction (2026-10-01)

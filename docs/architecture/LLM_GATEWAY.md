@@ -1,5 +1,19 @@
 # Ryvix Dedicated LLM Gateway Architecture
 
+## Implementation checkpoint — 2026-10-02
+
+Conversation reload/archive, durable quotas, bounded tenant incident/artifact
+retrieval and commit-pinned repository files are implemented. Optional Gemini
+reranking and authorized recorded HOSTED_ON relationships provide limited semantic
+and topology context, not a full repository vector index or arbitrary graph RAG.
+Real provider streaming, answer quality and deployed browser checks remain pending.
+
+See the [current project status](../PROJECT_STATUS.md) for the
+implemented scope, migration checkpoint, verification evidence and remaining work.
+The specification below also includes target design; it is not evidence that
+every described capability is implemented or live-verified.
+
+
 ## 1. Architectural Boundary
 The LLM Gateway (`AIAgentLLMGateway` / `ModelGateway`) provides a decoupled, provider-agnostic abstraction that shields the rest of Ryvix from vendor lock-in.
 

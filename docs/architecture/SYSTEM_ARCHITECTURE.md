@@ -1,5 +1,19 @@
 # Ryvix System Architecture Specification
 
+## Implementation checkpoint — 2026-10-02
+
+Security, chat/history, reviewed learning, worker ownership, approved service/cloud
+operations, WhatsApp P1 alerts and approved release/account emails have implemented
+paths. Migrations are applied through `20261002000003`. Provider credentials,
+public deployment, actual delivery/recovery and representative model quality
+remain separate acceptance work. Use the current status index before old phase lists.
+
+See the [current project status](../PROJECT_STATUS.md) for the
+implemented scope, migration checkpoint, verification evidence and remaining work.
+The specification below also includes target design; it is not evidence that
+every described capability is implemented or live-verified.
+
+
 ## 1. Executive Architecture Summary
 
 Ryvix is an AI-powered autonomous software and infrastructure operations platform. It unifies source-code manipulation, deployment verification, runtime telemetry monitoring, incident forensics, and server lifecycle operations into a single platform governed by human-in-the-loop policies.

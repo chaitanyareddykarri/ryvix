@@ -1,6 +1,16 @@
 # Ryvix Integration Interfaces & Contracts
 
-This document summarizes the external integration contracts implemented across Ryvix.
+Current contracts are summarized in [project status](../docs/PROJECT_STATUS.md)
+and the [provider plan](../docs/infrastructure/PRODUCTION_PROVIDER_PLAN.md).
+The sections below include target contracts, not a list of live-certified adapters.
+
+Implemented communication paths are Gmail read-only polling into reviewed proposals,
+Meta signed inbox/P1 template dispatch with receipts, and Resend account security
+and approved-deployment notifications. WhatsApp chat/mobile approvals and Gmail
+push/replies remain unimplemented. GitHub execution resolves project-scoped Vault
+credentials; signed deployment_status events correlate approved release merge SHAs.
+Do not assume push, pull_request or check_run ingestion is enabled from the target
+contract below. Cloud recovery supports independently approved allowlisted reboots.
 
 ---
 

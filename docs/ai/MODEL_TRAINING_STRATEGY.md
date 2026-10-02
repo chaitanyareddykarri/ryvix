@@ -1,5 +1,19 @@
 # Ryvix Model-Readiness & Fine-Tuning Strategy
 
+## Implementation checkpoint — 2026-10-02
+
+The reviewed tenant learning path persists examples, requires independent label
+review, preserves train/validation/test partitions and gates explicit checkpoint
+promotion on held-out metrics and baseline non-regression. Representative reviewed
+data and production accuracy/drift evidence remain missing. Runtime memory and
+legacy global weight format checks are not equivalent to this controlled pipeline.
+
+See the [current project status](../PROJECT_STATUS.md) for the
+implemented scope, migration checkpoint, verification evidence and remaining work.
+The specification below also includes target design; it is not evidence that
+every described capability is implemented or live-verified.
+
+
 ## 1. Strategic Principles
 1. **Do NOT Train From Scratch**: Ryvix leverages strong foundational open-source models (such as Qwen 2.5 Coder 32B or LLaMA 3.3 70B) paired with structured prompts, context retrieval, tool registries, and validation gates.
 2. **Model-Readiness First**: The system continuously captures high-quality execution trajectories from real operations to build a clean, curated training dataset.

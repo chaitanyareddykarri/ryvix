@@ -1,5 +1,19 @@
 # Ryvix Self-Healing, Attack Detection & Autonomous Recovery Architecture
 
+## Implementation checkpoint — 2026-10-02
+
+Native service restart and cloud reboot now have separate persisted independent
+approvals, cooldowns and recorded outcomes. Native commands use Ed25519 signatures
+and a durable Linux replay journal. Cloud dispatch is claimed before provider
+contact and ambiguous outcomes are not automatically retried. `/operations` and
+`/recovery` expose the workflows. Real approved host operations remain unverified.
+
+See the [current project status](../PROJECT_STATUS.md) for the
+implemented scope, migration checkpoint, verification evidence and remaining work.
+The specification below also includes target design; it is not evidence that
+every described capability is implemented or live-verified.
+
+
 ## 1. Executive Summary
 
 Ryvix is an **Autonomous Software & Infrastructure Operations Platform**. Beyond code editing and build verification, Ryvix functions as an autonomous Site Reliability Engineer (SRE) and Security Operations Center (SOC) assistant. It continuously:

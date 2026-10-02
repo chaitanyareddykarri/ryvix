@@ -1,5 +1,20 @@
 # Ryvix Database Data Model & Entity Specifications
 
+## Implementation checkpoint — 2026-10-02
+
+The recorded live migration checkpoint is `20261002000003`; the latest code
+verification passed 99 read-only database boundary checks. New protected records
+cover reviewed learning/inbox, host ownership, approvals/commands, runtime
+observations, cloud recovery, WhatsApp receipts, release requests and email
+preferences/outbox. Apply numbered migrations to other deployments; do not reset
+the hosted database. Older table counts below are historical.
+
+See the [current project status](../PROJECT_STATUS.md) for the
+implemented scope, migration checkpoint, verification evidence and remaining work.
+The specification below also includes target design; it is not evidence that
+every described capability is implemented or live-verified.
+
+
 ## 1. Relational Architecture & Database Engine
 
 Ryvix uses **one centralized Supabase PostgreSQL database** as its unified relational datastore. The schema is organized into phased domain modules with strict referential integrity, cascading foreign keys, multi-tenant isolation, and version-controlled migrations in `supabase/migrations/`.

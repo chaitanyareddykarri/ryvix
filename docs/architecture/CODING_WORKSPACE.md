@@ -1,5 +1,19 @@
 # Ryvix Coding Workspace Architecture
 
+## Implementation checkpoint — 2026-10-02
+
+Stable worker-host ownership, host-scoped cleanup, process locking and allowlisted
+preview routing are implemented. Production still needs immutable workspace/egress
+images and allowlists, public DNS/TLS, signing secrets and matching web/worker
+configuration. The separate operations worker handles cloud/WhatsApp/email queues.
+Real multi-host routing and public preview acceptance remain pending.
+
+See the [current project status](../PROJECT_STATUS.md) for the
+implemented scope, migration checkpoint, verification evidence and remaining work.
+The specification below also includes target design; it is not evidence that
+every described capability is implemented or live-verified.
+
+
 ## 1. Overview & Operational Need
 
 When a user requests a code change that requires dependency installation, compilation, automated test verification, or live frontend preview rendering, Ryvix provisions an **isolated, stack-aware Coding Workspace**.

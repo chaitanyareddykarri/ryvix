@@ -1,59 +1,16 @@
 # Ryvix Current Project Context
 
-> 2026-10-02 email/release follow-up: migration 20261002000003 is applied.
-> Security report ingestion, verified-account email notifications and explicit
-> protected-branch release approval are implemented. See
-> docs/infrastructure/EMAIL_AND_RELEASES.md and
-> docs/verification/EMAIL_RELEASE_2026_10_02.md. Real delivery/deployment still
-> requires configured providers, approved live targets and browser verification.
+Current code checkpoint: `45b130b` (2026-10-02), published to main.
+Use [PROJECT_STATUS](../docs/PROJECT_STATUS.md) for implemented behavior, provider
+requirements, evidence and remaining work. Migrations are applied through
+`20261002000003`. Latest code checks: 75 suites plus 15 Node checks; 99 database
+checks. Live provider delivery, deployed browser flows and model quality remain
+unverified. See [email/release evidence](../docs/verification/EMAIL_RELEASE_2026_10_02.md).
 
-> 2026-10-02 operations continuation: see
-> docs/verification/RECOVERY_OUTBOUND_2026_10_02.md and
-> docs/infrastructure/PRODUCTION_PROVIDER_PLAN.md. Cloud recovery approvals and
-> a P1 WhatsApp delivery outbox are implemented; migration 20261002000002 is applied.
-> Real cloud operations, provider delivery, full WhatsApp LLM chat and deployment
-> acceptance are not certified by the local/rolled-back verification results.
+## Historical project overview
 
-> 2026-10-02 continuation: current checkpoint is
-> docs/verification/CONTINUATION_2026_10_01.md. Migrations through 20261002000001
-> are applied. Chat/security/channel/learning review, native approved service
-> commands, worker-host ownership and deployment runtime observations are locally
-> implemented and tested. Production accounts/hosts/provider configuration and
-> authenticated browser verification remain incomplete; no accuracy or live
-> service-recovery certification is claimed. Older notes below are historical.
-
-> 2026-10-01 AI upgrade: chat now uses tenant/user-owned PostgreSQL conversation
-> history, bounded incident/artifact retrieval and real provider text streaming.
-> Classifier checkpoints load with validation; evaluation tooling is available.
-> See docs/verification/AI_UPGRADE_2026_10_01.md. ADR-019 migrations through
-> 20261001000002 are applied. Historical Mem0/chat and model-quality claims below
-> are not evidence of the current route's behavior or unseen-data accuracy.
-
-> Latest checkpoint (2026-09-30): see docs/verification/COMPLETION_2026_09_30.md.
-> Latest rollout is through 20260930000006; 64 project suites and 63 database
-> boundary checks pass, including rolled-back tenant-role isolation fixtures.
-> The missing observability logs route is now implemented with tenant scoping.
-> Deployment events are now persisted from signed GitHub webhooks (ADR-016), with
-> migration 20260930000005 applied and 35 database-boundary checks passing.
-> Provider event delivery and runtime-health correlation are not yet certified.
-> Live migration rollout now completed through 20260930000004; all 31 read-only
-> database-boundary checks pass. Prior missing-migration notes below are historical.
-> Production preview/release/image configuration and live integration tests remain.
-> The local task API now queues work for a dedicated worker. New OTP/queue/RLS
-> migrations must precede deployment. Historical completion claims remain invalid;
-> Docker isolation/egress/preview tests now pass. Verified database TLS works with
-> the official CA, but intermittent connectivity and migration drift block rollout;
-> public preview and live integration configuration remain incomplete.
->
-> Database counts and completion statements in the historical architecture notes
-> below are not current live verification. Use the checkpoint for measured status.
-
-> Remediation status (2026-09-29): historical completion claims below are not
-> production certification. Read CURRENT_TASK.md and
-> docs/verification/PRODUCTION_REMEDIATION.md for checkpoint `3038b27` (pushed to
-> `fix/production-remediation`) and subsequent uncommitted review fixes,
-> pending migrations and missing live verification. The user's current scope
-> prioritizes real dashboard/task/sandbox/PR/preview/connection/telemetry/AI flows.
+The following overview includes intended capabilities and old checkpoint counts;
+it must not be read as current production certification.
 
 ## 1. Project Purpose
 
@@ -118,7 +75,7 @@ Ryvix is an **AI-powered autonomous software and infrastructure operations platf
 6. **Supabase Cloud Hosted**: Supabase is hosted at `https://tsoyrpgifovzwqtgpkkb.supabase.co`. Do NOT create a local Postgres container.
 7. **Transactional Mail vs Connector Separation**: Supabase Auth handles 6-digit OTP delivery; Gmail connector handles task digests and customer communication.
 
-## Current Implementation Status (Live & Verified)
+## Historical implementation snapshot (superseded)
 - **Monorepo Architecture**: `@ryvix/database`, `@ryvix/backend`, `@ryvix/ai`, `@ryvix/services`, `@ryvix/web`.
 - **Path 1**: Repository Analyzer (`github.connector.ts`), Docker Sandbox (`docker-workspace.manager.ts`), PR Service (`pr.service.ts`), Web Console (`/tasks`, `/api/tasks`).
 - **Path 2**: Internal Agent (`internal-agent.ts`), Cloud Recovery Bridge (`cloud-recovery.bridge.ts`), Server Console (`/servers`, `/api/servers`).

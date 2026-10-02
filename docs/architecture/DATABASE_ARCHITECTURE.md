@@ -1,5 +1,20 @@
 # Ryvix Complete Database Architecture & Security Specification
 
+## Implementation checkpoint — 2026-10-02
+
+The recorded live migration checkpoint is `20261002000003`; the latest code
+verification passed 99 read-only database boundary checks. New protected records
+cover reviewed learning/inbox, host ownership, approvals/commands, runtime
+observations, cloud recovery, WhatsApp receipts, release requests and email
+preferences/outbox. Apply numbered migrations to other deployments; do not reset
+the hosted database. Older table counts below are historical.
+
+See the [current project status](../PROJECT_STATUS.md) for the
+implemented scope, migration checkpoint, verification evidence and remaining work.
+The specification below also includes target design; it is not evidence that
+every described capability is implemented or live-verified.
+
+
 ## 1. Single Centralized Database Architecture
 
 Ryvix uses **one centralized Supabase PostgreSQL database** as the authoritative application datastore. The database does **not** live inside the web application, nor are separate databases maintained for the AI or backend.

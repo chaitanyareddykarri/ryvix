@@ -1,5 +1,20 @@
 # Ryvix Security Architecture & Operational Invariants
 
+## Implementation checkpoint — 2026-10-02
+
+Settings authorization and mutation share a locked transaction. GitHub execution
+uses project-scoped Vault credentials and chat usage has durable quotas. Signed
+agent security reports persist measured observations; opted-in users can receive
+Resend emails at their confirmed account address. A trusted detector must supply
+reports; this does not install a WAF. Server actions and releases require their
+explicit persisted approval workflows.
+
+See the [current project status](../docs/PROJECT_STATUS.md) for the
+implemented scope, migration checkpoint, verification evidence and remaining work.
+The specification below also includes target design; it is not evidence that
+every described capability is implemented or live-verified.
+
+
 ## 1. Zero-Trust AI Credential & Database Isolation
 
 The AI Model is strictly an untrusted execution agent with respect to credentials and direct database access. Under no circumstances should secrets or master database keys be included in prompts, context windows, model completions, or AI execution environments.
@@ -36,12 +51,12 @@ The AI Model is strictly an untrusted execution agent with respect to credential
 
 ### Internal Connector
 - **Privilege Boundary**: Runs as a non-root unprivileged service account (e.g., `ryvix-agent`) where possible.
-- **Mutual TLS / Signed Handshake**: Communicates with Ryvix ingestion endpoints over mTLS or ed25519 HMAC signed requests with nonce replay protection.
+- **Mutual TLS / Signed Handshake**: Communicates with Ryvix ingestion endpoints over Ed25519 signed requests with nonce replay protection.
 - **Bounded Capabilities**: The internal connector only executes commands explicitly whitelisted in its capability manifest (e.g., `restart_service`, `fetch_logs`, `check_disk`). Arbitrary raw bash commands are rejected.
 
 ### External Connector (Out-of-Band)
 - **Zero In-Host Dependencies**: Operates entirely outside the target server (e.g., via AWS EC2, DigitalOcean, or Hetzner API).
-- **Narrow Scopes**: Cloud provider API credentials granted by the customer are strictly scoped to specific instance IDs with actions restricted to reboot/start/stop/status.
+- **Narrow Scopes**: Cloud provider API credentials granted by the customer are strictly scoped to specific instance IDs with actions restricted to the implemented reboot/status workflow.
 
 ---
 

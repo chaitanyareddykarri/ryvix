@@ -1,5 +1,18 @@
 # Gate 3: Connector Architecture Audit & Capability Model
 
+## Historical checkpoint — 2026-10-02
+
+This report is retained as evidence of its original inspection or test run.
+The latest implementation checkpoint is `45b130b`: cloud recovery, WhatsApp P1
+dispatch, security email and approved releases are implemented in that checkpoint.
+The latest recorded schema is `20261002000003`; provider acceptance is still pending.
+
+See the [current project status](../PROJECT_STATUS.md) for the
+implemented scope, migration checkpoint, verification evidence and remaining work.
+Results and pending lists below describe the original checkpoint; later changes
+are recorded in the status index. Historical counts are intentionally preserved.
+
+
 ## 1. Executive Summary
 
 Ryvix interacts with diverse external systems: source control (GitHub), messaging channels (WhatsApp, Gmail), customer servers (in-host agent), and cloud infrastructure providers (AWS, DigitalOcean, Hetzner). 

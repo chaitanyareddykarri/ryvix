@@ -1,5 +1,19 @@
 # Repository worker deployment
 
+## Implementation checkpoint — 2026-10-02
+
+Stable worker-host ownership, host-scoped cleanup, process locking and allowlisted
+preview routing are implemented. Production still needs immutable workspace/egress
+images and allowlists, public DNS/TLS, signing secrets and matching web/worker
+configuration. The separate operations worker handles cloud/WhatsApp/email queues.
+Real multi-host routing and public preview acceptance remain pending.
+
+See the [current project status](../PROJECT_STATUS.md) for the
+implemented scope, migration checkpoint, verification evidence and remaining work.
+The specification below also includes target design; it is not evidence that
+every described capability is implemented or live-verified.
+
+
 ## Continuation: worker ownership (2026-10-02)
 
 Migration `20261001000006` is applied. Each Docker host now requires a stable

@@ -1,5 +1,19 @@
 # Ryvix Product Coding Workflow
 
+## Implementation checkpoint — 2026-10-02
+
+The implemented release flow is preview/diff review → approved PR → explicit
+owner/admin approval of the exact commit and target version → protected-branch
+merge → existing customer CI/CD. Only a signed deployment event matching the
+approved merge SHA and unchanged mapping enables result email. A PR or reachable
+endpoint is not proof of deployment. Live end-to-end acceptance remains pending.
+
+See the [current project status](../PROJECT_STATUS.md) for the
+implemented scope, migration checkpoint, verification evidence and remaining work.
+The specification below also includes target design; it is not evidence that
+every described capability is implemented or live-verified.
+
+
 ## 1. Overview
 
 Ryvix enables users to request software modifications directly through conversational prompts. Whether fixing a broken layout, updating dependencies, or implementing a new feature, Ryvix orchestrates the entire development, verification, and deployment lifecycle.

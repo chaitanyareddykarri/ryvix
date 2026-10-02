@@ -1,5 +1,19 @@
 # Gmail Integration Specification
 
+## Implementation checkpoint — 2026-10-02
+
+Gmail uses read-only OAuth polling into a reviewed inbox. WhatsApp supports signed
+inbound proposals and durable P1 template alerts with signed receipts. Full
+two-way WhatsApp LLM chat, mobile approvals, Gmail push and replies remain future
+work. Security/deployment email uses Resend to the confirmed account address,
+including Gmail recipients; receiving it does not require Gmail OAuth.
+
+See the [current project status](../PROJECT_STATUS.md) for the
+implemented scope, migration checkpoint, verification evidence and remaining work.
+The specification below also includes target design; it is not evidence that
+every described capability is implemented or live-verified.
+
+
 > Account security/deployment notifications now support Gmail recipients through
 > the application's Resend sender; see `../infrastructure/EMAIL_AND_RELEASES.md`.
 > This does not grant Gmail mailbox sending access or implement conversational
@@ -24,13 +38,13 @@ Gmail functions as an **asynchronous customer communication channel** for Ryvix.
 > Ryvix authentication emails are delivered strictly via dedicated high-reputation transactional infrastructure (e.g., SendGrid, Postmark, AWS SES) configured in `.env.example`.
 
 ### 2.2 Token Protection
-- Gmail OAuth refresh tokens are stored encrypted in KMS-backed database records.
+- Gmail OAuth refresh tokens are stored in the existing Supabase Vault architecture.
 - The AI Model **never** receives raw Gmail access tokens or credentials.
 - The Backend handles all reading and sending via scoped Google Workspace APIs.
 
 ---
 
-## 3. Communication Patterns
+## 3. Planned communication patterns (not implemented)
 
 1. **Outbound Notification Digests**:
    - Sent when requested tasks complete or when daily summaries are generated.

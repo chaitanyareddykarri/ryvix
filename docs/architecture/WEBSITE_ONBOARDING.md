@@ -1,5 +1,19 @@
 # Ryvix Non-Coder Website Onboarding Architecture
 
+## Implementation checkpoint — 2026-10-02
+
+The implemented release flow is preview/diff review → approved PR → explicit
+owner/admin approval of the exact commit and target version → protected-branch
+merge → existing customer CI/CD. Only a signed deployment event matching the
+approved merge SHA and unchanged mapping enables result email. A PR or reachable
+endpoint is not proof of deployment. Live end-to-end acceptance remains pending.
+
+See the [current project status](../PROJECT_STATUS.md) for the
+implemented scope, migration checkpoint, verification evidence and remaining work.
+The specification below also includes target design; it is not evidence that
+every described capability is implemented or live-verified.
+
+
 ## 1. Design Philosophy: Zero-Friction for Non-Coders
 
 Ryvix targets business owners, product teams, and non-technical operators who manage production websites. The onboarding experience completely abstracts away developer concepts:

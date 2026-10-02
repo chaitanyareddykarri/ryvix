@@ -1,5 +1,19 @@
 # Ryvix Autonomous AI Architecture: The Complete Master Technical Specification
 
+## Implementation checkpoint — 2026-10-02
+
+The reviewed tenant learning path persists examples, requires independent label
+review, preserves train/validation/test partitions and gates explicit checkpoint
+promotion on held-out metrics and baseline non-regression. Representative reviewed
+data and production accuracy/drift evidence remain missing. Runtime memory and
+legacy global weight format checks are not equivalent to this controlled pipeline.
+
+See the [current project status](../PROJECT_STATUS.md) for the
+implemented scope, migration checkpoint, verification evidence and remaining work.
+The specification below also includes target design; it is not evidence that
+every described capability is implemented or live-verified.
+
+
 > **Classification**: Authoritative Engineering Architecture & Operational Manual  
 > **Status**: Historical architecture description; production verification is incomplete. See `docs/verification/PRODUCTION_REMEDIATION.md` for current evidence and gaps.  
 > **Platform Version**: v2.4.0 Autonomous Operations Platform  

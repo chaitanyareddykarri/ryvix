@@ -1,5 +1,18 @@
 # Production remediation progress
 
+## Historical checkpoint — 2026-10-02
+
+This report is retained as evidence of its original inspection or test run.
+The latest implementation checkpoint is `45b130b`: cloud recovery, WhatsApp P1
+dispatch, security email and approved releases are implemented in that checkpoint.
+The latest recorded schema is `20261002000003`; provider acceptance is still pending.
+
+See the [current project status](../PROJECT_STATUS.md) for the
+implemented scope, migration checkpoint, verification evidence and remaining work.
+Results and pending lists below describe the original checkpoint; later changes
+are recorded in the status index. Historical counts are intentionally preserved.
+
+
 Observability/tenant continuation: the missing logs endpoint is implemented and
 ADR-018/migration 20260930000006 is applied. Browser operational-record writes and
 stale-membership project access are blocked. 64 suites, 63 privilege checks and

@@ -1,5 +1,19 @@
 # External Out-of-Band Connector Specification
 
+## Implementation checkpoint — 2026-10-02
+
+Native service restart and cloud reboot now have separate persisted independent
+approvals, cooldowns and recorded outcomes. Native commands use Ed25519 signatures
+and a durable Linux replay journal. Cloud dispatch is claimed before provider
+contact and ambiguous outcomes are not automatically retried. `/operations` and
+`/recovery` expose the workflows. Real approved host operations remain unverified.
+
+See the [current project status](../PROJECT_STATUS.md) for the
+implemented scope, migration checkpoint, verification evidence and remaining work.
+The specification below also includes target design; it is not evidence that
+every described capability is implemented or live-verified.
+
+
 ## 1. System Mission & Independence
 
 The **External Connector** is Ryvix's out-of-band resilience system. Operating entirely outside the customer host, it maintains reachability visibility and cloud-level control regardless of whether the internal host OS is functional, hung, or completely crashed.

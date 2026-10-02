@@ -1,5 +1,19 @@
 # Ryvix Connector Architecture: Dual-Path Isolation & Recovery
 
+## Implementation checkpoint — 2026-10-02
+
+Gmail uses read-only OAuth polling into a reviewed inbox. WhatsApp supports signed
+inbound proposals and durable P1 template alerts with signed receipts. Full
+two-way WhatsApp LLM chat, mobile approvals, Gmail push and replies remain future
+work. Security/deployment email uses Resend to the confirmed account address,
+including Gmail recipients; receiving it does not require Gmail OAuth.
+
+See the [current project status](../PROJECT_STATUS.md) for the
+implemented scope, migration checkpoint, verification evidence and remaining work.
+The specification below also includes target design; it is not evidence that
+every described capability is implemented or live-verified.
+
+
 ## 1. Dual-Path Architecture Overview
 
 A core architectural principle of Ryvix is the strict separation between the **Internal Connector** and the **External Out-of-Band Connector**. 
