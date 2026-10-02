@@ -1,0 +1,91 @@
+import fs from 'node:fs';
+import {parseEnv} from 'node:util';
+import {randomUUID} from 'node:crypto';
+import assert from 'node:assert/strict';
+import {Client,type Pool} from 'pg';
+import {CloudRecoveryStore} from '../backend/src/services/cloud-recovery-store';
+import {WhatsAppOutbox} from '../backend/src/services/whatsapp-outbox';
+import {ChannelAccounts} from '../backend/src/services/channel-accounts';
+
+async function main(){
+  const defaults:Record<string,string>={};for(const f of ['.env','.env.local','web/.env.local'])if(fs.existsSync(f))Object.assign(defaults,parseEnv(fs.readFileSync(f,'utf8')));
+  for(const [k,v] of Object.entries(defaults))if(process.env[k]===undefined)process.env[k]=v;
+  const url=new URL(process.env.DATABASE_URL!);for(const k of ['sslmode','sslcert','sslkey','sslrootcert'])url.searchParams.delete(k);
+  const c=new Client({connectionString:url.toString(),connectionTimeoutMillis:10000,ssl:{rejectUnauthorized:true,ca:process.env.DATABASE_CA_CERT}});
+  let phase='connection';const users=[randomUUID(),randomUUID()],project=randomUUID(),environment=randomUUID(),server=randomUUID(),connector=randomUUID();
+  try{await c.connect();await c.query('BEGIN');await c.query("SET LOCAL statement_timeout='15s'");
+    phase='migration in rollback transaction';
+    const exists=(await c.query("SELECT to_regclass('public.cloud_recovery_requests') AS table")).rows[0].table;
+    if(!exists)await c.query(fs.readFileSync('supabase/migrations/20261002000002_cloud_recovery_alert_outbox.sql','utf8'));
+    for(const role of ['anon','authenticated'])for(const table of ['cloud_recovery_requests','whatsapp_alert_outbox','whatsapp_alert_receipts']){
+      assert.equal((await c.query('SELECT has_table_privilege($1,$2,\'SELECT,INSERT,UPDATE,DELETE\') AS access',[role,table])).rows[0].access,false);
+    }
+    phase='tenant fixtures';
+    for(const u of users)await c.query("INSERT INTO auth.users(id,email,raw_user_meta_data) VALUES($1,$2,'{}')",[u,`rollback-${u}@example.test`]);
+    const org=(await c.query('SELECT organization_id FROM profiles WHERE id=$1',[users[0]])).rows[0].organization_id;
+    const other=(await c.query('SELECT organization_id FROM profiles WHERE id=$1',[users[1]])).rows[0].organization_id;
+    await c.query("INSERT INTO organization_members(organization_id,user_id,role) VALUES($1,$2,'admin')",[org,users[1]]);
+    await c.query("INSERT INTO projects(id,organization_id,name,slug) VALUES($1,$2,'Rollback fixture','recovery-fixture')",[project,org]);
+    await c.query("INSERT INTO environments(id,project_id,name,slug) VALUES($1,$2,'Fixture','fixture')",[environment,project]);
+    await c.query("INSERT INTO connectors(id,environment_id,name,connector_type,status,device_public_key) VALUES($1,$2,'Fixture','server_inband','active','fixture-public-key')",[connector,environment]);
+    await c.query("INSERT INTO servers(id,environment_id,connector_id,hostname,os_type,status) VALUES($1,$2,$3,'fixture','linux','healthy')",[server,environment,connector]);
+    const query=(sql:string,args?:unknown[])=>c.query(sql==='BEGIN'?'SAVEPOINT fixture_store':sql==='COMMIT'?'RELEASE SAVEPOINT fixture_store':sql==='ROLLBACK'?'ROLLBACK TO SAVEPOINT fixture_store':sql,args);
+    const pool={query,connect:async()=>({query,release(){}})} as unknown as Pool;
+    let executions=0,fail=false;
+    const cloud=new CloudRecoveryStore(pool,{aws:{execute:async()=>{executions++;if(fail)throw new Error('fixture timeout');return {id:'fixture-provider-reference',status:'dispatched'};},
+      probe:async()=>({provider:'aws',instanceId:'i-12345678',state:'running',hypervisorResponsive:true,statusChecks:{systemCheck:'ok',instanceCheck:'ok'},checkedAt:new Date().toISOString()})}});
+    process.env.RYVIX_CLOUD_TARGETS=`${server}:aws:i-12345678`;
+    phase='cloud scope and independent approval';
+    await assert.rejects(cloud.request(other,users[1],server),/denied/);
+    let r=await cloud.request(org,users[0],server);
+    await assert.rejects(cloud.decide(org,users[0],r.id,true),/Independent/);
+    await cloud.decide(org,users[1],r.id,true);
+    await c.query("UPDATE organization_members SET role='viewer' WHERE organization_id=$1 AND user_id=$2",[org,users[1]]);
+    assert.equal(await cloud.dispatchOne(),false);assert.equal(executions,0);
+    await c.query("UPDATE organization_members SET role='admin' WHERE organization_id=$1 AND user_id=$2",[org,users[1]]);
+    process.env.RYVIX_CLOUD_TARGETS=`${server}:aws:i-87654321`;
+    assert.equal(await cloud.dispatchOne(),false);assert.equal(executions,0);
+    assert.equal((await cloud.list(org,users[0]))[0].status,'expired','Changed target invalidates old approval');
+    process.env.RYVIX_CLOUD_TARGETS=`${server}:aws:i-12345678`;
+    r=await cloud.request(org,users[0],server);await cloud.decide(org,users[1],r.id,true);
+    phase='durable dispatch and no replay';
+    assert.equal(await cloud.dispatchOne(),true);assert.equal(await cloud.dispatchOne(),false);assert.equal(executions,1);
+    await cloud.verifyPending();assert.equal((await cloud.list(org,users[0])).find(item=>item.id===r.id)?.status,'accepted');
+    await c.query("UPDATE cloud_recovery_requests SET dispatched_at=now()-interval '2 seconds' WHERE id=$1",[r.id]);
+    await c.query('UPDATE connectors SET last_heartbeat_at=now() WHERE id=$1',[connector]);
+    await cloud.verifyPending();assert.equal((await cloud.list(org,users[0])).find(item=>item.id===r.id)?.status,'observed_healthy');
+    const retry=await cloud.request(org,users[0],server);await cloud.decide(org,users[1],retry.id,true);
+    assert.equal(await cloud.dispatchOne(),false,'Cooldown prevents another immediate reboot');
+    await c.query("UPDATE cloud_recovery_requests SET dispatched_at=now()-interval '16 minutes' WHERE id=$1",[r.id]);
+    fail=true;await cloud.dispatchOne();assert.equal((await c.query('SELECT status FROM cloud_recovery_requests WHERE id=$1',[retry.id])).rows[0].status,'unknown');
+    assert.equal(await cloud.dispatchOne(),false);assert.equal(executions,2);
+    phase='outbox deduplication and early delivery receipt';
+    const phone=String(Date.now()),recipient='919999999999';
+    const account=await new ChannelAccounts(pool).connect(org,users[0],environment,'whatsapp',phone,'fixture-token');
+    process.env.RYVIX_WHATSAPP_ALERT_TARGETS=JSON.stringify([{connectorId:account.connectorId,recipient,template:'ryvix_p1',language:'en_US',optedIn:true}]);process.env.WHATSAPP_GRAPH_VERSION='v25.0';
+    const incident=(await c.query("INSERT INTO incidents(environment_id,title,incident_type,severity) VALUES($1,'Fixture','service_crash','P1_critical') RETURNING id",[environment])).rows[0].id;
+    let sends=0;const outbox=new WhatsAppOutbox(pool,async input=>{sends++;assert.equal(input.incident,incident);
+      await outbox.receipt({phone,recipient,id:'wamid.rollback-fixture',status:'delivered'});return 'wamid.rollback-fixture';});
+    await outbox.enqueue();await outbox.enqueue();assert.equal((await outbox.list(org,users[0])).length,1);assert.equal((await outbox.list(other,users[1])).length,0);
+    assert.equal(await outbox.dispatchOne(),true);assert.equal(await outbox.dispatchOne(),false);assert.equal(sends,1);
+    assert.equal((await outbox.list(org,users[0]))[0].status,'delivered');
+    await outbox.receipt({phone,recipient,id:'wamid.rollback-fixture',status:'sent'});assert.equal((await outbox.list(org,users[0]))[0].status,'delivered');
+    await outbox.receipt({phone:'123456',recipient,id:'wamid.rollback-fixture',status:'read'});assert.equal((await outbox.list(org,users[0]))[0].status,'delivered');
+    await outbox.receipt({phone,recipient,id:'wamid.rollback-fixture',status:'read'});assert.equal((await outbox.list(org,users[0]))[0].status,'read');
+    phase='outbox revocation and ambiguous send';
+    await c.query("INSERT INTO incidents(environment_id,title,incident_type,severity) VALUES($1,'Fixture 2','service_crash','P1_critical')",[environment]);await outbox.enqueue();
+    process.env.RYVIX_WHATSAPP_ALERT_TARGETS='[]';assert.equal(await outbox.dispatchOne(),false);assert.equal(sends,1);
+    assert.ok((await outbox.list(org,users[0])).some(r=>r.status==='cancelled'));
+    process.env.RYVIX_WHATSAPP_ALERT_TARGETS=JSON.stringify([{connectorId:account.connectorId,recipient,template:'ryvix_p1',language:'en_US',optedIn:true}]);
+    await c.query("INSERT INTO incidents(environment_id,title,incident_type,severity) VALUES($1,'Fixture 3','service_crash','P1_critical')",[environment]);
+    const uncertain=new WhatsAppOutbox(pool,async()=>{sends++;throw new Error('fixture network timeout');});
+    await uncertain.enqueue();assert.equal(await uncertain.dispatchOne(),true);assert.equal(await uncertain.dispatchOne(),false);
+    assert.equal(sends,2);assert.ok((await uncertain.list(org,users[0])).some(r=>r.status==='unknown'));
+    await c.query("UPDATE whatsapp_alert_outbox SET status='sending',claimed_at=now()-interval '2 minutes' WHERE status='unknown'");
+    await uncertain.expireClaims();assert.equal(await uncertain.dispatchOne(),false);assert.equal(sends,2);
+    await c.query('ROLLBACK');assert.equal((await c.query('SELECT id FROM auth.users WHERE id=ANY($1::uuid[])',[users])).rowCount,0);
+    console.log('PASS real SQL cloud independent approval, tenant scope, revocation, frozen target, no replay, cooldown, unknown outcomes, heartbeat observation; WhatsApp deduplication, early/out-of-order receipts, scope and consent removal. All fixture data and any temporary migration rolled back. No external mutation performed.');
+  }catch(e:any){console.error(`Recovery/outbound verification failed during ${phase} (${String(e.code||e.name||'FAILED').replace(/[^a-z0-9_]/gi,'')}).`);process.exitCode=1;}
+  finally{await c.query('ROLLBACK').catch(()=>{});await c.end().catch(()=>{});}
+}
+void main();

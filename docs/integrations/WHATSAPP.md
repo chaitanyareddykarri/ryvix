@@ -1,8 +1,9 @@
 # WhatsApp Integration Specification
 
 > Current implementation: see ../infrastructure/CHANNELS_AND_LEARNING.md and
-> ADR-022. Signed inbound messages become reviewed proposals. The outbound alerts
-> and mobile approval features described below are not implemented or certified.
+> ADR-022 and ADR-026. Signed inbound messages become reviewed proposals. P1
+> template dispatch now uses a durable outbox and signed delivery receipts.
+> Live delivery is unverified. Two-way LLM chat and mobile approvals remain future work.
 
 ## 1. Scope & Operational Role
 
@@ -32,5 +33,5 @@ WhatsApp serves as Ryvix's **real-time mobile alert and operational control chan
 
 ## 4. Cost & Rate Limit Management
 
-- **Production Economics**: WhatsApp Business messages incur per-conversation charges. Ryvix groups related alert notifications into a single active 24-hour conversation window to optimize operating costs.
+- **Production Economics**: Check current Meta pricing for the selected message category and recipient country before rollout. P1 sends use an approved template and opted-in recipients; this implementation does not promise conversation-based billing or group incidents into a conversation.
 - **Throttling**: High-volume, non-critical logs are strictly filtered out; only actionable alerts and user-initiated dialogues are transmitted via WhatsApp.

@@ -1,5 +1,12 @@
 # Ryvix Current Project Context
 
+> 2026-10-02 operations continuation: see
+> docs/verification/RECOVERY_OUTBOUND_2026_10_02.md and
+> docs/infrastructure/PRODUCTION_PROVIDER_PLAN.md. Cloud recovery approvals and
+> a P1 WhatsApp delivery outbox are implemented; migration 20261002000002 is applied.
+> Real cloud operations, provider delivery, full WhatsApp LLM chat and deployment
+> acceptance are not certified by the local/rolled-back verification results.
+
 > 2026-10-02 continuation: current checkpoint is
 > docs/verification/CONTINUATION_2026_10_01.md. Migrations through 20261002000001
 > are applied. Chat/security/channel/learning review, native approved service

@@ -11,6 +11,7 @@
  * - Saves atomically to disk (ai/data/long_term_cognitive_memory.json)
  */
 
+import { randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -100,7 +101,7 @@ export class LongTermMemoryManager {
 
     const now = new Date().toISOString();
     for (const f of defaultFacts) {
-      const id = `fact_seed_${f.category.toLowerCase()}_${Math.random().toString(36).slice(2, 6)}`;
+      const id = `fact_seed_${f.category.toLowerCase()}_${randomUUID()}`;
       this.facts.set(id, {
         id,
         ...f,
@@ -160,7 +161,7 @@ export class LongTermMemoryManager {
       }
     }
 
-    const id = `fact_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const id = `fact_${Date.now()}_${randomUUID()}`;
     const newFact: LongTermFact = {
       id,
       entityId,

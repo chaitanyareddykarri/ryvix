@@ -16,6 +16,7 @@
  * - In-App Notification Center Ledger with Acknowledgment & Deduplication
  */
 
+import { randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -166,7 +167,7 @@ export class RiskAlertDispatcher {
     }
     this.recentDeduplicationCache.set(dedupKey, now);
 
-    const alertId = `alert_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const alertId = `alert_${Date.now()}_${randomUUID()}`;
     const timestamp = new Date().toISOString();
     const severity = params.severity;
     const score = params.riskScore !== undefined ? params.riskScore : severity === 'CRITICAL' ? 0.98 : 0.85;

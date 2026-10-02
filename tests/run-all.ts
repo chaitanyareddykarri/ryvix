@@ -1,3 +1,4 @@
+import {testRecoveryOutbound} from './recovery-outbound.test';
 import { seedHealthFixtures } from './health-fixtures';
 import { testSettingsMutations } from './settings-mutations.test';
 import { testFrontierDeepLearning } from './frontier-deep-learning.test';
@@ -138,6 +139,7 @@ async function runAllTests() {
 
   ];
 
+  testCases.push({name:'Cloud target and WhatsApp outbound boundaries',fn:testRecoveryOutbound});
   for (const tc of testCases) {
     try {
       await tc.fn();

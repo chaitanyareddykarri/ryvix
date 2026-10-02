@@ -11,6 +11,7 @@
  * - Tracks hit/miss telemetry and manages TTL expiration
  */
 
+import { randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -164,7 +165,7 @@ export class SemanticVectorCache {
     category: string = 'GENERAL'
   ): CacheEntry<T> {
     const queryVec = this.embedText(query);
-    const id = `cache_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const id = `cache_${Date.now()}_${randomUUID()}`;
     const now = Date.now();
 
     const entry: CacheEntry<T> = {

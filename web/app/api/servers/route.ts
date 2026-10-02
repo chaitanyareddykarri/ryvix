@@ -1,4 +1,6 @@
-import { queryDirectDb } from "@/utils/direct-db";
+import { queryDirectDb, getDirectDbPool } from "@/utils/direct-db";
+import {ServerCommandStore} from '../../../../backend/src/services/server-command-store';
+import {CloudRecoveryStore} from '../../../../backend/src/services/cloud-recovery-store';
 import { requireTenant, RequestError } from "@/utils/tenant-context";
 import { serverTelemetry } from "@/utils/server-telemetry";
 import { issueEnrollment } from "@/utils/device-ingestion";
@@ -66,16 +68,16 @@ export async function POST(req: Request) {
         { headers: { 'Cache-Control': 'no-store' } });
     }
 
-    // A simulated local agent must never stand in for an enrolled device command.
+    // Compatibility actions create approval requests; they never execute directly.
     if (action === "execute_capability") {
-      return NextResponse.json({ success: false, error: "Remote command delivery and persisted approval are not configured. No operation was performed." }, { status: 503 });
+      if(capability!=='restart_service')throw new RequestError('Only approved service restarts are supported.',400);
+      const request=await new ServerCommandStore(getDirectDbPool()).request(tenant.organizationId,tenant.user.id,serverId,params?.service);
+      return NextResponse.json({success:true,...request,approvalRequired:true,operationsUrl:'/operations'},{status:202});
     }
-    // High-impact recovery must be bound to a persisted approval record. A
-    // client boolean is not evidence of approval, so fail closed until the
-    // approval request/decision/dispatch workflow is available.
+    // A client-supplied boolean cannot approve a cloud recovery.
     if (action === "oob_cloud_reboot") {
-      return NextResponse.json({ success: false,
-        error: "Cloud recovery is unavailable until persisted human approval is implemented. No operation was performed." }, { status: 409 });
+      const request=await new CloudRecoveryStore(getDirectDbPool()).request(tenant.organizationId,tenant.user.id,serverId);
+      return NextResponse.json({success:true,...request,approvalRequired:true,operationsUrl:'/recovery'},{status:202});
     }
 
     if (action === "diagnose_threat_neural") {

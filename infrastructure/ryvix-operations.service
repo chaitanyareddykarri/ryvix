@@ -1,0 +1,23 @@
+[Unit]
+Description=Ryvix approved cloud recovery and WhatsApp alert worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ryvix-operations
+Group=ryvix-operations
+WorkingDirectory=/opt/ryvix/current
+Environment=NODE_ENV=production
+EnvironmentFile=/etc/ryvix/operations.env
+ExecStart=/usr/bin/npm run worker:operations
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+TimeoutStopSec=180
+
+[Install]
+WantedBy=multi-user.target

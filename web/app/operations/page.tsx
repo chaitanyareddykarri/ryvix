@@ -18,7 +18,7 @@ export default function OperationsPage(){
     if(!response.ok)throw new Error(data.error||'Operation unavailable');await refresh();
   }catch(e){setError(e instanceof Error?e.message:'Operation unavailable');}finally{setBusy(false);}}
   return <main style={{maxWidth:960,margin:'auto',padding:32,color:'#e5e7eb'}}>
-    <Link href="/servers">Back to servers</Link><h1>Server operation approvals</h1>
+    <Link href="/servers">Back to servers</Link> · <Link href="/recovery">Cloud recovery approvals</Link><h1>Server operation approvals</h1>
     <p>Request one restart of an allowed service. A different owner or administrator must approve it within ten minutes.</p>
     {!configured&&<p>Service restart delivery is not configured.</p>}{error&&<p role="alert">{error}</p>}
     <select aria-label="Server" disabled={busy} value={server} onChange={e=>setServer(e.target.value)}><option value="">Select server</option>{servers.map(s=><option key={s.id} value={s.id}>{s.hostname}</option>)}</select>

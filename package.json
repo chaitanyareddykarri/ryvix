@@ -11,6 +11,8 @@
     "services"
   ],
   "scripts": {
+    "verify:recovery-outbound": "tsx scripts/verify-recovery-outbound-live.ts",
+    "worker:operations": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/operations-worker.ts",
     "verify:operations": "tsx scripts/verify-operations-live.ts",
     "verify:channels-learning": "tsx scripts/verify-channels-learning-live.ts",
     "train:reviewed": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/train-reviewed.ts",

@@ -2,7 +2,8 @@ import {NextResponse} from 'next/server';
 import {timingSafeEqual} from 'node:crypto';
 import {getDirectDbPool} from '@/utils/direct-db';
 import {boundedDeviceBody} from '@/utils/device-ingestion';
-import {verifyWhatsAppSignature,whatsappMessages} from '../../../../../services/src/communication/whatsapp';
+import {verifyWhatsAppSignature,whatsappMessages,whatsappStatuses} from '../../../../../services/src/communication/whatsapp';
+import {WhatsAppOutbox} from '../../../../../backend/src/services/whatsapp-outbox';
 import {ChannelInbox} from '../../../../../backend/src/services/channel-inbox';
 export async function GET(request:Request){
   const params=new URL(request.url).searchParams,expected=process.env.WHATSAPP_VERIFY_TOKEN||'',supplied=params.get('hub.verify_token')||'';
@@ -15,8 +16,9 @@ export async function POST(request:Request){
     if(!process.env.WHATSAPP_APP_SECRET)return NextResponse.json({error:'WhatsApp is not configured.'},{status:503});
     const raw=await boundedDeviceBody(request,262144);
     if(!verifyWhatsAppSignature(raw,request.headers.get('x-hub-signature-256'),process.env.WHATSAPP_APP_SECRET))return NextResponse.json({error:'Invalid signature.'},{status:401});
-    let messages;try{messages=whatsappMessages(JSON.parse(raw.toString('utf8')));}catch{return NextResponse.json({error:'Invalid WhatsApp event.'},{status:400});}
+    let messages,statuses;try{const payload=JSON.parse(raw.toString('utf8'));messages=whatsappMessages(payload);statuses=whatsappStatuses(payload);}catch{return NextResponse.json({error:'Invalid WhatsApp event.'},{status:400});}
     const pool=getDirectDbPool(),inbox=new ChannelInbox(pool);
+    for(const status of statuses)await new WhatsAppOutbox(pool).receipt(status);
     for(const message of messages){
       const account=await pool.query("SELECT connector_id FROM channel_accounts WHERE provider_subject=$1",[`whatsapp:${message.phone}`]);
       if(account.rows[0])await inbox.receive(account.rows[0].connector_id,message.id,message.sender,message.text);

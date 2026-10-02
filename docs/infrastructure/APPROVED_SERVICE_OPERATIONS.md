@@ -4,7 +4,9 @@ The `/operations` page requests a specific service restart and requires a
 different current owner/admin to approve it within ten minutes. Approval,
 dispatch and device result are durable and audited. Native telemetry remains
 observation-only. Cloud resets and arbitrary shell/process/firewall commands are
-not enabled by this feature.
+not enabled by this feature. Cloud reboot requests now have a separate durable
+workflow at `/recovery`; see ADR-026 and `PRODUCTION_PROVIDER_PLAN.md`. It requires
+its own operations worker and scoped provider configuration.
 
 Configure `RYVIX_COMMAND_PRIVATE_KEY` on the control plane as base64-encoded
 Ed25519 PKCS8 DER, plus `RYVIX_COMMAND_SERVICES` as exact comma-separated systemd

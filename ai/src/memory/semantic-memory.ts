@@ -11,6 +11,7 @@
  * - Persists to disk (ai/data/semantic_cognitive_memory.json)
  */
 
+import { randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -161,7 +162,7 @@ export class SemanticMemoryManager {
     const now = new Date().toISOString();
     for (const d of defaults) {
       const vec = this.embedText(`${d.title}. ${d.content} Tags: ${d.tags.join(' ')}`);
-      const id = `sem_${d.category.toLowerCase()}_${Math.random().toString(36).slice(2, 7)}`;
+      const id = `sem_${d.category.toLowerCase()}_${randomUUID()}`;
       this.items.set(id, {
         id,
         title: d.title,
@@ -205,7 +206,7 @@ export class SemanticMemoryManager {
   ): SemanticMemoryItem {
     const textToEmbed = `${title}. ${content} Tags: ${tags.join(' ')}`;
     const vec = this.embedText(textToEmbed);
-    const id = `sem_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const id = `sem_${Date.now()}_${randomUUID()}`;
 
     const item: SemanticMemoryItem = {
       id,

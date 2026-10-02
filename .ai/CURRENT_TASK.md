@@ -1,5 +1,25 @@
 # Current Task & Implementation State
 
+## Cloud recovery and WhatsApp continuation (2026-10-02)
+
+Added persisted independent cloud approvals, durable one-attempt provider dispatch,
+cooldowns, unknown-outcome handling and measured post-request liveness. Added a
+tenant P1 WhatsApp outbox, Vault token dispatch, signed delivery receipt persistence,
+early-callback reconciliation and delivery UI. Legacy server actions now create
+approval requests. Six persisted IDs in the four requested AI files use UUIDs.
+Migration `20261002000002` was applied with verified TLS after a dry run. SQL
+fixtures tested scope, revocation, target changes, no replay, cooldowns, unknown
+outcomes and receipt ordering with all data rolled back and injected providers.
+74 project suites and 15 Node checks passed. Final build/publication checks are
+tracked in `docs/verification/RECOVERY_OUTBOUND_2026_10_02.md`.
+
+See `docs/infrastructure/PRODUCTION_PROVIDER_PLAN.md` for the exact provider
+accounts, current variable names and rollout order. Existing LLM keys are not
+visible in this runtime's normal environment; reuse them in the selected deployment
+secret store. No new cloud operation, WhatsApp message or full chat delivery has
+been executed. Two-way WhatsApp LLM chat, Gmail replies/push, real provider/browser
+verification and representative AI quality evaluation still require further work.
+
 ## Consolidated continuation (2026-10-02)
 
 See `docs/verification/CONTINUATION_2026_10_01.md` for the current work list and

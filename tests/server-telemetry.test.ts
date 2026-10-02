@@ -44,7 +44,11 @@ export async function testServerTelemetry() {
       if (denied) throw new RequestError('Authentication required.', 401);
       return { organizationId: 'authorized-org', user: { id: 'verified-user' } };
     } };
-    if (name === '@/utils/direct-db') return { queryDirectDb: async (sql: string, args: string[]) => {
+    if(name.endsWith('/cloud-recovery-store')||name.endsWith('/server-command-store')){
+      class Store {async request(org:string,user:string,server:string){assert.equal(org,'authorized-org');assert.equal(user,'verified-user');assert.equal(server,'server-1');return {id:'persisted-request',status:'pending'};}}
+      return {CloudRecoveryStore:Store,ServerCommandStore:Store};
+    }
+    if (name === '@/utils/direct-db') return { getDirectDbPool:()=>({}),queryDirectDb: async (sql: string, args: string[]) => {
       queries++;
       assert.equal(JSON.stringify(args), JSON.stringify(['authorized-org', 'verified-user']));
       assert.match(sql, /m.user_id = \$2/);
@@ -61,11 +65,14 @@ export async function testServerTelemetry() {
   const authBeforeReboot = tenantCalls;
   const reboot = await exports.POST({ json: async () => ({ action: 'oob_cloud_reboot', serverId: 'server-1', approved: true }) });
   assert.equal(tenantCalls, authBeforeReboot + 1, 'A POST request must resolve tenant authentication once');
-  assert.equal(reboot.status, 409, 'A browser boolean must not authorize a high-impact cloud action');
-  assert.equal(reboot.body.success, false);
+  assert.equal(reboot.status, 202);
+  assert.equal(reboot.body.status, 'pending', 'A browser boolean cannot approve the persisted request');
+  assert.equal(reboot.body.approvalRequired,true);
   assert.equal(cloudAdapterCalls, 0, 'Unpersisted approval must never reach the provider adapter');
-  const command = await exports.POST({ json: async () => ({ action: 'execute_capability', serverId: 'server-1', capability: 'service.restart' }) });
-  assert.equal(command.status, 503, 'Remote commands stay unavailable until signed dispatch and persisted approval exist');
+  const command = await exports.POST({ json: async () => ({ action: 'execute_capability', serverId: 'server-1', capability: 'restart_service',params:{service:'fixture.service'} }) });
+  assert.equal(command.status, 202);
+  assert.equal(command.body.status,'pending');
+  assert.equal((await exports.POST({json:async()=>({action:'execute_capability',capability:'raw_shell'})})).status,400);
   assert.equal(cloudAdapterCalls, 0);
   rows = [{ id: 'persisted-server', hostname: 'stored-host', status: 'healthy', services: [] }];
   const missing = (await exports.GET()).body.servers[0];
