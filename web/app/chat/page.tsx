@@ -118,7 +118,53 @@ export default function WebChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const conversationIdRef = useRef<string | undefined>(undefined);
-  useEffect(() => () => abortControllerRef.current?.abort(), []);
+  const historyRequestRef = useRef<AbortController | null>(null);
+  const [conversations, setConversations] = useState<Array<{id:string;title:string}>>([]);
+  const [historyLoading,setHistoryLoading] = useState(false);
+  const [historyError,setHistoryError] = useState('');
+  const [repositories,setRepositories]=useState<Array<{id:string;full_name:string}>>([]);
+  const [repositoryId,setRepositoryId]=useState('');
+  function rememberConversation(id?: string) {
+    const url = new URL(window.location.href);
+    if (id) url.searchParams.set('conversation',id); else url.searchParams.delete('conversation');
+    url.searchParams.delete('prompt');
+    window.history.replaceState(null,'',url.toString());
+  }
+  async function openConversation(id: string, signal?: AbortSignal) {
+    if (!id || isStreaming) return;
+    historyRequestRef.current?.abort();
+    const controller = new AbortController();
+    historyRequestRef.current = controller;
+    signal = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
+    setHistoryLoading(true); setHistoryError('');
+    try {
+      const response=await fetch(`/api/chat/conversations?id=${encodeURIComponent(id)}`,{signal});
+      const data=await response.json();
+      if (!response.ok) throw new Error(data.error || 'Conversation unavailable.');
+      if (signal?.aborted) return;
+      conversationIdRef.current=data.conversationId;
+      setMessages(data.turns.flatMap((turn:any)=>[
+        {id:`${turn.id}-user`,role:'user',content:turn.question,timestamp:new Date(turn.created_at).toLocaleTimeString()},
+        {id:`${turn.id}-assistant`,role:'assistant',content:turn.answer,timestamp:new Date(turn.created_at).toLocaleTimeString()},
+      ]));
+      rememberConversation(data.conversationId);
+    } catch(error) { if (!signal?.aborted) setHistoryError(error instanceof Error ? error.message : 'History unavailable.'); }
+    finally { if (!signal?.aborted) setHistoryLoading(false); }
+  }
+  useEffect(() => {
+    const abort=new AbortController();
+    fetch('/api/chat/conversations',{signal:abort.signal}).then(async response=>{
+      const data=await response.json(); if (!response.ok) throw new Error(data.error || 'History unavailable.');
+      setConversations(data.conversations);
+      setRepositories(data.repositories || []);
+    }).catch(error=>{if(!abort.signal.aborted)setHistoryError(error.message);});
+    const id=new URL(window.location.href).searchParams.get('conversation');
+    if(id) void openConversation(id,abort.signal);
+    return ()=>abort.abort();
+    // Initial URL restoration only; requests are cancelled on unmount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
+  useEffect(() => () => { abortControllerRef.current?.abort(); historyRequestRef.current?.abort(); }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -129,7 +175,7 @@ export default function WebChatPage() {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const queryPrompt = params.get("prompt");
-      if (queryPrompt && !isStreaming) {
+      if (queryPrompt && !params.has('conversation') && !isStreaming) {
         handleSendMessage(queryPrompt);
       }
     }
@@ -153,7 +199,7 @@ export default function WebChatPage() {
 
   const handleSendMessage = async (promptToSend?: string) => {
     const text = (promptToSend || inputPrompt).trim();
-    if (!text || isStreaming) return;
+    if (!text || isStreaming || historyLoading) return;
 
     setInputPrompt("");
     const userMsgId = `user_${Date.now()}`;
@@ -184,7 +230,7 @@ export default function WebChatPage() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: text, stream: true, conversationId: conversationIdRef.current }),
+        body: JSON.stringify({ prompt: text, stream: true, conversationId: conversationIdRef.current, repositoryId:repositoryId || undefined }),
         signal: abortController.signal
       });
 
@@ -231,7 +277,12 @@ export default function WebChatPage() {
             continue;
           }
 
-          if (eventType === 'start') conversationIdRef.current = parsedData.conversationId;
+          if (eventType === 'start') {
+            conversationIdRef.current = parsedData.conversationId;
+            rememberConversation(parsedData.conversationId);
+            setConversations(previous=>previous.some(item=>item.id===parsedData.conversationId) ? previous :
+              [{id:parsedData.conversationId,title:text.slice(0,100)},...previous].slice(0,50));
+          }
           if (eventType === 'error') throw new Error(parsedData.error || 'Response interrupted.');
           setMessages(prev =>
             prev.map(msg => {
@@ -348,7 +399,22 @@ export default function WebChatPage() {
 
           {/* Nav Links */}
           <div style={{ display: "flex", gap: "0.5rem" }}>
-            <button disabled={isStreaming} onClick={() => { conversationIdRef.current = undefined; setMessages([]); }}
+            <Link href="/channels">Inbox</Link>
+            <Link href="/learning">Learning</Link>
+            <Link href="/operations">Server approvals</Link>
+            <Link href="/deployments">Deployments</Link>
+            <select aria-label="Repository context" disabled={isStreaming || historyLoading} value={repositoryId}
+              onChange={event=>setRepositoryId(event.target.value)} style={{maxWidth:'180px',background:'#111827',color:'#cbd5e1'}}>
+              <option value="">No live repository</option>
+              {repositories.map(repo=><option key={repo.id} value={repo.id}>{repo.full_name}</option>)}
+            </select>
+            <select aria-label="Conversation history" disabled={isStreaming || historyLoading} value={conversationIdRef.current || ''}
+              onChange={event=>void openConversation(event.target.value)} style={{maxWidth:'180px',background:'#111827',color:'#cbd5e1'}}>
+              <option value="">Previous conversations</option>
+              {conversations.map(item=><option key={item.id} value={item.id}>{item.title}</option>)}
+            </select>
+            {historyError && <span role="alert">{historyError}</span>}
+            <button disabled={isStreaming || historyLoading} onClick={() => { conversationIdRef.current = undefined; rememberConversation(); setMessages([]); }}
               style={{ padding:'0.3rem 0.75rem',borderRadius:'6px',color:'#cbd5e1',border:'1px solid rgba(255,255,255,0.1)',background:'rgba(255,255,255,0.04)' }}>
               New conversation
             </button>

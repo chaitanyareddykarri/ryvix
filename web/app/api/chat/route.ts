@@ -9,6 +9,8 @@ import { DeviceError } from '../../../../backend/src/services/device-protocol';
 import { ConversationStore, ConversationError } from '../../../../backend/src/services/conversation-store';
 import { ContextBuilder } from '../../../../ai/src/context/context-builder';
 import { CHAT_SYSTEM_PROMPT } from '../../../../ai/src/chat-policy';
+import { repositoryChatContext } from '@/utils/repository-chat-context';
+import { rerankSources } from '../../../../ai/src/semantic-reranking';
 
 export const dynamic = 'force-dynamic';
 const active = new Set<string>();
@@ -45,6 +47,12 @@ export async function POST(request: Request) {
       diagnosticContext(organizationId,user.id), retrieveChatSources(organizationId,user.id,
         [...session.history.filter(message=>message.role==='user').slice(-2).map(message=>message.content),prompt].join('\n')),
     ]);
+    if(body.repositoryId !== undefined) {
+      if(typeof body.repositoryId !== 'string')throw new RequestError('Invalid repository.',400);
+      const repository=await repositoryChatContext(organizationId,user.id,body.repositoryId,prompt,signal);
+      excerpts.push(...repository.sources);
+    }
+    const ranked=await rerankSources(prompt,excerpts,signal);
     const intent = /deploy|release|commit|workflow/i.test(prompt) ? 'deployment'
       : /server|health|cpu|memory|disk|incident|security|latency/i.test(prompt) ? 'diagnostics'
       : /code|component|implement|refactor|repository|preview/i.test(prompt) ? 'coding' : 'general';
@@ -56,7 +64,7 @@ export async function POST(request: Request) {
       ...session.history.map(message => ({ ...message, content: ContextBuilder.sanitizeText(message.content) })),
       { role: 'user', content: ContextBuilder.sanitizeText(JSON.stringify({ question: prompt, intent,
         observations: JSON.stringify(context).slice(0,24000),
-        observationsTruncated: JSON.stringify(context).length>24000, sources: excerpts })) },
+        observationsTruncated: JSON.stringify(context).length>24000, sources: ranked.sources,retrievalMode:ranked.mode })) },
     ], { temperature: 0.2, maxTokens: 4096, signal,
       onProvider:(provider,model)=>{ modelInfo={provider,model}; } });
     const first = await iterator.next();

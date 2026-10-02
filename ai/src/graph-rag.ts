@@ -57,8 +57,8 @@ export class SystemTopologyGraph {
   private nodes = new Map<string, TopologyNode>();
   private edges: TopologyEdge[] = [];
 
-  constructor() {
-    this.seedProductionTopology();
+  constructor(seedDefaults = true) {
+    if (seedDefaults) this.seedProductionTopology();
   }
 
   public addNode(node: TopologyNode): void {

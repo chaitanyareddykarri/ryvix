@@ -19,7 +19,7 @@ export async function testRepositoryJobStore() {
     if(sql.includes('INSERT INTO audit_events') && mode==='audit-failure') throw new Error('audit unavailable');
     return {rows:[{id:'row'}],rowCount:1};
   }};
-  const store=new RepositoryJobStore({connect:async()=>client,query:client.query} as unknown as Pool);
+  const store=new RepositoryJobStore({connect:async()=>client,query:client.query} as unknown as Pool,'host-a');
   await store.enqueue('repo','org','user','change');
   assert.ok(calls.findIndex(s=>s.startsWith('INSERT INTO tasks')) < calls.findIndex(s=>s.startsWith('INSERT INTO repository_jobs')));
   assert.ok(calls.includes('COMMIT'));

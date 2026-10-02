@@ -1,5 +1,13 @@
 # Ryvix Current Project Context
 
+> 2026-10-02 continuation: current checkpoint is
+> docs/verification/CONTINUATION_2026_10_01.md. Migrations through 20261002000001
+> are applied. Chat/security/channel/learning review, native approved service
+> commands, worker-host ownership and deployment runtime observations are locally
+> implemented and tested. Production accounts/hosts/provider configuration and
+> authenticated browser verification remain incomplete; no accuracy or live
+> service-recovery certification is claimed. Older notes below are historical.
+
 > 2026-10-01 AI upgrade: chat now uses tenant/user-owned PostgreSQL conversation
 > history, bounded incident/artifact retrieval and real provider text streaming.
 > Classifier checkpoints load with validation; evaluation tooling is available.

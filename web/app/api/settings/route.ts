@@ -1,8 +1,6 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
-import * as crypto from "node:crypto";
-import { queryDirectDb } from "@/utils/direct-db";
-import { cookies } from "next/headers";
-import { createClient } from "@/utils/supabase/server";
+import { queryDirectDb, getDirectDbPool } from "@/utils/direct-db";
+import { SettingsStore, SettingsError } from '../../../../backend/src/services/settings-store';
 import { requireTenant, RequestError } from '@/utils/tenant-context';
 
 export const dynamic = "force-dynamic";
@@ -113,68 +111,14 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
-
-    const profileRes = await queryDirectDb<{ organization_id: string }>(
-      `SELECT organization_id FROM profiles WHERE id = $1`,
-      [user.id]
-    );
-    const userOrgId = profileRes[0]?.organization_id;
-
-    const body = await req.json().catch(() => ({}));
-    const { action, orgName } = body;
-    const targetOrgId = userOrgId;
-
-    if (!targetOrgId) {
-      return NextResponse.json({ success: false, error: "No organization found" }, { status: 400 });
-    }
-
-    const membership = await queryDirectDb<{ role: string }>(
-      "SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2",
-      [targetOrgId, user.id]
-    );
-    if (!membership.some(({ role }) => role === "owner" || role === "admin")) {
-      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
-    }
-
-    if (action === "update_org" && orgName) {
-      await queryDirectDb("UPDATE organizations SET name = $1, updated_at = NOW() WHERE id = $2", [
-        orgName,
-        targetOrgId,
-      ]);
-      return NextResponse.json({ success: true, message: "Organization updated successfully" });
-    }
-
-    if (action === "generate_key") {
-      const rawSecret = `ryvix_live_${crypto.randomBytes(24).toString("hex")}`;
-      const prefix = rawSecret.slice(0, 16);
-      const hash = crypto.createHash("sha256").update(rawSecret).digest("hex");
-
-      const insertRes = await queryDirectDb(
-        `INSERT INTO api_keys (id, organization_id, name, key_prefix, hashed_secret, scopes, expires_at, created_at)
-         VALUES (gen_random_uuid(), $1, $2, $3, $4, ARRAY['read', 'write', 'deploy', 'ai'], NOW() + INTERVAL '1 year', NOW())
-         RETURNING id, name, key_prefix, created_at, expires_at`,
-        [targetOrgId, body.keyName || "Platform API Key", prefix, hash]
-      );
-
-      return NextResponse.json({
-        success: true,
-        rawKey: rawSecret,
-        key: insertRes[0],
-      });
-    }
-
-    return NextResponse.json({ success: false, error: "Unknown action" }, { status: 400 });
-  } catch {
-    return NextResponse.json({ success: false, error: 'Settings update unavailable.' }, { status: 503 });
+    const { user, organizationId } = await requireTenant();
+    const body = await req.json().catch(() => null);
+    if (!body || typeof body !== 'object' || Array.isArray(body)) throw new RequestError('Invalid request.',400);
+    const result = await new SettingsStore(getDirectDbPool()).mutate(organizationId,user.id,body);
+    return NextResponse.json(result,{headers:{'Cache-Control':'no-store'}});
+  } catch(error) {
+    const known = error instanceof RequestError || error instanceof SettingsError;
+    return NextResponse.json({success:false,error:known ? error.message : 'Settings update unavailable.'},
+      {status:known ? error.status : 503});
   }
 }

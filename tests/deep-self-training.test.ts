@@ -1,9 +1,15 @@
 import assert from 'node:assert/strict';
-import {
-  deepSelfTrainer,
-} from '../ai/src/orchestrator';
+import { mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { DeepSelfTrainer } from '../ai/src/deep-self-trainer';
+import { NeuralThreatClassifier, neuralThreatClassifier } from '../ai/src/neural-network';
 
 export async function testDeepSelfTraining(): Promise<void> {
+  const sharedBefore = neuralThreatClassifier.exportWeights();
+  const classifier = new NeuralThreatClassifier();
+  const before = classifier.exportWeights();
+  const deepSelfTrainer = new DeepSelfTrainer(mkdtempSync(join(tmpdir(), 'ryvix-training-test-')), classifier);
   console.log('[TEST] Running Deep Self-Training & Meta-Learning Engine Test Suite...');
 
   // 1. Test Synthetic Perturbation Generation
@@ -33,7 +39,13 @@ export async function testDeepSelfTraining(): Promise<void> {
 
   assert.ok(summary.syntheticSamplesTrained >= 9);
   assert.strictEqual(summary.epochsCompleted, 2);
-  assert.ok(summary.finalLoss <= summary.initialLoss || summary.finalLoss < 2.0);
+  // Two stochastic epochs do not guarantee decreasing loss. Verify real updates,
+  // finite measured losses, disk persistence, and isolation from runtime weights.
+  assert.ok(Number.isFinite(summary.initialLoss) && summary.initialLoss >= 0);
+  assert.ok(Number.isFinite(summary.finalLoss) && summary.finalLoss >= 0);
+  assert.notDeepEqual(classifier.exportWeights(), before);
+  assert.deepEqual(JSON.parse(readFileSync(summary.persistedWeightsPath, 'utf8')), classifier.exportWeights());
+  assert.deepEqual(neuralThreatClassifier.exportWeights(), sharedBefore);
   assert.ok(summary.averageRewardScore >= 0.8);
   assert.ok(summary.durationMs < 500);
   console.log(`  ✓ Meta-Learning Cycle complete: ${summary.syntheticSamplesTrained} samples trained in ${summary.durationMs}ms (Loss: ${summary.initialLoss} -> ${summary.finalLoss}).`);

@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
 import { serverTelemetry } from '../web/utils/server-telemetry';
+import { SystemTopologyGraph } from '../ai/src/graph-rag';
 export async function testDiagnosticContext() {
   let queries = 0, fail = false, hasDeployment = false;
   const exports: any = {};
@@ -10,6 +11,7 @@ export async function testDiagnosticContext() {
     compilerOptions: { module: ts.ModuleKind.CommonJS },
   }).outputText, { exports, require(name: string) {
     if (name === 'server-only') return {};
+    if (name.endsWith('/graph-rag')) return {SystemTopologyGraph};
     if (name === './server-telemetry') return { serverTelemetry };
     if (name === './direct-db') return { queryDirectDb: async (sql: string, args: string[]) => {
       queries++;
@@ -23,7 +25,8 @@ export async function testDiagnosticContext() {
     throw new Error(name);
   } });
   const result = await exports.diagnosticContext('verified-org', 'verified-user');
-  assert.equal(queries, 6); assert.equal(result.servers.length, 0);
+  assert.equal(queries, 8); assert.equal(result.servers.length, 0);
+  assert.equal(result.topology.relationships.length,0,'No seeded topology enters tenant context');
   assert.equal(result.deployments.recordsAvailable, false);
   hasDeployment = true;
   const observed = await exports.diagnosticContext('verified-org', 'verified-user');

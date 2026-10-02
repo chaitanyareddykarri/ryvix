@@ -10,7 +10,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { neuralThreatClassifier } from './neural-network';
+import { neuralThreatClassifier, NeuralThreatClassifier } from './neural-network';
 import { generalIntelligenceEngine } from './general-intelligence';
 
 export interface SyntheticPerturbation {
@@ -85,7 +85,7 @@ export interface ComprehensiveTrainingRunSummary extends TrainingRunSummary {
 export class DeepSelfTrainer {
   private dataDir: string;
 
-  constructor(dataDir?: string) {
+  constructor(dataDir?: string, private readonly classifier: NeuralThreatClassifier = neuralThreatClassifier) {
     this.dataDir = dataDir || path.resolve(__dirname, '..', 'data');
     if (!fs.existsSync(this.dataDir)) {
       try {
@@ -397,18 +397,18 @@ export class DeepSelfTrainer {
       allSamples.push(...generated);
     }
 
-    const samples = allSamples.map(sample => ({ sample, vector: neuralThreatClassifier.vectorize({
+    const samples = allSamples.map(sample => ({ sample, vector: this.classifier.vectorize({
       metrics: sample.syntheticMetrics, openPorts: sample.openPorts, logs: sample.syntheticLogs,
     }) }));
     // Evaluate the same frozen sample set before and after training. Online losses
     // measured while weights change within an epoch are not comparable snapshots.
     const evaluateLoss = () => samples.reduce((sum, { sample, vector }) => sum - Math.log(Math.max(1e-12,
-      neuralThreatClassifier.predict(vector).classProbabilities[sample.baseThreat] || 0)), 0) / samples.length;
+      this.classifier.predict(vector).classProbabilities[sample.baseThreat] || 0)), 0) / samples.length;
     const initialLoss = evaluateLoss();
 
     for (let epoch = 0; epoch < epochs; epoch++) {
       for (const { sample, vector } of samples) {
-        neuralThreatClassifier.trainSample(vector, sample.baseThreat, 0.01);
+        this.classifier.trainSample(vector, sample.baseThreat, 0.01);
       }
     }
     const finalLoss = evaluateLoss();
@@ -417,9 +417,7 @@ export class DeepSelfTrainer {
 
     // Persist updated neural weights to disk
     const weightsPath = path.join(this.dataDir, 'neural_weights.json');
-    try {
-      fs.writeFileSync(weightsPath, JSON.stringify(neuralThreatClassifier.exportWeights(), null, 2), 'utf8');
-    } catch {}
+    fs.writeFileSync(weightsPath, JSON.stringify(this.classifier.exportWeights(), null, 2), 'utf8');
 
     return {
       runId,
@@ -458,34 +456,34 @@ export class DeepSelfTrainer {
 
       // Train Coding Workspace Samples
       for (const item of codingPerturbations) {
-        const vec = neuralThreatClassifier.vectorize({
+        const vec = this.classifier.vectorize({
           metrics: item.metrics,
           logs: item.logs,
           codingWorkspaceContext: item.context,
         });
-        const loss = neuralThreatClassifier.trainSample(vec, item.targetClass, 0.02);
+        const loss = this.classifier.trainSample(vec, item.targetClass, 0.02);
         epochLossSum += loss;
       }
 
       // Train AGI Cognitive Subsystem Samples
       for (const item of agiPerturbations) {
-        const vec = neuralThreatClassifier.vectorize({
+        const vec = this.classifier.vectorize({
           conversationalQuery: item.query,
           logs: item.logs,
           agiCognitiveContext: item.context,
         });
-        const loss = neuralThreatClassifier.trainSample(vec, item.targetClass, 0.02);
+        const loss = this.classifier.trainSample(vec, item.targetClass, 0.02);
         epochLossSum += loss;
       }
 
       // Train System Threat Samples
       for (const item of threatPerturbations) {
-        const vec = neuralThreatClassifier.vectorize({
+        const vec = this.classifier.vectorize({
           metrics: item.syntheticMetrics,
           openPorts: item.openPorts,
           logs: item.syntheticLogs,
         });
-        const loss = neuralThreatClassifier.trainSample(vec, item.baseThreat, 0.02);
+        const loss = this.classifier.trainSample(vec, item.baseThreat, 0.02);
         epochLossSum += loss;
       }
 
@@ -500,9 +498,7 @@ export class DeepSelfTrainer {
     const avgReward = totalRewardSum / totalSamplesCount;
 
     const weightsPath = path.join(this.dataDir, 'neural_weights.json');
-    try {
-      fs.writeFileSync(weightsPath, JSON.stringify(neuralThreatClassifier.exportWeights(), null, 2), 'utf8');
-    } catch {}
+    fs.writeFileSync(weightsPath, JSON.stringify(this.classifier.exportWeights(), null, 2), 'utf8');
 
     return {
       runId,

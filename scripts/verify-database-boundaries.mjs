@@ -1,11 +1,9 @@
 import fs from 'node:fs';
-import { parseEnv } from 'node:util';
+import { loadRuntimeEnvironment } from './runtime-environment.mjs';
 import pg from 'pg';
 
 // Read-only rollout checks. Never print environment values or raw driver errors.
-for (const file of ['.env', '.env.local', 'web/.env.local']) {
-  if (fs.existsSync(file)) Object.assign(process.env, parseEnv(fs.readFileSync(file, 'utf8')));
-}
+loadRuntimeEnvironment();
 let client;
 try {
   const url = new URL(process.env.DATABASE_URL);
@@ -38,13 +36,13 @@ try {
       EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
         WHERE n.nspname='vault' AND c.relkind IN ('r','v','m') AND has_table_privilege($1,c.oid,'SELECT')) AS secret_access`, [role]);
     check(`${role}: no Vault access`, Object.values(vault.rows[0]).every(value => value === false));
-    for (const table of ['auth_challenge_limits','repository_jobs','connector_enrollments','connector_telemetry_receipts','connector_credentials','deployment_events']) {
+    for (const table of ['auth_challenge_limits','repository_jobs','connector_enrollments','connector_telemetry_receipts','connector_credentials','deployment_events','chat_request_budgets','channel_accounts','channel_inbox','learning_checkpoints','learning_deployments','server_commands','deployment_targets','deployment_runtime_observations']) {
       const result = await client.query(`SELECT has_table_privilege($1,$2,'SELECT,INSERT,UPDATE,DELETE') AS allowed`, [role, `public.${table}`]);
       check(`${role}: ${table} is backend-only`, !result.rows[0].allowed);
     }
     for (const table of ['tasks','plans','approval_requests','workspace_sessions','pull_requests','connectors','telemetry_metric_rollups','repositories',
       'projects','environments','organization_members','api_keys','servers','services_inventory','security_events','incidents','chat_conversations','chat_turns',
-      'recovery_plans','recovery_runs','plan_steps','tool_calls','health_checks','audit_events']) {
+      'recovery_plans','recovery_runs','plan_steps','tool_calls','health_checks','audit_events','organization_audit_events','learning_examples']) {
       const result = await client.query(`SELECT has_table_privilege($1,$2,'INSERT,UPDATE,DELETE') AS allowed`, [role, `public.${table}`]);
       check(`${role}: no direct ${table} mutations`, !result.rows[0].allowed);
     }

@@ -6,8 +6,8 @@ export class DeviceError extends Error {
 export const deviceUuid = /^[a-f\d]{8}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{12}$/i;
 export const digest = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
 export const telemetryPath = '/api/connector/telemetry';
-export function signingMessage(body: Buffer, timestamp: string, nonce: string) {
-  return Buffer.from(`POST\n${telemetryPath}\n${timestamp}\n${nonce}\n${digest(body)}`);
+export function signingMessage(body: Buffer, timestamp: string, nonce: string, path=telemetryPath) {
+  return Buffer.from(`POST\n${path}\n${timestamp}\n${nonce}\n${digest(body)}`);
 }
 export function devicePublicKey(encoded: unknown) {
   try {
@@ -17,14 +17,14 @@ export function devicePublicKey(encoded: unknown) {
     return key;
   } catch { throw new DeviceError('A valid Ed25519 public key is required.'); }
 }
-export function verifyDeviceRequest(body: Buffer, headers: Headers, publicKey: string, now = Date.now()) {
+export function verifyDeviceRequest(body: Buffer, headers: Headers, publicKey: string, now = Date.now(), path=telemetryPath) {
   const timestamp = headers.get('x-ryvix-timestamp') || '';
   const nonce = headers.get('x-ryvix-nonce') || '';
   const signature = headers.get('x-ryvix-signature') || '';
   if (body.length > 262144) throw new DeviceError('Telemetry batch exceeds 256 KiB.', 413);
   if (!/^\d{13}$/.test(timestamp) || Math.abs(now - Number(timestamp)) > 120000 || !deviceUuid.test(nonce)
     || !/^[A-Za-z0-9+/]{86}==$/.test(signature)) throw new DeviceError('Invalid or expired device signature.', 401);
-  if (!verify(null, signingMessage(body, timestamp, nonce), devicePublicKey(publicKey), Buffer.from(signature, 'base64')))
+  if (!verify(null, signingMessage(body, timestamp, nonce,path), devicePublicKey(publicKey), Buffer.from(signature, 'base64')))
     throw new DeviceError('Device signature rejected.', 401);
   return nonce;
 }

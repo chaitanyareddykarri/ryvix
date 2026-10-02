@@ -1,5 +1,9 @@
 # WhatsApp Integration Specification
 
+> Current implementation: see ../infrastructure/CHANNELS_AND_LEARNING.md and
+> ADR-022. Signed inbound messages become reviewed proposals. The outbound alerts
+> and mobile approval features described below are not implemented or certified.
+
 ## 1. Scope & Operational Role
 
 WhatsApp serves as Ryvix's **real-time mobile alert and operational control channel**. It is specifically optimized for urgent on-call incidents, interactive approval gates, and quick status inquiries when engineers are away from their workstations.

@@ -27,6 +27,8 @@ export async function testWebChatStreaming() {
     if (name.endsWith('/chat-policy')) return { CHAT_SYSTEM_PROMPT };
     if (name.endsWith('/context/context-builder')) return { ContextBuilder };
     if (name === '@/utils/chat-retrieval') return { retrieveChatSources: async () => [] };
+    if (name === '@/utils/repository-chat-context') return {repositoryChatContext:async()=>({sources:[]})};
+    if (name.endsWith('/semantic-reranking')) return {rerankSources:async(_question:string,sources:unknown[])=>({sources,mode:'fixture'})};
     if (name === '@/utils/direct-db') return { getDirectDbPool: () => ({}) };
     if (name.endsWith('/conversation-store')) return { ConversationError: RequestError, ConversationStore: class {
       async begin() { return { id: randomUUID(), lease: randomUUID(), history: [{ role:'user',content:'Earlier I asked about server health.' }] }; }

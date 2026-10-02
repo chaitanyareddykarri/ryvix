@@ -18,9 +18,12 @@ import (
 )
 
 type DeviceConfig struct {
-	ServerID        string `json:"serverId"`
-	PrivateSeed     string `json:"privateSeed"`
-	ControlPlaneURL string `json:"controlPlaneUrl"`
+	ServerID         string   `json:"serverId"`
+	PrivateSeed      string   `json:"privateSeed"`
+	ControlPlaneURL  string   `json:"controlPlaneUrl"`
+	CommandPublicKey string   `json:"commandPublicKey,omitempty"`
+	CommandServices  []string `json:"commandServices,omitempty"`
+	CommandJournal   string   `json:"commandJournal,omitempty"`
 }
 
 func LoadDevice(path string) (DeviceConfig, error) {

@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/ryvix/agent/pkg/commands"
 	"github.com/ryvix/agent/pkg/container"
 	"github.com/ryvix/agent/pkg/dispatcher"
 	"github.com/ryvix/agent/pkg/systemd"
@@ -14,11 +15,14 @@ import (
 )
 
 type Config struct {
-	ServerID        string
-	Hostname        string
-	Token           string
-	ControlPlaneURL string
-	Interval        time.Duration
+	ServerID         string
+	Hostname         string
+	Token            string
+	ControlPlaneURL  string
+	Interval         time.Duration
+	CommandPublicKey string
+	CommandServices  []string
+	CommandJournal   string
 }
 
 type AgentDaemon struct {
@@ -28,6 +32,7 @@ type AgentDaemon struct {
 	docker     *container.DockerManager
 	dispatcher *dispatcher.Dispatcher
 	seq        int64
+	commands   *commands.Client
 }
 
 func NewAgentDaemon(cfg Config) *AgentDaemon {
@@ -42,6 +47,7 @@ func NewAgentDaemon(cfg Config) *AgentDaemon {
 	}
 
 	return &AgentDaemon{
+		commands:   &commands.Client{Origin: cfg.ControlPlaneURL, ServerID: cfg.ServerID, PrivateSeed: cfg.Token, PublicKey: cfg.CommandPublicKey, Services: cfg.CommandServices, Journal: cfg.CommandJournal},
 		config:     cfg,
 		collector:  telemetry.NewCollector(),
 		systemd:    systemd.NewSystemdManager(),
@@ -125,6 +131,11 @@ func (a *AgentDaemon) tick() bool {
 	if err != nil {
 		log.Printf("[Ryvix Agent] Telemetry dispatch note: %v", err)
 		return false
+	}
+	if a.config.CommandPublicKey != "" {
+		if err := a.commands.Cycle(context.Background()); err != nil {
+			log.Print("[Ryvix Agent] Approved command channel unavailable; inspect configuration and pending outcomes")
+		}
 	}
 
 	return true

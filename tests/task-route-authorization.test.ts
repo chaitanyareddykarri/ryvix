@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import ts from 'typescript';
+import { SettingsStore, SettingsError } from '../backend/src/services/settings-store';
 
 // Execute the real route handlers with isolated auth/database adapters.
 function loadRoute(relativePath: string, user: any, rows: any[] = []) {
@@ -24,6 +25,7 @@ function loadRoute(relativePath: string, user: any, rows: any[] = []) {
   vm.runInNewContext(code, {
     exports, Date, console,
     require: (name: string) => {
+      if (name.endsWith('settings-store')) return {SettingsStore,SettingsError};
       if (name === 'next/server') return { NextResponse: { json: (body: any, init?: any) => ({ body, status: init?.status || 200 }) } };
       if (name === 'next/headers') return { cookies: async () => ({}) };
       if (name === '@/utils/tenant-context') return { RequestError,
@@ -36,6 +38,9 @@ function loadRoute(relativePath: string, user: any, rows: any[] = []) {
       } };
       if (name === '@/utils/supabase/server') return { createClient: () => supabase };
       if (name === '@/utils/direct-db') return {
+        getDirectDbPool: () => ({connect:async()=>({release(){},query:async(sql:string,...args:any[])=>{
+          calls.push({name:'sql',args:[sql,...args]});return {rows};
+        }})}),
         queryDirectDb: async (...args: any[]) => { calls.push({ name: 'sql', args }); return rows; },
       };
       if (name === 'node:crypto') return {};
@@ -69,8 +74,8 @@ export async function testTaskRouteAuthorization() {
   const settingsPath = 'web/app/api/settings/route.ts';
   const settingsRequest = { json: async () => ({ action: 'update_org', orgId: 'victim-org', orgName: 'Changed' }) };
   const missingOrg = loadRoute(settingsPath, { id: 'user-a' });
-  assert.equal((await missingOrg.route.POST(settingsRequest)).status, 400);
-  assert.equal(missingOrg.calls.length, 1);
+  assert.equal((await missingOrg.route.POST(settingsRequest)).status, 403);
+  assert.ok(missingOrg.calls.some(call=>call.args[0]==='ROLLBACK'));
   const viewer = loadRoute(settingsPath, { id: 'user-a' }, [{ organization_id: 'own-org', role: 'viewer' }]);
   assert.equal((await viewer.route.POST(settingsRequest)).status, 403);
   assert.ok(viewer.calls.every(call => !call.args[0].startsWith('UPDATE')));

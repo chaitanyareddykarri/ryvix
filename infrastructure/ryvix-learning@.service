@@ -1,0 +1,18 @@
+[Unit]
+Description=Ryvix reviewed classifier training for project %i
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ryvix-worker
+WorkingDirectory=/opt/ryvix/current
+EnvironmentFile=/etc/ryvix/worker.env
+ExecStart=/usr/bin/node --import tsx scripts/train-reviewed.ts %i
+TimeoutStartSec=180
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+MemoryMax=512M
+CPUQuota=50%

@@ -11,6 +11,9 @@
     "services"
   ],
   "scripts": {
+    "verify:operations": "tsx scripts/verify-operations-live.ts",
+    "verify:channels-learning": "tsx scripts/verify-channels-learning-live.ts",
+    "train:reviewed": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/train-reviewed.ts",
     "eval:ai": "tsx scripts/evaluate-ai.ts",
     "eval:classifier": "tsx scripts/evaluate-classifier.ts",
     "verify:chat": "tsx scripts/verify-chat-history-live.ts",

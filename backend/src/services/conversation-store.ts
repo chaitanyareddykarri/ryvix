@@ -9,6 +9,7 @@ export class ConversationStore {
   private async transaction<T>(fn: (client: PoolClient) => Promise<T>) {
     const client = await this.pool.connect();
     try { await client.query('BEGIN'); await client.query("SET LOCAL lock_timeout='5s'");
+      await client.query("SET LOCAL TIME ZONE 'UTC'");
       const result = await fn(client); await client.query('COMMIT'); return result;
     } catch (error) { await client.query('ROLLBACK').catch(() => {}); throw error; }
     finally { client.release(); }
@@ -30,6 +31,14 @@ export class ConversationStore {
       const result = await client.query(`UPDATE chat_conversations SET lease_id=$4,lease_expires_at=now()+interval '3 minutes'
         WHERE id=$1 AND organization_id=$2 AND user_id=$3 AND (lease_expires_at IS NULL OR lease_expires_at<=now()) RETURNING id`, [id,organizationId,userId,lease]);
       if (!result.rows.length) throw new ConversationError('Conversation unavailable or already processing a response.',409);
+      for (const [subject,limit] of [['organization',600],[`user:${userId}`,60]] as const) {
+        const budget = await client.query(`INSERT INTO chat_request_budgets(organization_id,subject,bucket,requests)
+          VALUES($1,$2,date_trunc('hour',now()),1)
+          ON CONFLICT(organization_id,subject,bucket) DO UPDATE SET requests=chat_request_budgets.requests+1
+          WHERE chat_request_budgets.requests<$3 RETURNING requests`,[organizationId,subject,limit]);
+        if (!budget.rows.length) throw new ConversationError('Hourly chat request limit reached. Retry next hour.',429);
+      }
+      await client.query("DELETE FROM chat_request_budgets WHERE organization_id=$1 AND bucket<now()-interval '2 days'",[organizationId]);
       await client.query("DELETE FROM chat_turns WHERE conversation_id=$1 AND created_at<now()-interval '30 days'", [id]);
       const turns = await client.query('SELECT question,answer FROM chat_turns WHERE conversation_id=$1 ORDER BY id DESC LIMIT 12', [id]);
       let budget = 24000;

@@ -1,5 +1,9 @@
 # Gmail Integration Specification
 
+> Current implementation: see ../infrastructure/CHANNELS_AND_LEARNING.md and
+> ADR-022. OAuth polling feeds a reviewed inbox. The historical automatic
+> sender-to-task flow below is not enabled; email text cannot authorize actions.
+
 ## 1. Scope & Functional Boundaries
 
 Gmail functions as an **asynchronous customer communication channel** for Ryvix. Customers can connect their authorized Google Workspace or personal Gmail account to receive task notifications, daily summaries, and reply with instructions.

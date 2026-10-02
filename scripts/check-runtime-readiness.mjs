@@ -9,7 +9,8 @@ console.log(`Cloud coding model credential: ${cloudModelConfigured ? 'configured
 if (!cloudModelConfigured) process.exitCode = 1;
 const required = ['DATABASE_URL', 'AUTH_CHALLENGE_SECRET', 'PREVIEW_BASE_DOMAIN',
   'PREVIEW_SIGNING_SECRET', 'RYVIX_PUBLIC_URL', 'RYVIX_AGENT_RELEASE_MANIFEST',
-  'RYVIX_WORKSPACE_NODE_IMAGE', 'RYVIX_WORKSPACE_EGRESS_IMAGE', 'RYVIX_WORKSPACE_IMAGES'];
+  'RYVIX_WORKSPACE_NODE_IMAGE', 'RYVIX_WORKSPACE_EGRESS_IMAGE', 'RYVIX_WORKSPACE_IMAGES',
+  'RYVIX_WORKER_HOST_ID','RYVIX_WORKER_PREVIEW_DOMAINS'];
 for (const name of required) {
   console.log(`${name}: ${process.env[name] ? 'configured' : 'missing'}`);
   if (!process.env[name]) process.exitCode = 1;

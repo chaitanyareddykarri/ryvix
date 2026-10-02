@@ -52,6 +52,7 @@ func main() {
 		fmt.Println("Enrolled device identity saved.")
 		return
 	}
+	var commandConfig auth.DeviceConfig
 	if *configPath != "" {
 		stored, err := auth.LoadDevice(*configPath)
 		if err != nil {
@@ -59,13 +60,17 @@ func main() {
 			os.Exit(1)
 		}
 		*serverID, *token, *controlPlane = stored.ServerID, stored.PrivateSeed, stored.ControlPlaneURL
+		commandConfig = stored
 	}
 	cfg := daemon.Config{
-		ServerID:        *serverID,
-		Hostname:        *hostname,
-		Token:           *token,
-		ControlPlaneURL: *controlPlane,
-		Interval:        *interval,
+		ServerID:         *serverID,
+		Hostname:         *hostname,
+		Token:            *token,
+		ControlPlaneURL:  *controlPlane,
+		Interval:         *interval,
+		CommandPublicKey: commandConfig.CommandPublicKey,
+		CommandServices:  commandConfig.CommandServices,
+		CommandJournal:   commandConfig.CommandJournal,
 	}
 
 	d := daemon.NewAgentDaemon(cfg)

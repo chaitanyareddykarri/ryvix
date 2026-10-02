@@ -7,6 +7,7 @@ import { ConversationStore } from '../backend/src/services/conversation-store';
 import vm from 'node:vm';
 import ts from 'typescript';
 import { ContextBuilder } from '../ai/src/context/context-builder';
+import { SettingsStore } from '../backend/src/services/settings-store';
 
 async function main() {
   const defaults: Record<string,string> = {};
@@ -67,6 +68,13 @@ async function main() {
     catch(error:any) { denied=error.code==='42501'; }
     await client.query('ROLLBACK TO SAVEPOINT browser_write'); assert.ok(denied);
     await client.query('RESET ROLE');
+    const settings=new SettingsStore({connect:async()=>({query,release(){}})} as unknown as Pool);
+    await settings.mutate(organizations[0],users[0],{action:'update_org',orgName:'Rollback settings test'});
+    assert.equal((await client.query('SELECT count(*)::int AS n FROM organization_audit_events WHERE organization_id=$1',[organizations[0]])).rows[0].n,1);
+    await client.query('UPDATE chat_request_budgets SET requests=60 WHERE organization_id=$1 AND subject=$2',[organizations[0],`user:${users[0]}`]);
+    await assert.rejects(store.begin(organizations[0],users[0],first.id),/Hourly chat/);
+    await client.query("UPDATE organization_members SET role='viewer' WHERE organization_id=$1 AND user_id=$2",[organizations[0],users[0]]);
+    await assert.rejects(settings.mutate(organizations[0],users[0],{action:'generate_key'}),/Forbidden/);
     await client.query('DELETE FROM organization_members WHERE organization_id=$1 AND user_id=$2',[organizations[0],users[0]]);
     await assert.rejects(store.begin(organizations[0],users[0],first.id));
     await client.query('ROLLBACK');

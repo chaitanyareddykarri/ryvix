@@ -6,21 +6,21 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=root
-WorkingDirectory=/opt/ryvix-agent
-ExecStart=/opt/ryvix-agent/ryvix-agent \
-  -control-plane=https://app.ryvix.dev \
-  -interval=5s
+User=ryvix-agent
+Group=ryvix-agent
+WorkingDirectory=/var/lib/ryvix-agent
+ExecStart=/usr/local/bin/ryvix-agent --config /var/lib/ryvix-agent/device.json --interval=5s
 Restart=always
 RestartSec=5s
 LimitNOFILE=65536
-CapabilityBoundingSet=CAP_NET_ADMIN CAP_SYS_PTRACE
-AmbientCapabilities=CAP_NET_ADMIN
+CapabilityBoundingSet=
 
 # Zero-trust sandboxing
-ProtectSystem=full
+ProtectSystem=strict
 ProtectHome=true
-NoNewPrivileges=false
+NoNewPrivileges=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/ryvix-agent
 
 [Install]
 WantedBy=multi-user.target

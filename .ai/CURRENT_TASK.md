@@ -1,5 +1,26 @@
 # Current Task & Implementation State
 
+## Consolidated continuation (2026-10-02)
+
+See `docs/verification/CONTINUATION_2026_10_01.md` for the current work list and
+measured results. The unfinished chat/security/channel/learning batch was reviewed
+and extended. Added durable native service approvals, signed command/receipt
+transport and Linux replay journal; stable worker host ownership and preview
+routing; explicit deployment/runtime endpoint mappings and measured observations.
+Migrations are applied through `20261002000001`. Local checks: 73 project suites
+and 15 Node checks, typecheck/lint/build, 87 database boundary checks, rolled-back
+chat/channel/learning/operations SQL fixtures, Go tests/vet, four Linux command
+tests and real local Docker workspace/preview checks passed. Original runtime
+data was restored. The user subsequently requested publication to main; see
+`docs/verification/MAIN_CHECKLIST_2026_10_02.md` for that checkpoint audit.
+
+Production completion is not claimed. Missing live configuration/accounts/hosts
+block provider/browser/webhook/public-TLS/real-task-to-PR/agent rollout and measured
+model quality. Real representative reviewed data was not supplied. Native command
+implementation supports explicitly allowed systemd restarts, not cloud resets;
+the separate durable cloud recovery workflow and drift monitoring remain work.
+Do not interpret old completion claims or synthetic suite output as live evidence.
+
 ## Self-learning evidence correction (2026-10-01)
 
 Legacy anomaly learning is not wired to production telemetry. It now rejects

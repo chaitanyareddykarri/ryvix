@@ -9,7 +9,11 @@ export interface RepositoryJob {
 }
 
 export class RepositoryJobStore {
-  constructor(private readonly pool: Pool) {}
+  constructor(private readonly pool: Pool, private readonly hostId?: string) {}
+  private workerHost() {
+    if(!this.hostId || !/^[a-z0-9][a-z0-9-]{0,62}$/.test(this.hostId))throw new Error('Stable worker host required');
+    return this.hostId;
+  }
   private async transaction<T>(fn: (client: PoolClient) => Promise<T>) {
     const client = await this.pool.connect();
     try { await client.query('BEGIN'); const value = await fn(client); await client.query('COMMIT'); return value; }
@@ -48,6 +52,7 @@ export class RepositoryJobStore {
     });
   }
   async claim(workerId: string): Promise<RepositoryJob | null> {
+    const host=this.workerHost();
     return this.transaction(async client => {
       const result = await client.query(`SELECT j.task_id,j.repository_id,t.project_id,t.created_by,t.user_prompt,
         p.organization_id,r.full_name,r.default_branch FROM repository_jobs j
@@ -56,7 +61,7 @@ export class RepositoryJobStore {
         WHERE j.status='queued' AND t.status='queued' ORDER BY j.created_at
         FOR UPDATE OF t,j SKIP LOCKED LIMIT 1`);
       const job = result.rows[0]; if (!job) return null;
-      await client.query(`UPDATE repository_jobs SET status='running',worker_id=$2,lease_expires_at=now()+interval '45 seconds',updated_at=now() WHERE task_id=$1`, [job.task_id,workerId]);
+      await client.query(`UPDATE repository_jobs SET status='running',worker_id=$2,worker_host_id=$3,lease_expires_at=now()+interval '45 seconds',updated_at=now() WHERE task_id=$1`, [job.task_id,workerId,host]);
       await client.query("UPDATE tasks SET status='planning',updated_at=now() WHERE id=$1", [job.task_id]);
       await this.audit(client,job.project_id,null,'system',job.task_id,'task.execute.requested');
       return job;
@@ -91,9 +96,9 @@ export class RepositoryJobStore {
   async session(job: RepositoryJob, workerId: string, session: WorkspaceSession) {
     return this.transaction(async client => {
       await this.lock(client,job,workerId);
-      await client.query(`INSERT INTO workspace_sessions(id,task_id,project_id,container_id,status,preview_port,allocated_cpu,allocated_ram_mb,created_at,expires_at)
-        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, [session.id,job.task_id,job.project_id,session.container_id,
-        session.status,session.preview_port,session.allocated_cpu,session.allocated_ram_mb,session.created_at,session.expires_at]);
+      await client.query(`INSERT INTO workspace_sessions(id,task_id,project_id,container_id,status,preview_port,allocated_cpu,allocated_ram_mb,created_at,expires_at,worker_host_id)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`, [session.id,job.task_id,job.project_id,session.container_id,
+        session.status,session.preview_port,session.allocated_cpu,session.allocated_ram_mb,session.created_at,session.expires_at,this.workerHost()]);
     });
   }
   async plan(job: RepositoryJob, workerId: string, summary: string, steps: string[]) {
@@ -115,10 +120,11 @@ export class RepositoryJobStore {
       await this.audit(client,job.project_id,null,'system',job.task_id,'task.execute.success');
     });
   }
-  async fail(job: RepositoryJob, workerId: string) {
+  async fail(job: RepositoryJob, workerId: string, expiredOnly=false) {
     return this.transaction(async client => {
       const valid = await client.query(`SELECT t.status FROM tasks t JOIN repository_jobs j ON j.task_id=t.id
-        WHERE t.id=$1 AND j.worker_id=$2 AND j.status='running' FOR UPDATE OF t,j`, [job.task_id,workerId]);
+        WHERE t.id=$1 AND j.worker_id=$2 AND j.status='running'
+          AND (NOT $3::boolean OR j.lease_expires_at<=now()) FOR UPDATE OF t,j`, [job.task_id,workerId,expiredOnly]);
       if (!valid.rows[0]) return;
       await client.query(`UPDATE tasks SET status='failed',error_details='Workspace execution interrupted or verification failed. No changes were shipped.',updated_at=now()
         WHERE id=$1 AND status IN ('planning','executing','verifying')`, [job.task_id]);
@@ -129,18 +135,18 @@ export class RepositoryJobStore {
   async expireLeases() {
     const result = await this.pool.query(`SELECT j.task_id,j.worker_id,t.project_id,t.created_by FROM repository_jobs j
       JOIN tasks t ON t.id=j.task_id WHERE j.status='running' AND j.lease_expires_at<=now() LIMIT 100`);
-    for (const row of result.rows) await this.fail(row, row.worker_id);
+    for (const row of result.rows) await this.fail(row, row.worker_id,true);
   }
   async previewSessions(): Promise<WorkspaceSession[]> {
-    return (await this.pool.query("SELECT * FROM workspace_sessions WHERE status='active' AND preview_url IS NOT NULL AND expires_at>now() LIMIT 1000")).rows;
+    return (await this.pool.query("SELECT * FROM workspace_sessions WHERE worker_host_id=$1 AND status='active' AND preview_url IS NOT NULL AND expires_at>now() LIMIT 1000",[this.workerHost()])).rows;
   }
   async cleanupSessions(): Promise<WorkspaceSession[]> {
     return (await this.pool.query(`SELECT w.* FROM workspace_sessions w JOIN tasks t ON t.id=w.task_id
-      WHERE w.status<>'destroyed' AND (w.expires_at<=now() OR t.status IN ('failed','cancelled')) LIMIT 100`)).rows;
+      WHERE w.worker_host_id=$1 AND w.status<>'destroyed' AND (w.expires_at<=now() OR t.status IN ('failed','cancelled')) LIMIT 100`,[this.workerHost()])).rows;
   }
   async markDestroyed(sessionId: string) {
     await this.transaction(async client => {
-      const session = await client.query("UPDATE workspace_sessions SET status='destroyed',preview_url=NULL WHERE id=$1 AND status<>'destroyed' RETURNING project_id",[sessionId]);
+      const session = await client.query("UPDATE workspace_sessions SET status='destroyed',preview_url=NULL WHERE id=$1 AND worker_host_id=$2 AND status<>'destroyed' RETURNING project_id",[sessionId,this.workerHost()]);
       if (session.rows[0]) await client.query(`INSERT INTO audit_events(project_id,actor_type,action_name,parameters_hash,diff_summary,status)
         VALUES($1,'system','workspace.cleanup.success',$2,'Expired or stopped task workspace cleaned up.','success')`,
         [session.rows[0].project_id,createHash('sha256').update(sessionId).digest('hex')]);

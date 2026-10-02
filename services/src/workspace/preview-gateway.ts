@@ -1,6 +1,17 @@
 import { createServer, request as httpRequest, type Server } from 'node:http';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { dockerWorkspaceManager } from './docker-workspace.manager';
+import { workerPreviewDomain } from './worker-host';
+
+/** Web signs from authorized persisted metadata; it never invokes Docker. */
+export function persistedPreviewLaunchUrl(session: {id:string;worker_host_id?:string|null;preview_url?:string|null;expires_at:string;status:string}) {
+  const expires=Date.parse(session.expires_at);
+  if(!/^[a-f0-9-]{36}$/.test(session.id)||session.status!=='active'||!Number.isFinite(expires)||expires<=Date.now()||!session.worker_host_id)
+    throw new Error('Preview unavailable');
+  const origin=`https://${session.id}.${workerPreviewDomain(session.worker_host_id)}`;
+  if(session.preview_url!==origin && session.preview_url!==origin+'/')throw new Error('Preview owner/domain mismatch');
+  return `${origin}/?__ryvix_grant=${signPreviewGrant(session.id,Math.min(Date.now()+60000,expires))}`;
+}
 
 let gateway: Server | undefined;
 function key() {

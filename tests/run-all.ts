@@ -1,4 +1,5 @@
 import { seedHealthFixtures } from './health-fixtures';
+import { testSettingsMutations } from './settings-mutations.test';
 import { testFrontierDeepLearning } from './frontier-deep-learning.test';
 import { testAiSelfUnderstandingAndCodingSpace } from './ai-self-understanding-and-coding-space.test';
 import { testDeepCognitiveArchitecture } from './deep-cognitive-architecture.test';
@@ -59,8 +60,13 @@ async function runAllTests() {
 
   seedHealthFixtures();
   const testCases: { name: string; fn: () => Promise<void> }[] = [
+    { name: 'Current Repository Chat Scope, Commit Pinning and Secret Exclusion', fn:(await import('./repository-chat-context.test')).testRepositoryChatContext },
+    { name: 'Device Command Signature, Target and Path Binding', fn:(await import('./server-command-protocol.test')).testServerCommandProtocol },
+    { name: 'Worker Host Cleanup and Preview Routing', fn:(await import('./worker-host.test')).testWorkerHost },
+    { name: 'Verified Channels, Reviewed Learning and Semantic Reranking', fn:(await import('./channels-learning.test')).testChannelsLearning },
     { name: 'Chat Retrieval Tenant Scope and Context Budget', fn: (await import('./chat-retrieval.test')).testChatRetrieval },
     { name: 'AI Streaming, Conversation Ownership and Weight Validation', fn: (await import('./ai-upgrade.test')).testAiUpgrade },
+    { name: 'Settings Transaction and Audit', fn: testSettingsMutations },
     { name: 'Settings Authentication and Safe Errors', fn: (await import('./settings-boundary.test')).testSettingsBoundary },
     { name: 'PR Approval Durability, Reauthorization and Retry', fn: (await import('./pr-shipping-approval.test')).testPrShippingApproval },
     { name: 'Durable Repository Job Queue and Lease Boundaries', fn: (await import('./repository-job-store.test')).testRepositoryJobStore },

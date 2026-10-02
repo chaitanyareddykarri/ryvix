@@ -1,5 +1,27 @@
 # Repository worker deployment
 
+## Continuation: worker ownership (2026-10-02)
+
+Migration `20261001000006` is applied. Each Docker host now requires a stable
+`RYVIX_WORKER_HOST_ID` and a shared `RYVIX_WORKER_PREVIEW_DOMAINS` JSON map, for
+example `{"worker-a":"a.preview.example.com","worker-b":"b.preview.example.com"}`.
+On each worker, `PREVIEW_BASE_DOMAIN` must match that host's entry. Web receives
+the same allowlist and signing configuration. Route each host-specific wildcard
+domain through HTTPS to that host's loopback gateway; provision matching TLS.
+Do not reuse a domain or host ID for different Docker daemons.
+
+The worker holds a PostgreSQL advisory lock for its host for its process lifetime.
+Claims/sessions persist host ownership; cleanup and restored previews are scoped
+to it. Web signs persisted preview metadata without Docker access. Historical
+sessions with no host assignment deliberately fail closed: inspect their real
+Docker identity before assigning ownership; never bulk-guess a host.
+
+Local Docker verification passes with the existing verification images. Those
+tags are test evidence, not approval of production image contents. Select reviewed
+production image digests, configure the model/Vault credentials and public URLs,
+run the readiness probe on the designated server, then start its worker service.
+Real multi-host proxy routing and deployed worker execution remain unverified.
+
 The web production Compose service does not start the repository worker. Deploy
 the worker separately using `infrastructure/ryvix-workspace-worker.service` on
 the trusted Linux Docker host. Customer source, install scripts, tests and builds
@@ -37,8 +59,9 @@ Run `npm run verify:runtime` using the intended server environment and run
 `npm run verify:workspace` on the Docker host before starting the service.
 Exported server settings take precedence over local files in the readiness check.
 Install/enable the supplied unit only on the designated worker server. Start with
-one worker host: durable host assignment and multi-host preview routing remain
-unverified. Configure wildcard HTTPS routing to that host's preview gateway.
+one worker host initially; host assignment is now implemented, while live
+multi-host preview routing remains unverified. Configure wildcard HTTPS routing
+to the owning host's preview gateway.
 
 Complete rollout evidence requires an authorized repository task through the real
 web UI: credential retrieval, clone, external inference, file changes, applicable

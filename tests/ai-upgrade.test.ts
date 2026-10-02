@@ -57,6 +57,7 @@ export async function testAiUpgrade() {
   const calls: string[]=[];
   const client = { release() {}, async query(sql:string, args?:unknown[]) {
     calls.push(sql);
+    if (sql.includes('INSERT INTO chat_request_budgets')) return {rows:[{requests:1}]};
     if (sql.includes('SELECT 1 FROM organization_members')) return {rows:membership?[{}]:[]};
     if (sql.includes('UPDATE chat_conversations')) {
       assert.ok(sql.includes('organization_id=') && sql.includes('user_id='));

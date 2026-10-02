@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
 import crypto from 'node:crypto';
+import { SettingsStore, SettingsError } from '../backend/src/services/settings-store';
 
 export async function testSettingsBoundary() {
   class RequestError extends Error { constructor(message: string, readonly status: number) { super(message); } }
@@ -12,6 +13,7 @@ export async function testSettingsBoundary() {
     compilerOptions: { module: ts.ModuleKind.CommonJS },
   }).outputText;
   vm.runInNewContext(code, { exports, require(name: string) {
+    if (name.endsWith('settings-store')) return {SettingsStore,SettingsError};
     if (name === 'node:crypto') return crypto;
     if (name === 'next/server') return { NextResponse: { json: (body: unknown, init?: any) => ({ body, status: init?.status || 200 }) } };
     if (name === 'next/headers') return { cookies: async () => ({}) };

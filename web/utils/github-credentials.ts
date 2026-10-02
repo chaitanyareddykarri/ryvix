@@ -1,5 +1,4 @@
 import 'server-only';
-import { cookies } from 'next/headers';
 import { getDirectDbPool } from './direct-db';
 import { RequestError } from './tenant-context';
 import type { PoolClient } from 'pg';
@@ -16,8 +15,5 @@ export async function githubTokenForProject(projectId: string, organizationId: s
       AND (credential.expires_at IS NULL OR credential.expires_at>now())
     ORDER BY c.updated_at DESC LIMIT 1`, [projectId, organizationId, userId]);
   if (connected.rows[0]?.decrypted_secret) return connected.rows[0].decrypted_secret;
-  // Retain the existing server-only OAuth/PAT session when no persisted connection exists.
-  const sessionToken = (await cookies()).get('gh_session_token')?.value;
-  if (!sessionToken) throw new RequestError('Connect GitHub before running this operation.', 409);
-  return sessionToken;
+  throw new RequestError('Connect a persisted GitHub connection for this project before running this operation.', 409);
 }
