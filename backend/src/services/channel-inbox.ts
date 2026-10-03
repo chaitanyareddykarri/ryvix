@@ -6,9 +6,11 @@ export class ChannelInbox {
   constructor(private readonly pool:Pool){}
   async receive(connector:string,messageId:string,sender:string,content:string) {
     if(!messageId||messageId.length>512||!sender||sender.length>320||!content.trim()||content.length>10000)throw new ChannelError('Invalid channel message.',400);
-    const result=await this.pool.query(`WITH incoming AS (INSERT INTO channel_inbox(connector_id,provider_message_id,sender,content)
-      SELECT c.id,$2,$3,$4 FROM connectors c JOIN channel_accounts a ON a.connector_id=c.id JOIN environments e ON e.id=c.environment_id
+    const result=await this.pool.query(`WITH incoming AS (INSERT INTO channel_inbox(connector_id,provider_message_id,sender,content,sender_user_id)
+      SELECT c.id,$2,$3,$4,CASE WHEN c.connector_type='whatsapp' THEN linked.user_id END FROM connectors c JOIN channel_accounts a ON a.connector_id=c.id JOIN environments e ON e.id=c.environment_id
       JOIN projects p ON p.id=e.project_id JOIN organization_members m ON m.organization_id=p.organization_id AND m.user_id=a.owner_id
+      LEFT JOIN LATERAL (SELECT l.user_id FROM whatsapp_phone_links l JOIN organization_members lm ON lm.organization_id=l.organization_id AND lm.user_id=l.user_id
+        WHERE l.connector_id=c.id AND l.organization_id=p.organization_id AND l.phone='+'||$3 LIMIT 1) linked ON true
       WHERE c.id=$1 AND c.status='active' AND m.role IN ('owner','admin','developer')
       ON CONFLICT(connector_id,provider_message_id) DO NOTHING RETURNING id,connector_id),
       audited AS (INSERT INTO audit_events(project_id,actor_type,action_name,parameters_hash,diff_summary,status)

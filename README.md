@@ -1,5 +1,9 @@
 # Ryvix
 
+Latest: [WhatsApp phone verification and Gmail SMTP](docs/infrastructure/WHATSAPP_ASSISTANT.md).
+Phase 1 is implemented; migration `20261003000003` is applied. Provider setup and
+real delivery remain separate from the passing code/database checks.
+
 Latest: [experience and personal memory](docs/infrastructure/EXPERIENCE_AND_MEMORY.md)
 adds explicit preferences, reviewed chat corrections, outcome collection and
 lessons reused by chat/coding, plus opt-in

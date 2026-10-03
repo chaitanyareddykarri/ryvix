@@ -1,5 +1,14 @@
 # Current Task & Implementation State
 
+## WhatsApp phase 1 and Gmail SMTP correction
+
+Implemented `/profile/whatsapp`, OTP challenge/link APIs, persisted attempt/send
+limits and scoped inbound attribution. Applied migration `20261003000003`.
+Application OTP and notifications use shared SMTP by default; Gmail credentials
+are not visible in the current normal runtime files. No live send is claimed.
+See [checkpoint](../docs/verification/WHATSAPP_PHONE_2026_10_03.md) and
+[remaining assistant phases](../docs/infrastructure/WHATSAPP_ASSISTANT.md).
+
 ## Experience and memory continuation — 2026-10-03
 
 Implemented `/experience`, explicit personal memory, owned chat corrections,

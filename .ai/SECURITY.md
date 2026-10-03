@@ -5,7 +5,7 @@
 Settings authorization and mutation share a locked transaction. GitHub execution
 uses project-scoped Vault credentials and chat usage has durable quotas. Signed
 agent security reports persist measured observations; opted-in users can receive
-Resend emails at their confirmed account address. A trusted detector must supply
+SMTP emails at their confirmed account address (updated 2026-10-03). A trusted detector must supply
 reports; this does not install a WAF. Server actions and releases require their
 explicit persisted approval workflows.
 

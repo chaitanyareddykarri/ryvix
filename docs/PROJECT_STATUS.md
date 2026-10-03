@@ -1,5 +1,10 @@
 # Ryvix implementation and deployment status
 
+Latest continuation: [WhatsApp phone identity and Gmail SMTP](infrastructure/WHATSAPP_ASSISTANT.md).
+Migration `20261003000003` applied. Personal number OTP linking is implemented;
+assistant routing/replies remain later phases. SMTP is the default email transport.
+See [verification](verification/WHATSAPP_PHONE_2026_10_03.md).
+
 ## Latest continuation — 2026-10-03
 
 Personal memory, chat corrections, opt-in outcome collection, independently
@@ -28,9 +33,9 @@ that external delivery, production deployment or model quality are certified.
 | Chat | Conversation reload/archive, tenant-scoped incident/task retrieval, bounded commit-pinned repository files, optional Gemini reranking and recorded HOSTED_ON relationships | No full repository semantic index or arbitrary graph traversal; live streaming/answer review pending |
 | Native operations | Independent persisted approval, signed expiring commands, nonce receipts, Linux replay journal, service allowlists, cooldowns and measured service-state receipts | Enroll a deployed agent and verify an approved restart; service state is not application health |
 | Cloud recovery | Independent approval of a frozen allowlisted target, durable one-attempt reboot dispatch, cooldowns, provider outcomes and heartbeat observation | Configure scoped cloud account/test host and verify an actual approved reboot; observed liveness does not prove a reboot |
-| WhatsApp | Signed inbound proposals requiring review; durable P1 template queue, opt-in recipients, signed delivery receipts and `/channels/alerts` | Meta account/template/consent and real delivery; two-way LLM chat, user-phone linking and mobile approvals remain unimplemented |
+| WhatsApp | Signed inbound proposals requiring review; durable P1 template queue, opt-in recipients, signed delivery receipts and `/channels/alerts` | Meta account/template/consent and real delivery; two-way LLM chat and mobile approvals remain unimplemented; OTP phone linking is implemented |
 | Gmail | Vault-backed read-only OAuth polling into reviewed task proposals | Real OAuth intake verification; Pub/Sub push and Gmail replies remain unimplemented |
-| Account email | `/notifications` opt-in per environment; durable Resend sends to confirmed account email, including Gmail; security and approved-release results | Verified sender/key, actual detector and inbox verification; provider acceptance is not delivery |
+| Account email | `/notifications` opt-in per environment; durable SMTP sends to confirmed account email, including Gmail; security and approved-release results | Verified sender/key, actual detector and inbox verification; provider acceptance is not delivery |
 | Releases | `/releases` owner/admin approval of exact reviewed head and mapping version; protected default branch and successful checks; bounded merge and read-only reconciliation | Existing customer CI/CD performs deployment; real approved release/webhook/runtime/browser acceptance pending |
 | Worker scale | Stable host ownership, host-scoped cleanup, advisory process lock and allowlisted preview host routing | Configure images/domains/TLS and verify multiple deployed hosts |
 | Reviewed learning | Tenant examples, independent labels, immutable splits, held-out metrics, gated promotion and rollback | Representative reviewed data, measured real quality and drift monitoring; legacy memory/weights are not training evidence |
@@ -40,7 +45,7 @@ that external delivery, production deployment or model quality are certified.
 
 Security: trusted detector → enrolled agent's signed `/api/connector/security`
 report → persisted security event → eligible user preference → durable outbox →
-Resend → confirmed account mailbox. Reporting does not install a WAF or detect
+Configured SMTP → confirmed account mailbox. Reporting does not install a WAF or detect
 every attack automatically. Email contains references and application links, not
 raw evidence or credentials.
 
@@ -79,7 +84,7 @@ unverified. Earlier dated suite counts describe earlier checkpoints.
 
 Use existing Supabase Cloud, GitHub/Vault repository credentials, one supported
 existing LLM provider, Linux web/worker hosting, registry images, and DNS/TLS.
-Use Resend for application notifications; configure Supabase Auth's transactional
+Use your configured Gmail SMTP for application notifications; configure Supabase Auth's transactional
 mail separately. Google OAuth is needed only for reading the Gmail task inbox.
 Meta WhatsApp Cloud API is needed for WhatsApp intake/alerts. Choose only the
 cloud recovery adapter needed for the target: AWS, DigitalOcean, Hetzner or GCP.
@@ -110,7 +115,7 @@ for variable names and rollout order, and
 | --- | --- |
 | Approved cloud recovery | [Cloud recovery store](../backend/src/services/cloud-recovery-store.ts), [recovery verification](../scripts/verify-recovery-outbound-live.ts) |
 | WhatsApp durable delivery | [Outbox](../backend/src/services/whatsapp-outbox.ts), [provider transport](../services/src/communication/whatsapp.ts) |
-| Confirmed-account notifications | [Email preferences/outbox](../backend/src/services/email-notifications.ts), [Resend transport](../services/src/communication/email-notifications.ts) |
+| Confirmed-account notifications | [Email preferences/outbox](../backend/src/services/email-notifications.ts), [SMTP notification transport](../services/src/communication/email-notifications.ts) |
 | Signed security observations | [Security ingestion](../backend/src/services/security-ingestion.ts), [agent guide](../agent/README.md) |
 | Approved website release | [Release store](../backend/src/services/release-store.ts), [release/email verification](../scripts/verify-release-email-live.ts) |
 | Background dispatch | [Operations worker](../scripts/operations-worker.ts), [service unit](../infrastructure/ryvix-operations.service) |

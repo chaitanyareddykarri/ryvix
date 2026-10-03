@@ -1,5 +1,10 @@
 # Ryvix Current Project Context
 
+Latest: WhatsApp OTP identity phase and Gmail SMTP correction; migration
+`20261003000003` applied. See [checkpoint](../docs/verification/WHATSAPP_PHONE_2026_10_03.md).
+Phone linking is implemented; automatic WhatsApp AI replies and actions remain
+subsequent phases. SMTP runtime credentials and live delivery are still unverified.
+
 Latest continuation: 2026-10-03 experience/memory pipeline, applied migration
 `20261003000002`, including bounded repository knowledge indexing.
 Read [the current checkpoint](../docs/verification/EXPERIENCE_2026_10_03.md)

@@ -4,10 +4,10 @@
  * 
  * High-Reliability Transactional Email Dispatcher for Ryvix Authentication.
  * Dispatches genuine cryptographically random 6-digit OTP codes directly
- * via Gmail SMTP (or Resend API fallback) directly to ANY recipient email.
+ * via the configured SMTP transport. Acceptance is not proof of inbox delivery.
  */
 
-import nodemailer from "nodemailer";
+import {sendSmtpMail} from "../../services/src/communication/smtp";
 
 export interface SendOtpEmailParams {
   to: string;
@@ -23,11 +23,7 @@ export async function sendOtpEmail(params: SendOtpEmailParams): Promise<{
 }> {
   const { to, otp, type, fullName } = params;
 
-  const smtpUser = process.env.SMTP_USER || "chaitanyareddykarri2006@gmail.com";
-  const smtpPass = process.env.SMTP_PASSWORD || "";
-  const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
-  const smtpPort = parseInt(process.env.SMTP_PORT || "465", 10);
-  const fromEmail = process.env.EMAIL_FROM || `"Ryvix Auth" <${smtpUser}>`;
+  const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "";
 
   let title = "Your Ryvix Verification Code";
   let description = "Use the 6-digit verification code below to complete your authentication. This code will expire in 10 minutes.";
@@ -35,7 +31,7 @@ export async function sendOtpEmail(params: SendOtpEmailParams): Promise<{
   if (type === "signup") {
     title = "Confirm Your Ryvix Account";
     description = fullName 
-      ? `Welcome to Ryvix, ${fullName}! Please enter the 6-digit code below to activate your account.`
+      ? `Welcome to Ryvix, ${fullName.replace(/[&<>"']/g, value => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[value]!))}! Please enter the 6-digit code below to activate your account.`
       : "Welcome to Ryvix! Please enter the 6-digit verification code below to activate your account.";
   } else if (type === "reset") {
     title = "Reset Your Ryvix Password";
@@ -92,61 +88,10 @@ export async function sendOtpEmail(params: SendOtpEmailParams): Promise<{
 </html>
 `;
 
-  // 1. Primary: Direct Gmail SMTP Dispatch (Delivers directly to ANY email in the world)
-  if (smtpUser && smtpPass) {
-    try {
-      const transporter = nodemailer.createTransport({
-        host: smtpHost,
-        port: smtpPort,
-        secure: smtpPort === 465,
-        auth: {
-          user: smtpUser,
-          pass: smtpPass,
-        },
-      });
-
-      const info = await transporter.sendMail({
-        from: fromEmail,
-        to: to,
-        subject: `${otp} is your Ryvix verification code`,
-        text: `Your Ryvix verification code is: ${otp}. It expires in 10 minutes.`,
-        html: htmlContent,
-      });
-
-      console.log(`[Email Service] Dispatched OTP directly to ${to} via Gmail SMTP. MessageID: ${info.messageId}`);
-      return { success: true, id: info.messageId };
-    } catch (smtpErr: any) {
-      console.error("[Email Service] Gmail SMTP dispatch error:", smtpErr.message);
-    }
+  try {
+    const id=await sendSmtpMail({from:fromEmail,to,subject:`${otp} is your Ryvix verification code`,text:`Your Ryvix verification code is: ${otp}. It expires in 10 minutes.`,html:htmlContent});
+    return {success:true,id};
+  }catch{
+    return {success:false,error:'Failed to dispatch email verification.'};
   }
-
-  // 2. Fallback: Resend API
-  const resendApiKey = process.env.RESEND_API_KEY;
-  if (resendApiKey) {
-    try {
-      const response = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${resendApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: "onboarding@resend.dev",
-          to: [to],
-          subject: `${otp} is your Ryvix verification code`,
-          html: htmlContent,
-        }),
-      });
-
-      const data = await response.json();
-      if (response.ok && data.id) {
-        console.log(`[Email Service] Dispatched OTP to ${to} via Resend API. ID: ${data.id}`);
-        return { success: true, id: data.id };
-      }
-    } catch (resendErr: any) {
-      console.error("[Email Service] Resend fallback error:", resendErr.message);
-    }
-  }
-
-  return { success: false, error: "Failed to dispatch email verification." };
 }

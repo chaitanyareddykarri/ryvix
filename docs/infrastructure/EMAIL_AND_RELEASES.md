@@ -28,9 +28,12 @@ Ryvix does not synthesize a deployment-success event from a merge or a preview.
 
 ## Email configuration
 
-Use a Resend account with a verified sending domain. The notification adapter reads
-`RYVIX_NOTIFICATION_RESEND_KEY`, falling back to an existing `RESEND_API_KEY`.
-Set `RYVIX_NOTIFICATION_FROM` to a bare verified sender, e.g. `alerts@yourdomain.com`.
+Use the configured Gmail SMTP account: `SMTP_HOST=smtp.gmail.com`, port 465 or
+STARTTLS 587, `SMTP_USER` and `SMTP_PASSWORD`. `RYVIX_NOTIFICATION_PROVIDER=smtp`
+is the default. The notification sender defaults to `SMTP_USER`; optionally set
+`RYVIX_NOTIFICATION_FROM` to another authorized bare sender. Resend is optional
+only when explicitly selecting `RYVIX_NOTIFICATION_PROVIDER=resend`; no automatic
+fallback occurs after an uncertain SMTP send.
 Set `RYVIX_PUBLIC_URL` to the deployed HTTPS application origin and
 `RYVIX_EMAIL_NOTIFICATIONS_ENABLED=true` on the operations worker.
 
@@ -45,8 +48,9 @@ logs in the email.
 The outbox deduplicates per user/environment/source event. Membership, confirmed
 email, preferences and source scope are rechecked when sending. A recipient is
 limited to three claims per minute. A durable `sending` state precedes provider
-contact; a crash or timeout leaves `unknown`, without automatic resend. Resend
-receives a stable idempotency key. `accepted` means provider acceptance, not proof
+contact; a crash or timeout leaves `unknown`, without automatic resend. SMTP uses
+a stable Message-ID, which does not guarantee deduplication; the optional Resend
+adapter uses an idempotency key. `accepted` means provider acceptance, not proof
 of Gmail inbox delivery. Review the history on `/notifications` and provider logs
 for uncertain/bounced delivery. Supabase Auth OTP transport remains separate.
 

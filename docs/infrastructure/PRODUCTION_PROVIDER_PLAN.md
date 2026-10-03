@@ -15,9 +15,9 @@ Current implementation and evidence: [project status](../PROJECT_STATUS.md).
 | Optional semantic reranking | Gemini embedding API in the current implementation | `GEMINI_API_KEY` and `GEMINI_EMBEDDING_MODEL`. Lexical retrieval still works without embeddings. Other embedding providers need an adapter. |
 | Web and workers | One Linux VM/cloud provider | Choose AWS EC2, DigitalOcean, Hetzner or GCP. Recommended layout: one control-plane VM and a separate Docker worker VM. Initial sizing estimate: control plane 2 vCPU/4 GB; worker 4 vCPU/8 GB or more with one active workspace. Measure before increasing concurrency; each sandbox can require 2 vCPU/4 GB. |
 | Domain, DNS and HTTPS | Your registrar/DNS provider, ACME certificates | Application hostname and a separate preview domain. Automate wildcard TLS with DNS-01. Cloudflare DNS is an option; an existing DNS provider is also suitable if certificate automation is available. |
-| Login OTP and recovery email | Dedicated transactional SMTP, for example Resend | Verified sending domain, DNS authentication and SMTP credentials configured in Supabase Auth. Gmail is the task channel, not the Auth mail provider. Application environment variables alone do not configure hosted Supabase SMTP. |
+| Login OTP email | Your configured Gmail SMTP account | Application SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD and optional EMAIL_FROM. Hosted Supabase Auth SMTP is configured separately. |
 | Gmail task inbox | Google Cloud project + Gmail API + Google OAuth | OAuth consent configuration, client ID/secret, approved test users or production verification, authorized callback `https://APP_HOST/api/channels/gmail`. Users connect their Gmail account; refresh tokens are stored in Vault. Current scope is `gmail.readonly`. |
-| Security and approved-deployment email | Resend application sender | Verified sender/domain, `RYVIX_NOTIFICATION_RESEND_KEY` (or existing `RESEND_API_KEY`), `RYVIX_NOTIFICATION_FROM`, public application URL and worker enable flag. Users opt in at `/notifications`; recipient must be their confirmed account address. Gmail OAuth is not required to receive these emails. |
+| Security and approved-deployment email | Your Gmail SMTP account | Same SMTP settings on the operations worker; optional RYVIX_NOTIFICATION_FROM, public application URL and worker enable flag. Users opt in at /notifications; recipient must be their confirmed account address. Gmail OAuth is not required to receive these emails. |
 | WhatsApp task messages and P1 alerts | Meta WhatsApp Cloud API | Business portfolio, Meta app, WhatsApp Business Account, registered business phone/phone ID, suitable access token, app secret, webhook verify token, approved P1 template, language and opted-in recipient records. Twilio is an alternative provider but the current adapter calls Meta directly. |
 | Native server monitoring/restarts | Ryvix Linux agent | Release binaries/checksums, public HTTPS release manifest, enrollment, pinned signing public key, exact service allowlist and narrowly scoped systemd permissions. No extra messaging provider is needed for agent telemetry. |
 | Out-of-band cloud reboot | The provider that owns each customer instance | Exact registered-server to provider-instance mapping and scoped cloud credentials on the operations worker. Hosting Ryvix on one cloud does not grant access to another customer's instances. |
@@ -52,11 +52,13 @@ previously supplied is invalid or absent from a remote secret store. Its deploym
 location still needs to be connected to the running processes. Runtime presence,
 a successful live request and answer quality are separate checks.
 
+See [WhatsApp phase 1](WHATSAPP_ASSISTANT.md) for personal number OTP linking and the SMTP correction.
+
 ## How communication works
 
 October 2 follow-up: account email notifications and explicit protected-branch
 release approval are now implemented. See `EMAIL_AND_RELEASES.md` for configuration.
-Security and deployment-result emails use Resend to the verified account email;
+Security and deployment-result emails use configured SMTP to the verified account email;
 they do not require Gmail read/send OAuth. Existing Gmail task polling is separate.
 
 **Gmail:** user connects mailbox → authenticated polling reads new mail → tenant
@@ -66,8 +68,8 @@ this implementation. Sending replies requires `gmail.send` consent and a sender
 workflow; the current read-only grant cannot send mail.
 
 **WhatsApp inbound:** user messages the business number → Meta signed webhook →
-tenant inbox proposal → human review → coding task. This is task intake. Full
-two-way LLM chat needs verified sender-to-user linking, per-user history/quotas,
+tenant inbox proposal → human review → coding task. This is task intake. Verified sender-to-user linking is now implemented through OTP. Full
+two-way LLM chat still needs per-user history/quotas,
 reply dispatch and customer-service-window handling. Never map an arbitrary phone
 number to tenant authority merely because a message arrived.
 
@@ -134,7 +136,7 @@ its own enable flag and repository opt-in, and the existing project GitHub token
    `RYVIX_WHATSAPP_ALERT_TARGETS`. Resolve unknown outcomes before issuing another
    operation; the worker never automatically retries an ambiguous mutation.
    Enable account email with `RYVIX_EMAIL_NOTIFICATIONS_ENABLED=true`,
-   `RYVIX_NOTIFICATION_RESEND_KEY` (or `RESEND_API_KEY`) and a verified
+   the configured `SMTP_*` credentials and an authorized
    `RYVIX_NOTIFICATION_FROM`; users opt in at `/notifications`.
 9. **Release and enroll the agent.** Publish versioned Linux amd64/arm64 binaries,
    verify checksums and configure `RYVIX_AGENT_RELEASE_MANIFEST`. Pin command keys
