@@ -8,7 +8,7 @@ import MovingBlocks3D from "@/components/MovingBlocks3D";
 import ConnectRepositoryModal from "@/components/ConnectRepositoryModal";
 import ConnectServerModal from "@/components/ConnectServerModal";
 import ConnectionsPanel from "@/components/ConnectionsPanel";
-import AppNav, { ReturnToDashboardButton } from "@/components/AppNav";
+
 
 // =========================================================================
 // 1. LUCIDE-STYLE VECTOR ICONS (Zero external dependencies, pixel-perfect)
@@ -1747,14 +1747,11 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Primary Navigation Sections */}
-          <div className="dashboard-desktop-only" style={{ display: "flex", alignItems: "center" }}>
-            <AppNav className="dashboard-top-nav" />
-          </div>
+
 
           {/* Right: AI Status, Telemetry & User (Desktop) */}
           <div className="dashboard-desktop-only" style={{ alignItems: "center", gap: "0.75rem" }}>
-            <ReturnToDashboardButton />
+
             <div
               style={{
                 display: "inline-flex",
