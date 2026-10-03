@@ -402,6 +402,7 @@ export default function WebChatPage() {
             <Link href="/channels">Inbox</Link>
             <Link href="/learning">Learning</Link>
             <Link href="/experience">Memory and feedback</Link>
+            <Link href="/knowledge">Repository knowledge</Link>
             <Link href="/operations">Server approvals</Link>
             <Link href="/deployments">Deployments</Link>
             <select aria-label="Repository context" disabled={isStreaming || historyLoading} value={repositoryId}

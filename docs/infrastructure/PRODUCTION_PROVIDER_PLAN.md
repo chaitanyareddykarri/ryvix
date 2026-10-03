@@ -87,19 +87,21 @@ proof that the instance rebooted or that its application is healthy.
 
 ## Deployment sequence
 
-October 3 addition: apply `20261003000001`, deploy the
+October 3 addition: apply migrations through `20261003000002`, deploy the
 [experience worker](EXPERIENCE_AND_MEMORY.md), and explicitly opt projects into
 collection. This worker needs the existing trusted database connection, no new
 LLM subscription. Live answer evaluation reuses a configured provider; external
 fine-tuning is not automatically enabled by collection or user memory.
+Optional [repository indexing](REPOSITORY_KNOWLEDGE.md) uses the same worker with
+its own enable flag and repository opt-in, and the existing project GitHub token.
 
 1. **Choose the first environment.** Select one hosting provider, the application
    domain, a distinct preview domain, an authorized test repository, and an
    authorized disposable server for recovery verification. Start with one worker.
 2. **Database first.** Review and apply numbered migrations using the established
    Supabase CLI workflow with verified TLS. Never reset production. The new
-   latest applied migration is `20261002000003` (release/email), following
-   `20261002000002` (cloud/outbox). Verify RLS and protected-table
+   latest applied migration is `20261003000002` (repository knowledge), following
+   `20261003000001` (experience/memory). Verify RLS and protected-table
    grants. Configure Supabase Auth public URL, redirects and transactional SMTP.
 3. **Prepare Linux hosts.** Install the selected release at `/opt/ryvix/current`,
    Node dependencies including `tsx`, Docker on the coding host and trusted service

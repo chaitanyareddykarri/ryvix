@@ -3,6 +3,8 @@ import { queryDirectDb } from './direct-db';
 import { githubTokenForProject } from './github-credentials';
 import { RequestError } from './tenant-context';
 import { ContextBuilder } from '../../ai/src/context/context-builder';
+import {RepositoryKnowledge} from '../../backend/src/services/repository-knowledge';
+import {getDirectDbPool} from './direct-db';
 
 /** Read a bounded, immutable snapshot of an explicitly selected authorized repository. */
 export async function repositoryChatContext(org:string,user:string,repositoryId:string,question:string,signal?:AbortSignal) {
@@ -26,6 +28,10 @@ export async function repositoryChatContext(org:string,user:string,repositoryId:
   }
   const commit=await get(`commits/${encodeURIComponent(repo.default_branch || 'HEAD')}`);
   if(!/^[a-f0-9]{40}$/.test(commit.sha))throw new RequestError('Repository commit unavailable.',502);
+  const indexed=await new RepositoryKnowledge(getDirectDbPool()).search(org,user,repositoryId,question,commit.sha);
+  if(indexed.length)return {sources:indexed.map(row=>({id:`github:${row.full_name}:${row.commit_sha}:${row.path}`,
+    kind:'indexed repository file at freshly verified commit',title:row.path,date:row.indexed_at,
+    excerpt:ContextBuilder.sanitizeText(row.excerpt).slice(0,2000)})),projectId:repo.project_id,commit:commit.sha,truncated:indexed.some(row=>row.partial)};
   const tree=await get(`git/trees/${commit.sha}?recursive=1`);
   const terms=question.toLowerCase().match(/[a-z0-9_-]{4,}/g)||[];
   const files=(tree.tree||[]).filter((item:any)=>item.type==='blob' && item.mode!=='120000' && item.size<=60000 &&

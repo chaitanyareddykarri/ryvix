@@ -30,6 +30,7 @@ export async function testWebChatStreaming() {
     if (name === '@/utils/repository-chat-context') return {repositoryChatContext:async()=>({sources:[]})};
     if (name.endsWith('/semantic-reranking')) return {rerankSources:async(_question:string,sources:unknown[])=>({sources,mode:'fixture'})};
     if (name === '@/utils/direct-db') return { getDirectDbPool: () => ({}) };
+    if(name.endsWith('/repository-knowledge'))return {RepositoryKnowledge:class {async search(){return [];}}};
     if (name.endsWith('/experience-store')) return {ExperienceStore:class {
       async memories(org:string,user:string){assert.equal(org,'verified-organization');assert.equal(user,'verified-user');return [{kind:'preference',content:'Use brief explanations.',expires_at:'2026-12-01'}];}
       async retrieve(){return [];}

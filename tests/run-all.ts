@@ -1,4 +1,5 @@
 import {testExperienceLearning} from './experience-learning.test';
+import {testRepositoryKnowledge} from './repository-knowledge.test';
 import {testRecoveryOutbound} from './recovery-outbound.test';
 import {testEmailNotifications} from './email-notifications.test';
 import { seedHealthFixtures } from './health-fixtures';
@@ -63,6 +64,7 @@ async function runAllTests() {
 
   seedHealthFixtures();
   const testCases: { name: string; fn: () => Promise<void> }[] = [
+    {name:'Repository Knowledge Source Boundaries and Commit Refresh',fn:testRepositoryKnowledge},
     {name:'Truthful Learning Metrics and Experience Boundaries',fn:testExperienceLearning},
     { name: 'Current Repository Chat Scope, Commit Pinning and Secret Exclusion', fn:(await import('./repository-chat-context.test')).testRepositoryChatContext },
     { name: 'Device Command Signature, Target and Path Binding', fn:(await import('./server-command-protocol.test')).testServerCommandProtocol },

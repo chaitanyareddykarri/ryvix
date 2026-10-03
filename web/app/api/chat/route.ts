@@ -1,4 +1,5 @@
 import {ExperienceStore} from '../../../../backend/src/services/experience-store';
+import {RepositoryKnowledge} from '../../../../backend/src/services/repository-knowledge';
 import { NextResponse } from 'next/server';
 import { modelGateway } from '@ryvix/services';
 import { requireTenant, RequestError } from '@/utils/tenant-context';
@@ -58,7 +59,12 @@ export async function POST(request: Request) {
       excerpts.push(...repository.sources);
       const lessons=await experience.retrieve(organizationId,user.id,repository.projectId,retrievalQuery);
       excerpts.push(...lessonSources(lessons));
-    }else excerpts.push(...lessonSources(await experience.retrieve(organizationId,user.id,null,retrievalQuery)));
+    }else {
+      excerpts.push(...lessonSources(await experience.retrieve(organizationId,user.id,null,retrievalQuery)));
+      const knowledge=await new RepositoryKnowledge(getDirectDbPool()).search(organizationId,user.id,null,retrievalQuery);
+      excerpts.push(...knowledge.map(row=>({id:`indexed:${row.full_name}:${row.commit_sha}:${row.path}`,kind:'indexed repository snapshot (not verified current branch)',
+        title:row.path,date:row.indexed_at,excerpt:ContextBuilder.sanitizeText(row.excerpt).slice(0,2000)})));
+    }
     const ranked=await rerankSources(prompt,excerpts,signal);
     const intent = /deploy|release|commit|workflow/i.test(prompt) ? 'deployment'
       : /server|health|cpu|memory|disk|incident|security|latency/i.test(prompt) ? 'diagnostics'

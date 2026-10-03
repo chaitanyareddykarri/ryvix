@@ -54,8 +54,10 @@ Lessons use bounded lexical retrieval, followed by the existing optional semanti
 reranker in chat. A selected repository restricts lessons to its project; without
 one, chat can retrieve authorized organization project lessons with project IDs.
 Coding retrieves only its job's authorized project lessons. Current repository
-file retrieval remains bounded and commit-pinned; there is no complete persistent
-repository vector index or unrestricted graph RAG.
+file retrieval remains bounded and commit-pinned. The separately opted-in
+[repository knowledge index](REPOSITORY_KNOWLEDGE.md) adds persisted, sanitized
+source snapshots and full-text search, with current-commit validation for selected
+repositories. There is no complete repository vector index or unrestricted graph RAG.
 
 ## Worker deployment
 
@@ -129,8 +131,8 @@ fabricating a quality score. Regex checks require human correctness review; the
 14 authored regression cases are not a representative production benchmark.
 No command above submits fine-tuning jobs or activates a model.
 
-External LLM fine-tuning, dedicated coding benchmarks, a broader repository index,
-automatic label proposals and gradual model traffic rollout require further work.
+External LLM fine-tuning, dedicated coding benchmarks, automatic label proposals
+and gradual model traffic rollout require further work.
 Existing LLM keys can be reused for answering/evaluation once connected to runtime;
 fine-tuning support depends on the chosen provider/model and reviewed dataset.
 

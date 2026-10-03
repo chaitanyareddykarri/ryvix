@@ -1,7 +1,8 @@
 # Ryvix Current Project Context
 
 Latest continuation: 2026-10-03 experience/memory pipeline, applied migration
-`20261003000001`. Read [the current checkpoint](../docs/verification/EXPERIENCE_2026_10_03.md)
+`20261003000002`, including bounded repository knowledge indexing.
+Read [the current checkpoint](../docs/verification/EXPERIENCE_2026_10_03.md)
 and [experience guide](../docs/infrastructure/EXPERIENCE_AND_MEMORY.md). Collection,
 review and retrieval are implemented; no representative training or live provider
 quality has been established. The October 2 snapshot below is superseded.

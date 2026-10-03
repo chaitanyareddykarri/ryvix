@@ -7,6 +7,7 @@ import {ExperienceStore} from '../backend/src/services/experience-store';
 import {ExperienceCollector} from '../backend/src/services/experience-collector';
 import {NeuralThreatClassifier} from '../ai/src/neural-network';
 import {ConversationStore} from '../backend/src/services/conversation-store';
+import {RepositoryKnowledge} from '../backend/src/services/repository-knowledge';
 
 async function main(){
   const defaults:Record<string,string>={};for(const f of ['.env','.env.local','web/.env.local'])if(fs.existsSync(f))Object.assign(defaults,parseEnv(fs.readFileSync(f,'utf8')));
@@ -16,7 +17,8 @@ async function main(){
   let phase='connect';const user=randomUUID(),reviewer=randomUUID(),project=randomUUID(),env=randomUUID(),server=randomUUID(),repo=randomUUID(),task=randomUUID(),conversation=randomUUID();
   try{await c.connect();await c.query('BEGIN');await c.query("SET LOCAL statement_timeout='30s'");
     phase='migration';if(!(await c.query("SELECT to_regclass('public.experience_events') AS t")).rows[0].t)await c.query(fs.readFileSync('supabase/migrations/20261003000001_experience_memory.sql','utf8'));
-    for(const role of ['anon','authenticated'])for(const table of ['experience_settings','experience_events','experience_lessons','personal_memories','experience_predictions']){
+    if(!(await c.query("SELECT to_regclass('public.repository_knowledge_settings') AS t")).rows[0].t)await c.query(fs.readFileSync('supabase/migrations/20261003000002_repository_knowledge.sql','utf8'));
+    for(const role of ['anon','authenticated'])for(const table of ['experience_settings','experience_events','experience_lessons','personal_memories','experience_predictions','repository_knowledge_settings','repository_knowledge_files']){
       assert.equal((await c.query("SELECT has_table_privilege($1,$2,'SELECT,INSERT,UPDATE,DELETE') AS allowed",[role,table])).rows[0].allowed,false);
       assert.equal((await c.query('SELECT relrowsecurity FROM pg_class WHERE oid=$1::regclass',[table])).rows[0].relrowsecurity,true);
     }
@@ -92,8 +94,34 @@ async function main(){
     await collector.collectProject(project);assert.equal((await c.query('SELECT 1 FROM experience_lessons WHERE id=$1',[lesson.id])).rowCount,0);
     await store.configure(org,user,project,false,30);assert.equal((await store.list(org,user,project)).events.length,0);assert.equal(await collector.collectProject(project),0);
     await assert.rejects(store.feedback(org,user,project,feedback),/disabled/);
+    phase='repository knowledge';
+    const connector=(await c.query("INSERT INTO connectors(environment_id,name,connector_type,status) VALUES($1,'Fixture','github','active') RETURNING id",[env])).rows[0].id;
+    const secret=(await c.query("SELECT vault.create_secret('fixture-knowledge-token',$1) AS id",[`fixture-${connector}`])).rows[0].id;
+    await c.query("INSERT INTO connector_credentials(connector_id,credential_type,vault_secret_ref) VALUES($1,'oauth_token',$2)",[connector,secret]);
+    let cancel=false;const knowledge=new RepositoryKnowledge(pool,async(job,token)=>{
+      assert.equal(job.repository_id,repo);assert.equal(token,'fixture-knowledge-token');
+      if(cancel)await knowledge.configure(org,user,repo,false);
+      return {commit:'f'.repeat(40),partial:true,files:[{path:'src/auth.ts',content:'export const authorization = true; // tenant boundary'},
+        {path:'settings.json',content:'{"password":"never-store-repository-secret"}'}]};
+    });
+    await assert.rejects(knowledge.configure(randomUUID(),user,repo,true),/denied/);
+    await knowledge.configure(org,user,repo,true);assert.equal(await knowledge.indexOne(undefined,repo),true);
+    assert.ok(!JSON.stringify((await c.query('SELECT content FROM repository_knowledge_files WHERE repository_id=$1',[repo])).rows).includes('never-store-repository-secret'));
+    assert.equal((await knowledge.search(org,user,repo,'authorization','f'.repeat(40))).length,1);
+    assert.equal((await knowledge.search(org,user,repo,'authorization','e'.repeat(40))).length,0);
+    assert.equal((await knowledge.search(randomUUID(),user,null,'authorization')).length,0);
+    await c.query("UPDATE organization_members SET role='viewer' WHERE organization_id=$1 AND user_id=$2",[org,user]);
+    assert.equal((await knowledge.search(org,reviewer,repo,'authorization')).length,0,'Revoked configuring administrator hides index');
+    await c.query("UPDATE organization_members SET role='owner' WHERE organization_id=$1 AND user_id=$2",[org,user]);
+    await c.query("UPDATE repository_knowledge_settings SET indexed_at=now()-interval '2 days' WHERE repository_id=$1",[repo]);
+    assert.equal((await knowledge.search(org,user,repo,'authorization')).length,0);
+    await knowledge.configure(org,user,repo,true);cancel=true;await assert.rejects(knowledge.indexOne(undefined,repo),/indexing failed/);
+    assert.equal((await c.query('SELECT 1 FROM repository_knowledge_files WHERE repository_id=$1',[repo])).rowCount,0,'Disable during fetch prevents stale publication');
+    await c.query("UPDATE chat_request_budgets SET requests=30 WHERE organization_id=$1 AND subject=$2",[org,`knowledge:${user}`]);
+    await assert.rejects(knowledge.configure(org,user,repo,true),/limit reached/);
+    assert.equal((await c.query('SELECT enabled FROM repository_knowledge_settings WHERE repository_id=$1',[repo])).rows[0].enabled,false,'Limited request leaves configuration unchanged');
     await c.query('ROLLBACK');assert.equal((await c.query('SELECT id FROM auth.users WHERE id=$1',[user])).rowCount,0);
-    console.log('PASS real SQL: protected tables, tenant and memory isolation, all six source collectors, deduplication, secret exclusion, independent review, revoked role, owned feedback, expiry and opt-out purge. All fixtures rolled back; no provider calls.');
+    console.log('PASS real SQL: protected tables, tenant and memory isolation, all six source collectors, deduplication, secret exclusion, independent review, revoked role, owned feedback, expiry, opt-out purge, repository indexing, commit mismatch, stale snapshot and cancelled publication. All fixtures rolled back; GitHub reader injected, no provider calls.');
   }catch(e:any){console.error(`Experience SQL check failed at ${phase} (${String(e.code||e.name||'FAILED').replace(/[^a-z0-9_]/gi,'')}).`);if(['42P08','42883','42703','23514'].includes(e.code))console.error(String(e.message).slice(0,250));process.exitCode=1;}
   finally{await c.query('ROLLBACK').catch(()=>{});await c.end().catch(()=>{});}
 }

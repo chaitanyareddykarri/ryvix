@@ -4,9 +4,10 @@
 
 Personal memory, chat corrections, opt-in outcome collection, independently
 reviewed lessons in chat/coding, measured response metadata and observation-only
-classifier predictions are implemented. Migration `20261003000001` is applied.
-Latest evidence: 76 project suites plus 15 Node checks, typecheck/lint/build,
-real SQL rollback fixtures and 109 read-only database checks.
+classifier predictions are implemented. Added opt-in
+[repository knowledge indexing](infrastructure/REPOSITORY_KNOWLEDGE.md), authorized
+full-text retrieval and current-commit checks. Migrations through `20261003000002`
+are applied. Exact latest validation results are recorded in the checkpoint below.
 Read [setup and remaining limitations](infrastructure/EXPERIENCE_AND_MEMORY.md)
 and [verification](verification/EXPERIENCE_2026_10_03.md). Zero approved examples,
 evaluated checkpoints or active classifiers exist in the inspected database;
