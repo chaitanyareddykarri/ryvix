@@ -295,6 +295,35 @@ function IconMoreHorizontal({ size = 18, color = "currentColor" }: { size?: numb
   );
 }
 
+function IconMoreVertical({ size = 18, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="1.5" fill={color} />
+      <circle cx="12" cy="5" r="1.5" fill={color} />
+      <circle cx="12" cy="19" r="1.5" fill={color} />
+    </svg>
+  );
+}
+
+function IconUser({ size = 16, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
+
+function IconLogOut({ size = 16, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <polyline points="16 17 21 12 16 7" />
+      <line x1="21" y1="12" x2="9" y2="12" />
+    </svg>
+  );
+}
+
 // =========================================================================
 // 2. DATA CONTRACTS & STATE DEFINITIONS
 // =========================================================================
@@ -633,6 +662,18 @@ export default function DashboardPage() {
   useEffect(() => {
     const timer = setTimeout(() => setShowEntrance(false), 1000);
     return () => clearTimeout(timer);
+  }, []);
+
+  // Close mobile drawer and three-dot profile menu on Escape key
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setMobileMenuOpen(false);
+        setShowMobileOverflow(false);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   // Fetch Database & Server Data
@@ -1379,41 +1420,131 @@ export default function DashboardPage() {
         display: "flex",
         flexDirection: "column",
         position: "relative",
-        overflowX: "hidden",
       }}
     >
-      {/* Responsive Styles for Mobile Phone (< 768px) */}
+      {/* Responsive Styles for Mobile Phone (< 768px) and Small Mobile (< 480px) */}
       <style>{`
+        /* Action Button Labels Responsive Reflow */
+        .dashboard-badge-text-full { display: inline; }
+        .dashboard-badge-text-mid { display: none; }
+        .dashboard-badge-text-compact { display: none; }
+
+        .dashboard-project-text-full { display: inline; }
+        .dashboard-project-text-mid { display: none; }
+        .dashboard-project-text-compact { display: none; }
+
+        /* Mobile phone (< 768px) */
         @media (max-width: 768px) {
           .dashboard-mobile-only { display: flex !important; }
           .dashboard-desktop-only { display: none !important; }
-          .dashboard-header-inner { padding: 0.5rem 0.85rem !important; gap: 0.5rem !important; }
-          .dashboard-main-content {
-            padding: 1.25rem 0.85rem 3rem !important;
-            max-width: 100vw !important;
+          .dashboard-header {
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 120 !important;
+            padding: 0.35rem 0.65rem !important;
+            min-height: 52px !important;
             box-sizing: border-box !important;
-            overflow-x: hidden !important;
+          }
+          .dashboard-header-inner {
+            padding: 0 !important;
+            gap: 0.35rem !important;
+            flex-wrap: nowrap !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            position: relative !important;
+            box-sizing: border-box !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+          }
+          .dashboard-header-brand-group {
+            display: flex !important;
+            align-items: center !important;
+            flex-wrap: nowrap !important;
+            gap: 0.35rem !important;
+            min-width: 0 !important;
+            flex: 1 !important;
+            box-sizing: border-box !important;
+          }
+          .dashboard-badge-text-full { display: none !important; }
+          .dashboard-badge-text-mid { display: inline !important; }
+          .dashboard-badge-text-compact { display: none !important; }
+
+          .dashboard-project-text-full { display: none !important; }
+          .dashboard-project-text-mid { display: inline !important; }
+          .dashboard-project-text-compact { display: none !important; }
+
+          .dashboard-header-live-badge {
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 0.25rem !important;
+            padding: 0.28rem 0.5rem !important;
+            border-radius: 6px !important;
+            font-size: 0.72rem !important;
+            white-space: nowrap !important;
+            flex-shrink: 0 !important;
+            box-sizing: border-box !important;
+          }
+          .dashboard-header-project-container {
+            display: inline-flex !important;
+            position: relative !important;
+            flex-shrink: 0 !important;
+          }
+          .dashboard-header-project-btn {
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 0.25rem !important;
+            padding: 0.28rem 0.5rem !important;
+            border-radius: 6px !important;
+            font-size: 0.72rem !important;
+            white-space: nowrap !important;
+            box-sizing: border-box !important;
+          }
+          .dashboard-mobile-header-right {
+            display: flex !important;
+            align-items: center !important;
+            flex-shrink: 0 !important;
+            margin-left: 0.25rem !important;
+          }
+          .dashboard-mobile-header-btn {
+            width: 36px !important;
+            height: 36px !important;
+            min-width: 36px !important;
+            border-radius: 8px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 0 !important;
+            box-sizing: border-box !important;
+          }
+          .dashboard-main-content {
+            padding: 1rem 0.75rem 2.5rem !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            box-sizing: border-box !important;
           }
           .dashboard-shell {
             position: relative !important;
             width: 100% !important;
-            max-width: 100vw !important;
-            overflow-x: hidden !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            box-sizing: border-box !important;
           }
           .dashboard-sidebar {
             position: fixed !important;
-            top: 0 !important;
+            top: 52px !important;
             bottom: 0 !important;
             left: 0 !important;
-            height: 100vh !important;
-            height: 100dvh !important;
-            z-index: 100 !important;
-            width: min(290px, 86vw) !important;
-            max-width: 100vw !important;
+            height: calc(100vh - 52px) !important;
+            height: calc(100dvh - 52px) !important;
+            z-index: 110 !important;
+            width: min(82vw, 300px) !important;
+            max-width: 82vw !important;
             box-sizing: border-box !important;
             transform: translateX(-100%) !important;
             transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
-            box-shadow: 0 0 50px rgba(0, 0, 0, 0.95) !important;
+            box-shadow: 4px 0 35px rgba(0, 0, 0, 0.95) !important;
             overflow-y: auto !important;
             overflow-x: hidden !important;
             overscroll-behavior: contain !important;
@@ -1429,6 +1560,9 @@ export default function DashboardPage() {
             overflow-x: auto !important;
             -webkit-overflow-scrolling: touch !important;
             padding-bottom: 0.5rem !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
           }
           .dashboard-timeline-track {
             min-width: 520px !important;
@@ -1444,7 +1578,247 @@ export default function DashboardPage() {
             box-sizing: border-box !important;
             z-index: 60 !important;
           }
+
+          /* AI Workspace & Preview Split Stack on Mobile */
+          .dashboard-ai-workspace {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 1.25rem !important;
+            height: auto !important;
+            min-height: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            box-sizing: border-box !important;
+          }
+          .dashboard-ai-left-panel {
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            flex: none !important;
+            height: auto !important;
+            min-height: 520px !important;
+            box-sizing: border-box !important;
+          }
+          .dashboard-ai-split-handle {
+            display: none !important;
+          }
+          .dashboard-ai-right-panel {
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            flex: none !important;
+            height: auto !important;
+            min-height: 580px !important;
+            box-sizing: border-box !important;
+          }
+          .dashboard-ai-context-grid {
+            grid-template-columns: repeat(auto-fit, minmax(75px, 1fr)) !important;
+            gap: 0.35rem !important;
+            padding: 0.4rem !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+          }
+
+          /* Preview Studio Frame on Mobile */
+          .dashboard-preview-header {
+            flex-wrap: wrap !important;
+            gap: 0.5rem !important;
+            padding: 0.6rem 0.75rem !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+          }
+          .dashboard-preview-url-bar {
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            order: 2 !important;
+            box-sizing: border-box !important;
+          }
+          .dashboard-preview-comparison-bar {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 0.5rem !important;
+            padding: 0.6rem 0.75rem !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+          }
+          .dashboard-preview-comparison-controls {
+            display: flex !important;
+            flex-wrap: wrap !important;
+            gap: 0.35rem !important;
+            width: 100% !important;
+          }
+          .dashboard-preview-mode-badge {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            box-sizing: border-box !important;
+            line-height: 1 !important;
+            white-space: nowrap !important;
+            flex-shrink: 0 !important;
+          }
+          .dashboard-comparison-toggle-group {
+            display: inline-flex !important;
+            align-items: center !important;
+            box-sizing: border-box !important;
+            max-width: 100% !important;
+          }
+          .dashboard-comparison-btn {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            box-sizing: border-box !important;
+            line-height: 1.2 !important;
+            white-space: nowrap !important;
+          }
+          .dashboard-preview-canvas-wrap {
+            padding: 0.5rem !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+          }
+          .dashboard-preview-footer {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 0.85rem !important;
+            padding: 0.85rem 0.75rem !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+          }
+          .dashboard-preview-actions {
+            display: flex !important;
+            flex-direction: row !important;
+            gap: 0.5rem !important;
+            width: 100% !important;
+          }
+          .dashboard-preview-btn-approve {
+            white-space: normal !important;
+            text-align: center !important;
+            line-height: 1.25 !important;
+            flex: 1.2 !important;
+            min-width: 0 !important;
+          }
+          .dashboard-preview-btn-reject {
+            flex: 0.8 !important;
+            min-width: 0 !important;
+            text-align: center !important;
+          }
+          .dashboard-frame-meta-bar {
+            flex-wrap: wrap !important;
+            gap: 0.4rem !important;
+            padding: 0.4rem 0.65rem !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+          }
+          .dashboard-toast-container {
+            bottom: 1rem !important;
+            left: 1rem !important;
+            right: 1rem !important;
+            min-width: 0 !important;
+            max-width: calc(100vw - 2rem) !important;
+            width: auto !important;
+            box-sizing: border-box !important;
+          }
         }
+
+        /* Small mobile screens (< 480px) */
+        @media (max-width: 480px) {
+          .dashboard-main-content {
+            padding: 0.75rem 0.5rem 2rem !important;
+          }
+          .dashboard-preview-actions {
+            flex-direction: column !important;
+          }
+          .dashboard-preview-btn-reject,
+          .dashboard-preview-btn-approve {
+            width: 100% !important;
+            flex: none !important;
+          }
+          .dashboard-preview-url-bar {
+            padding: 0.3rem 0.5rem !important;
+            gap: 0.35rem !important;
+          }
+          .dashboard-preview-mode-badge {
+            padding: 0.2rem 0.48rem !important;
+            font-size: 0.64rem !important;
+          }
+          .dashboard-comparison-btn {
+            padding: 0.24rem 0.55rem !important;
+            font-size: 0.7rem !important;
+          }
+        }
+
+        /* Narrow mobile screens (<= 414px) */
+        @media (max-width: 414px) {
+          .dashboard-header {
+            padding: 0.35rem 0.5rem !important;
+          }
+          .dashboard-header-inner {
+            gap: 0.25rem !important;
+          }
+          .dashboard-header-brand-group {
+            gap: 0.25rem !important;
+          }
+          .dashboard-badge-text-full { display: none !important; }
+          .dashboard-badge-text-mid { display: none !important; }
+          .dashboard-badge-text-compact { display: inline !important; }
+
+          .dashboard-project-text-full { display: none !important; }
+          .dashboard-project-text-mid { display: none !important; }
+          .dashboard-project-text-compact { display: inline !important; }
+
+          .dashboard-header-live-badge {
+            padding: 0.22rem 0.4rem !important;
+            font-size: 0.7rem !important;
+          }
+          .dashboard-header-project-btn {
+            padding: 0.22rem 0.4rem !important;
+            font-size: 0.7rem !important;
+          }
+          .dashboard-mobile-header-btn {
+            width: 34px !important;
+            height: 34px !important;
+            min-width: 34px !important;
+          }
+        }
+
+        /* Extra narrow mobile screens (<= 340px) */
+        @media (max-width: 340px) {
+          .dashboard-header {
+            padding: 0.3rem 0.35rem !important;
+          }
+          .dashboard-header-brand-group {
+            gap: 0.2rem !important;
+          }
+          .dashboard-header-live-badge {
+            padding: 0.2rem 0.35rem !important;
+            font-size: 0.68rem !important;
+          }
+          .dashboard-header-project-btn {
+            padding: 0.2rem 0.35rem !important;
+            font-size: 0.68rem !important;
+          }
+          .dashboard-mobile-header-btn {
+            width: 30px !important;
+            height: 30px !important;
+            min-width: 30px !important;
+          }
+          .dashboard-preview-url-bar {
+            padding: 0.22rem 0.35rem !important;
+            gap: 0.25rem !important;
+          }
+          .dashboard-preview-mode-badge {
+            padding: 0.16rem 0.38rem !important;
+            font-size: 0.6rem !important;
+          }
+          .dashboard-comparison-btn {
+            padding: 0.2rem 0.45rem !important;
+            font-size: 0.68rem !important;
+          }
+        }
+
+        /* Desktop screens (>= 769px) */
         @media (min-width: 769px) {
           .dashboard-mobile-only { display: none !important; }
           .dashboard-desktop-only { display: flex !important; }
@@ -1525,6 +1899,7 @@ export default function DashboardPage() {
       {/* TOP BAR                                                                   */}
       {/* ========================================================================= */}
       <header
+        className="dashboard-header"
         style={{
           position: "sticky",
           top: 0,
@@ -1536,30 +1911,39 @@ export default function DashboardPage() {
           padding: "0.65rem 1.5rem",
         }}
       >
-        <div style={{ maxWidth: "1680px", margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
+        <div className="dashboard-header-inner" style={{ maxWidth: "1680px", margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
           {/* Left: Brand + Breadcrumb */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <div className="dashboard-header-brand-group" style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
             {/* Mobile Hamburger Menu Toggle Button */}
             <button
               type="button"
-              onClick={() => setMobileMenuOpen((prev) => !prev)}
-              className="dashboard-mobile-only"
+              onClick={() => {
+                setMobileMenuOpen((prev) => !prev);
+                setShowMobileOverflow(false);
+              }}
+              className="dashboard-mobile-only dashboard-mobile-header-btn"
               aria-label="Toggle Navigation Menu"
+              aria-expanded={mobileMenuOpen}
               style={{
-                background: "#0D1218",
-                border: "1px solid #1D2732",
-                color: "#F5F7FA",
-                padding: "0.35rem 0.5rem",
-                borderRadius: "7px",
+                background: mobileMenuOpen ? "rgba(124, 108, 255, 0.15)" : "#0D1218",
+                border: `1px solid ${mobileMenuOpen ? "#7C6CFF" : "#1D2732"}`,
+                color: mobileMenuOpen ? "#7C6CFF" : "#F5F7FA",
+                borderRadius: "8px",
                 cursor: "pointer",
+                display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                width: "40px",
+                height: "40px",
+                minWidth: "40px",
+                flexShrink: 0,
+                padding: 0,
               }}
             >
-              <IconMenu size={18} color="#F5F7FA" />
+              <IconMenu size={18} color={mobileMenuOpen ? "#7C6CFF" : "#F5F7FA"} />
             </button>
 
-            <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "0.6rem" }}>
+            <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "0.6rem", flexShrink: 0 }}>
               <div
                 style={{
                   width: "28px",
@@ -1573,40 +1957,49 @@ export default function DashboardPage() {
                   fontSize: "0.95rem",
                   fontWeight: 800,
                   boxShadow: "0 0 16px rgba(124, 108, 255, 0.4)",
+                  flexShrink: 0,
                 }}
               >
                 ✦
               </div>
-              <span style={{ fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)", fontSize: "1.2rem", fontWeight: 800, letterSpacing: "-0.02em", color: "#F5F7FA" }}>
+              <span style={{ fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)", fontSize: "1.2rem", fontWeight: 800, letterSpacing: "-0.02em", color: "#F5F7FA", flexShrink: 0 }}>
                 RYVIX
               </span>
             </Link>
 
-            <span style={{ color: "#66717F", fontSize: "0.85rem" }}>/</span>
+            {/* Desktop breadcrumb separator */}
+            <span className="dashboard-desktop-only" style={{ color: "#66717F", fontSize: "0.85rem" }}>/</span>
 
-            {/* Target Project Dropdown */}
-            <div style={{ position: "relative" }}>
+            {/* Target Project / Connect Repository Dropdown */}
+            <div className="dashboard-header-project-container" style={{ position: "relative", display: "inline-flex" }}>
               <button
                 type="button"
+                className="dashboard-header-project-btn"
                 onClick={() => setShowWebsiteModal(!showWebsiteModal)}
+                title="Select Target Project / Connect Repository"
                 style={{
-                  display: "flex",
+                  display: "inline-flex",
                   alignItems: "center",
-                  gap: "0.55rem",
-                  padding: "0.32rem 0.75rem",
+                  gap: "0.45rem",
+                  padding: "0.28rem 0.65rem",
                   background: "#0D1218",
                   border: "1px solid #1D2732",
                   borderRadius: "8px",
                   cursor: "pointer",
                   color: "#F5F7FA",
                   textAlign: "left",
+                  flexShrink: 0,
                 }}
               >
-                <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#7C6CFF" }} />
-                <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#F5F7FA" }}>
-                  {activeRepo?.full_name ? (activeRepo.full_name.split("/")[1] || activeRepo.full_name) : selectedWebsite}
+                <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#7C6CFF", flexShrink: 0 }} />
+                <span className="dashboard-project-text-full">
+                  {activeRepo?.full_name ? (activeRepo.full_name.split("/")[1] || activeRepo.full_name) : (selectedWebsite || "Connect Repository")}
                 </span>
-                <span style={{ fontSize: "0.68rem", color: "#66717F" }}>▾</span>
+                <span className="dashboard-project-text-mid">
+                  {activeRepo?.full_name ? (activeRepo.full_name.split("/")[1] || activeRepo.full_name) : "Connect Repo"}
+                </span>
+                <span className="dashboard-project-text-compact">Repo</span>
+                <span style={{ fontSize: "0.65rem", color: "#66717F", flexShrink: 0 }}>▾</span>
               </button>
 
               {showWebsiteModal && (
@@ -1622,7 +2015,7 @@ export default function DashboardPage() {
                     borderRadius: "10px",
                     padding: "0.5rem",
                     boxShadow: "0 20px 40px rgba(0, 0, 0, 0.85)",
-                    zIndex: 60,
+                    zIndex: 150,
                   }}
                 >
                   <div style={{ fontSize: "0.66rem", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", color: "#66717F", fontWeight: 700, padding: "0.4rem 0.6rem", textTransform: "uppercase" }}>
@@ -1705,12 +2098,14 @@ export default function DashboardPage() {
               )}
             </div>
 
-            {/* Live Website Badge Link */}
+            {/* Live Website Badge Link / Add Deployed URL */}
             {activeLiveUrl ? (
               <a
                 href={activeLiveUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                className="dashboard-header-live-badge"
+                title={`Live Website: ${activeLiveUrl}`}
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
@@ -1723,15 +2118,21 @@ export default function DashboardPage() {
                   fontSize: "0.76rem",
                   fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)",
                   textDecoration: "none",
+                  flexShrink: 0,
                 }}
               >
                 <IconGlobe size={13} color="#45D483" />
-                <span>{activeLiveUrl.replace(/^https?:\/\//, "")}</span>
+                <span className="dashboard-badge-text-full">{activeLiveUrl.replace(/^https?:\/\//, "")}</span>
+                <span className="dashboard-badge-text-mid">{activeLiveUrl.replace(/^https?:\/\//, "").slice(0, 12)}</span>
+                <span className="dashboard-badge-text-compact">URL</span>
                 <IconExternalLink size={11} color="#66717F" />
               </a>
             ) : (
               <button
+                type="button"
                 onClick={handleOpenLiveUrlModal}
+                className="dashboard-header-live-badge"
+                title="Configure deployed live website URL"
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
@@ -1744,15 +2145,16 @@ export default function DashboardPage() {
                   fontSize: "0.74rem",
                   fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)",
                   cursor: "pointer",
+                  flexShrink: 0,
                 }}
               >
                 <IconGlobe size={13} color="#F59E0B" />
-                <span>+ Add deployed URL</span>
+                <span className="dashboard-badge-text-full">+ Add deployed URL</span>
+                <span className="dashboard-badge-text-mid">+ Add URL</span>
+                <span className="dashboard-badge-text-compact">+ URL</span>
               </button>
             )}
           </div>
-
-
 
           {/* Right: AI Status, Telemetry & User (Desktop) */}
           <div className="dashboard-desktop-only" style={{ alignItems: "center", gap: "0.75rem" }}>
@@ -1810,93 +2212,222 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Right: Mobile Overflow Menu Button & Dropdown (...) */}
-          <div className="dashboard-mobile-only" style={{ position: "relative", alignItems: "center", gap: "0.5rem" }}>
+          {/* Right: Mobile Three-Dot Profile Menu Button & Dropdown */}
+          <div className="dashboard-mobile-only dashboard-mobile-header-right" style={{ position: "relative", alignItems: "center" }}>
             <button
               type="button"
               onClick={() => setShowMobileOverflow((prev) => !prev)}
-              aria-label="More options"
+              className="dashboard-mobile-header-btn"
+              aria-label="Profile and account options"
+              aria-expanded={showMobileOverflow}
               style={{
-                background: "#0D1218",
-                border: "1px solid #1D2732",
-                color: "#A5AFBC",
-                padding: "0.35rem 0.55rem",
-                borderRadius: "7px",
+                width: "40px",
+                height: "40px",
+                minWidth: "40px",
+                background: showMobileOverflow ? "rgba(124, 108, 255, 0.15)" : "#0D1218",
+                border: `1px solid ${showMobileOverflow ? "#7C6CFF" : "#1D2732"}`,
+                color: showMobileOverflow ? "#7C6CFF" : "#F5F7FA",
+                borderRadius: "8px",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                padding: 0,
+                flexShrink: 0,
+                transition: "all 0.15s ease",
               }}
             >
-              <IconMoreHorizontal size={18} color="#A5AFBC" />
+              <IconMoreVertical size={18} color={showMobileOverflow ? "#7C6CFF" : "#F5F7FA"} />
             </button>
 
+            {/* Backdrop for 3-dot profile popup */}
             {showMobileOverflow && (
               <div
+                onClick={() => setShowMobileOverflow(false)}
+                aria-hidden="true"
+                style={{
+                  position: "fixed",
+                  inset: 0,
+                  backgroundColor: "rgba(0, 0, 0, 0.5)",
+                  zIndex: 140,
+                }}
+              />
+            )}
+
+            {/* 3-Dot Profile Menu Popup */}
+            {showMobileOverflow && (
+              <div
+                className="dashboard-profile-menu-popup"
                 style={{
                   position: "absolute",
-                  top: "125%",
+                  top: "calc(100% + 8px)",
                   right: 0,
-                  width: "220px",
+                  width: "230px",
+                  maxWidth: "calc(100vw - 24px)",
+                  boxSizing: "border-box",
                   background: "#0D1218",
                   border: "1px solid #2A3542",
                   borderRadius: "10px",
-                  padding: "0.6rem",
-                  boxShadow: "0 15px 35px rgba(0, 0, 0, 0.9)",
-                  zIndex: 70,
+                  padding: "0.5rem",
+                  boxShadow: "0 16px 36px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.05)",
+                  zIndex: 150,
                   display: "flex",
                   flexDirection: "column",
-                  gap: "0.4rem",
+                  gap: "0.25rem",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "0.3rem 0.5rem", borderBottom: "1px solid #1D2732" }}>
-                  <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "linear-gradient(135deg, #7C6CFF, #A78BFA)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: 700, color: "#ffffff" }}>
+                {/* User Info Header */}
+                <div style={{ display: "flex", alignItems: "center", gap: "0.55rem", padding: "0.5rem 0.6rem", borderBottom: "1px solid #1D2732", marginBottom: "0.25rem" }}>
+                  <div style={{ width: "28px", height: "28px", borderRadius: "50%", background: "linear-gradient(135deg, #7C6CFF, #A78BFA)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", fontWeight: 700, color: "#ffffff", flexShrink: 0 }}>
                     {userEmail.charAt(0).toUpperCase()}
                   </div>
-                  <span style={{ fontSize: "0.76rem", color: "#F5F7FA", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {userEmail.split("@")[0]}
-                  </span>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#F5F7FA", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {userEmail.split("@")[0]}
+                    </div>
+                    <div style={{ fontSize: "0.7rem", color: "#66717F", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)" }}>
+                      {userEmail}
+                    </div>
+                  </div>
                 </div>
 
+                {/* Profile */}
                 <button
                   type="button"
-                  onClick={() => { setShowTelemetry(!showTelemetry); setShowMobileOverflow(false); }}
+                  onClick={() => {
+                    setActiveTab("settings");
+                    setShowMobileOverflow(false);
+                  }}
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "0.5rem",
-                    padding: "0.45rem 0.5rem",
+                    gap: "0.6rem",
+                    padding: "0.55rem 0.65rem",
+                    borderRadius: "6px",
+                    background: "transparent",
+                    border: "none",
+                    color: "#F5F7FA",
+                    fontSize: "0.84rem",
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    textAlign: "left",
+                    width: "100%",
+                  }}
+                >
+                  <IconUser size={15} color="#7C6CFF" />
+                  <span>Profile</span>
+                </button>
+
+                {/* Account */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab("settings");
+                    setShowMobileOverflow(false);
+                  }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.6rem",
+                    padding: "0.55rem 0.65rem",
+                    borderRadius: "6px",
+                    background: "transparent",
+                    border: "none",
+                    color: "#F5F7FA",
+                    fontSize: "0.84rem",
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    textAlign: "left",
+                    width: "100%",
+                  }}
+                >
+                  <IconShield size={15} color="#45D483" />
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flex: 1 }}>
+                    <span>Account</span>
+                    <span style={{ fontSize: "0.65rem", padding: "0.1rem 0.35rem", borderRadius: "4px", background: "rgba(69, 212, 131, 0.15)", color: "#45D483", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)" }}>
+                      Pro
+                    </span>
+                  </div>
+                </button>
+
+                {/* Settings */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab("settings");
+                    setShowMobileOverflow(false);
+                  }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.6rem",
+                    padding: "0.55rem 0.65rem",
+                    borderRadius: "6px",
+                    background: "transparent",
+                    border: "none",
+                    color: "#F5F7FA",
+                    fontSize: "0.84rem",
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    textAlign: "left",
+                    width: "100%",
+                  }}
+                >
+                  <IconSettings size={15} color="#A5AFBC" />
+                  <span>Settings</span>
+                </button>
+
+                {/* Telemetry */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowTelemetry(!showTelemetry);
+                    setShowMobileOverflow(false);
+                  }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.6rem",
+                    padding: "0.55rem 0.65rem",
                     borderRadius: "6px",
                     background: "transparent",
                     border: "none",
                     color: "#A5AFBC",
-                    fontSize: "0.8rem",
+                    fontSize: "0.84rem",
+                    fontWeight: 500,
                     cursor: "pointer",
                     textAlign: "left",
+                    width: "100%",
                   }}
                 >
-                  <IconTerminal size={14} color="#7C6CFF" />
+                  <IconTerminal size={15} color="#42D9FF" />
                   <span>Telemetry</span>
                 </button>
 
+                <div style={{ height: "1px", background: "#1D2732", margin: "0.2rem 0" }} />
+
+                {/* Exit / Sign Out */}
                 <button
                   type="button"
                   onClick={handleSignOut}
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "0.5rem",
-                    padding: "0.45rem 0.5rem",
+                    gap: "0.6rem",
+                    padding: "0.55rem 0.65rem",
                     borderRadius: "6px",
                     background: "transparent",
                     border: "none",
                     color: "#EF4444",
-                    fontSize: "0.8rem",
+                    fontSize: "0.84rem",
+                    fontWeight: 600,
                     cursor: "pointer",
                     textAlign: "left",
+                    width: "100%",
                   }}
                 >
-                  <span>Sign Out</span>
+                  <IconLogOut size={15} color="#EF4444" />
+                  <span>Exit</span>
                 </button>
               </div>
             )}
@@ -1919,7 +2450,7 @@ export default function DashboardPage() {
               backgroundColor: "rgba(0, 0, 0, 0.75)",
               backdropFilter: "blur(3px)",
               WebkitBackdropFilter: "blur(3px)",
-              zIndex: 90,
+              zIndex: 105,
             }}
           />
         )}
@@ -1952,28 +2483,9 @@ export default function DashboardPage() {
               marginBottom: "0.6rem",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <div
-                style={{
-                  width: "22px",
-                  height: "22px",
-                  borderRadius: "5px",
-                  background: "linear-gradient(135deg, #7C6CFF 0%, #42D9FF 100%)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#ffffff",
-                  fontSize: "0.75rem",
-                  fontWeight: 800,
-                  boxShadow: "0 0 10px rgba(124, 108, 255, 0.4)",
-                }}
-              >
-                ✦
-              </div>
-              <span style={{ fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)", fontSize: "1.05rem", fontWeight: 800, letterSpacing: "-0.02em", color: "#F5F7FA" }}>
-                RYVIX
-              </span>
-            </div>
+            <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", color: "#7C6CFF", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+              Navigation Drawer
+            </span>
             <button
               type="button"
               onClick={() => setMobileMenuOpen(false)}
@@ -2474,13 +2986,26 @@ export default function DashboardPage() {
           )}
 
           {/* 2. AI ASSISTANT DEEP WORKSPACE */}
-                    {activeTab === "ai" && (
+          {activeTab === "ai" && (
             <div 
               ref={aiSplitContainerRef}
-              style={{ display: "flex", gap: "1rem", width: "100%", height: "calc(100vh - 120px)", minHeight: "680px", position: "relative" }}
+              className="dashboard-ai-workspace"
+              style={{ display: "flex", gap: "0", width: "100%", height: "calc(100vh - 120px)", minHeight: "680px", position: "relative" }}
             >
               {/* Left Column: Interactive Streaming AI Conversation */}
-              <div style={{ display: "flex", flexDirection: "column", background: "#0D1218", border: "1px solid #1D2732", borderRadius: "14px", overflow: "hidden", width: `calc(${aiSplitRatio}% - 0.5rem)`, minWidth: "140px" }}>
+              <div
+                className="dashboard-ai-left-panel"
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  background: "#0D1218",
+                  border: "1px solid #1D2732",
+                  borderRadius: "14px",
+                  overflow: "hidden",
+                  flex: `0 0 calc(${aiSplitRatio}% - 18px)`,
+                  minWidth: "200px",
+                }}
+              >
                 {/* Project-Aware Context Bar */}
                 <div style={{ padding: "0.85rem 1.25rem", borderBottom: "1px solid #1D2732", background: "#080C11", display: "flex", flexDirection: "column", gap: "0.65rem" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -2494,7 +3019,10 @@ export default function DashboardPage() {
                   </div>
 
                   {/* Context Grid */}
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "0.4rem", padding: "0.45rem", background: "#0D1218", borderRadius: "8px", border: "1px solid #1D2732" }}>
+                  <div
+                    className="dashboard-ai-context-grid"
+                    style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "0.4rem", padding: "0.45rem", background: "#0D1218", borderRadius: "8px", border: "1px solid #1D2732" }}
+                  >
                     <div>
                       <div style={{ fontSize: "0.62rem", color: "#66717F", textTransform: "uppercase", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)" }}>PROJECT</div>
                       <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "#F5F7FA", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{selectedWebsite}</div>
@@ -2533,6 +3061,8 @@ export default function DashboardPage() {
                         color: "#F5F7FA",
                         fontSize: "0.86rem",
                         lineHeight: 1.5,
+                        overflowWrap: "anywhere",
+                        wordBreak: "break-word",
                       }}
                     >
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.3rem" }}>
@@ -2599,7 +3129,7 @@ export default function DashboardPage() {
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
                     disabled={isChatStreaming}
-                    style={{ flex: 1, padding: "0.65rem 0.85rem", borderRadius: "8px", background: "#0D1218", border: "1px solid #1D2732", color: "#F5F7FA", fontSize: "0.85rem", outline: "none" }}
+                    style={{ flex: 1, minWidth: 0, padding: "0.65rem 0.85rem", borderRadius: "8px", background: "#0D1218", border: "1px solid #1D2732", color: "#F5F7FA", fontSize: "0.85rem", outline: "none" }}
                   />
                   <button
                     type="submit"
@@ -2614,6 +3144,7 @@ export default function DashboardPage() {
                       fontSize: "0.82rem",
                       letterSpacing: "0.04em",
                       cursor: chatInput.trim() ? "pointer" : "default",
+                      flexShrink: 0,
                     }}
                   >
                     {isChatStreaming ? "..." : "SEND"}
@@ -2623,37 +3154,44 @@ export default function DashboardPage() {
 
               {/* Draggable Split Handle */}
               <div
+                className="dashboard-ai-split-handle"
                 onPointerDown={handleAiPointerDown}
                 onPointerMove={handleAiPointerMove}
                 onPointerUp={handleAiPointerUp}
                 onPointerCancel={handleAiPointerUp}
                 style={{
-                  position: "absolute",
-                  left: `calc(${aiSplitRatio}%)`,
-                  top: "50%",
-                  transform: "translate(-50%, -50%)",
-                  width: "36px",
-                  height: "48px",
-                  background: isAiDragging ? "linear-gradient(135deg, #7C6CFF, #42D9FF)" : "#1D2732",
-                  borderRadius: "8px",
+                  flex: "0 0 36px",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   cursor: "col-resize",
-                  zIndex: 20,
-                  boxShadow: isAiDragging ? "0 0 15px rgba(124, 108, 255, 0.6)" : "0 2px 8px rgba(0,0,0,0.5)",
-                  border: "1px solid #2A3645",
-                  touchAction: "none"
+                  touchAction: "none",
+                  zIndex: 20
                 }}
               >
-                <div style={{ display: "flex", gap: "3px" }}>
-                  <div style={{ width: "2px", height: "16px", background: isAiDragging ? "#fff" : "#66717F", borderRadius: "2px" }} />
-                  <div style={{ width: "2px", height: "16px", background: isAiDragging ? "#fff" : "#66717F", borderRadius: "2px" }} />
+                <div style={{
+                  width: "100%",
+                  height: "48px",
+                  background: isAiDragging ? "linear-gradient(135deg, #7C6CFF, #42D9FF)" : "transparent",
+                  borderRadius: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: isAiDragging ? "0 0 15px rgba(124, 108, 255, 0.6)" : "none",
+                  transition: "background 0.2s, box-shadow 0.2s"
+                }}>
+                  <div style={{ display: "flex", gap: "3px" }}>
+                    <div style={{ width: "2px", height: "16px", background: isAiDragging ? "#fff" : "#324054", borderRadius: "2px" }} />
+                    <div style={{ width: "2px", height: "16px", background: isAiDragging ? "#fff" : "#324054", borderRadius: "2px" }} />
+                  </div>
                 </div>
               </div>
 
               {/* Right Column: Preview studio */}
-              <div style={{ display: "flex", flexDirection: "column", background: "#0D1218", border: "1px solid #1D2732", borderRadius: "14px", overflow: "hidden", width: `calc(${100 - aiSplitRatio}% - 0.5rem)`, minWidth: "140px" }}>
+              <div
+                className="dashboard-ai-right-panel"
+                style={{ flex: `0 1 calc(${100 - aiSplitRatio}% - 18px)`, minWidth: "200px", display: "flex", flexDirection: "column", background: "#0D1218", border: "1px solid #1D2732", borderRadius: "14px", overflow: "hidden" }}
+              >
                 <PreviewStudioFrame
                   orgName={orgName}
                   activeLiveUrl={activeLiveUrl}
@@ -3295,7 +3833,7 @@ export default function DashboardPage() {
               </div>
 
               {/* URL Switcher Input Bar */}
-              <div style={{ padding: "0.75rem 1rem", borderRadius: "10px", background: "#0D1218", border: "1px solid #1D2732", marginBottom: "1.25rem", display: "flex", gap: "0.75rem", alignItems: "center" }}>
+              <div style={{ padding: "0.75rem 1rem", borderRadius: "10px", background: "#0D1218", border: "1px solid #1D2732", marginBottom: "1.25rem", display: "flex", flexWrap: "wrap", gap: "0.75rem", alignItems: "center" }}>
                 <span style={{ fontSize: "0.76rem", color: "#66717F", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", textTransform: "uppercase" }}>Target Live URL:</span>
                 <input
                   type="text"
@@ -3310,22 +3848,32 @@ export default function DashboardPage() {
                       else localStorage.removeItem(`ryvix_repo_live_url_${repoKey}`);
                     }
                   }}
-                  style={{ flex: 1, padding: "0.45rem 0.75rem", borderRadius: "6px", background: "#121922", border: "1px solid #1D2732", color: "#F5F7FA", fontSize: "0.82rem", outline: "none", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)" }}
+                  style={{ flex: 1, minWidth: "160px", padding: "0.45rem 0.75rem", borderRadius: "6px", background: "#121922", border: "1px solid #1D2732", color: "#F5F7FA", fontSize: "0.82rem", outline: "none", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)" }}
                 />
                 <button
+                  type="button"
                   onClick={() => setIsShowingAfter(!isShowingAfter)}
+                  className="dashboard-preview-mode-badge"
                   style={{
-                    padding: "0.45rem 1rem",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxSizing: "border-box",
+                    padding: "0.32rem 0.85rem",
                     borderRadius: "6px",
-                    background: isShowingAfter ? "rgba(69, 212, 131, 0.15)" : "rgba(124, 108, 255, 0.15)",
-                    border: `1px solid ${isShowingAfter ? "#45D483" : "#7C6CFF"}`,
-                    color: isShowingAfter ? "#45D483" : "#A78BFA",
-                    fontSize: "0.78rem",
+                    background: isShowingAfter ? "rgba(124, 108, 255, 0.18)" : "rgba(69, 212, 131, 0.15)",
+                    border: `1px solid ${isShowingAfter ? "#7C6CFF" : "#45D483"}`,
+                    color: isShowingAfter ? "#A78BFA" : "#45D483",
+                    fontSize: "0.76rem",
                     fontWeight: 700,
+                    lineHeight: 1.2,
                     cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                    minWidth: 0,
                   }}
                 >
-                  {isShowingAfter ? "Viewing: AI Sandbox Preview (After)" : "Viewing: Live Production Site (Before)"}
+                  {isShowingAfter ? "PREVIEW" : "Production"}
                 </button>
               </div>
 
@@ -4221,12 +4769,13 @@ export default function DashboardPage() {
         <div
           role="status"
           aria-live="polite"
+          className="dashboard-toast-container"
           style={{
             position: "fixed",
             bottom: "2rem",
             right: "2rem",
             zIndex: 9999,
-            minWidth: "320px",
+            minWidth: "280px",
             maxWidth: "420px",
             background: "#0D1218",
             border: "1px solid rgba(124, 108, 255, 0.45)",
@@ -4444,28 +4993,48 @@ function PreviewStudioFrame({
   const hasPendingChanges = previewState === "preview_ready" || previewState === "deploying" || previewState === "deployed";
   return (
     <>
-      <div style={{ padding: "0.65rem 1rem", background: "#080C11", borderBottom: "1px solid #1D2732", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
+      <div className="dashboard-preview-header" style={{ padding: "0.65rem 1rem", background: "#080C11", borderBottom: "1px solid #1D2732", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
           <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#F06A6A" }} />
           <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#E8B85C" }} />
           <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#45D483" }} />
         </div>
 
-        <div style={{ flex: 1, maxWidth: "580px", display: "flex", alignItems: "center", gap: "0.55rem", padding: "0.32rem 0.85rem", borderRadius: "6px", background: "#121922", border: "1px solid #1D2732", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", fontSize: "0.74rem" }}>
+        <div className="dashboard-preview-url-bar" style={{ flex: 1, maxWidth: "580px", minWidth: 0, display: "flex", alignItems: "center", gap: "0.55rem", padding: "0.32rem 0.85rem", borderRadius: "6px", background: "#121922", border: "1px solid #1D2732", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", fontSize: "0.74rem" }}>
           <IconLock size={12} color="#45D483" />
-          <span style={{ padding: "0.1rem 0.35rem", borderRadius: "3px", background: "rgba(124, 108, 255, 0.2)", color: "#A78BFA", fontSize: "0.65rem", fontWeight: 700 }}>
-            PREVIEW
+          <span
+            className="dashboard-preview-mode-badge"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxSizing: "border-box",
+              padding: "0.22rem 0.6rem",
+              borderRadius: "4px",
+              background: isShowingAfter ? "rgba(124, 108, 255, 0.18)" : "rgba(69, 212, 131, 0.15)",
+              border: `1px solid ${isShowingAfter ? "#7C6CFF" : "#45D483"}`,
+              color: isShowingAfter ? "#A78BFA" : "#45D483",
+              fontSize: "0.68rem",
+              fontWeight: 700,
+              lineHeight: 1,
+              letterSpacing: "0.04em",
+              flexShrink: 0,
+              minWidth: 0,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {isShowingAfter ? "PREVIEW" : "Production"}
           </span>
-          <span style={{ color: "#42D9FF", fontSize: "0.72rem", fontWeight: 600 }}>
+          <span style={{ color: "#42D9FF", fontSize: "0.72rem", fontWeight: 600, flexShrink: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "160px" }}>
             {repoName}
           </span>
-          <span style={{ color: "#66717F" }}>|</span>
-          <span style={{ color: "#A5AFBC", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <span style={{ color: "#66717F", flexShrink: 0 }}>|</span>
+          <span style={{ color: "#A5AFBC", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>
             {activePreviewUrl || activeLiveUrl || "No preview URL active"}
           </span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", flexShrink: 0 }}>
           <button onClick={() => setViewport("desktop")} style={{ background: viewport === "desktop" ? "#121922" : "transparent", border: `1px solid ${viewport === "desktop" ? "#7C6CFF" : "transparent"}`, color: viewport === "desktop" ? "#F5F7FA" : "#66717F", borderRadius: "5px", padding: "0.25rem 0.5rem", fontSize: "0.75rem", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.35rem" }}>
             <IconMonitor size={13} />
             <span>Desktop</span>
@@ -4481,18 +5050,60 @@ function PreviewStudioFrame({
         </div>
       </div>
 
-      <div style={{ padding: "0.55rem 1rem", background: "#121922", borderBottom: "1px solid #1D2732", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+      <div className="dashboard-preview-comparison-bar" style={{ padding: "0.55rem 1rem", background: "#121922", borderBottom: "1px solid #1D2732", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem" }}>
+        <div className="dashboard-preview-comparison-controls" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
           <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", color: "#66717F", textTransform: "uppercase" }}>Comparison:</span>
-          <div style={{ display: "flex", background: "#080C11", border: "1px solid #1D2732", borderRadius: "6px", padding: "2px" }}>
-            <button onClick={() => { setComparisonMode("toggle"); setIsShowingAfter(false); }} style={{ padding: "0.25rem 0.75rem", borderRadius: "4px", border: "none", background: comparisonMode === "toggle" && !isShowingAfter ? "#121922" : "transparent", color: comparisonMode === "toggle" && !isShowingAfter ? "#E8B85C" : "#66717F", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>
-              Before (Live)
+          <div className="dashboard-comparison-toggle-group" style={{ display: "inline-flex", alignItems: "center", background: "#080C11", border: "1px solid #1D2732", borderRadius: "6px", padding: "2px", gap: "2px", boxSizing: "border-box" }}>
+            <button
+              type="button"
+              className="dashboard-comparison-btn"
+              onClick={() => { setComparisonMode("toggle"); setIsShowingAfter(false); }}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxSizing: "border-box",
+                padding: "0.26rem 0.75rem",
+                borderRadius: "4px",
+                border: comparisonMode === "toggle" && !isShowingAfter ? "1px solid rgba(69, 212, 131, 0.45)" : "1px solid transparent",
+                background: comparisonMode === "toggle" && !isShowingAfter ? "rgba(69, 212, 131, 0.14)" : "transparent",
+                color: comparisonMode === "toggle" && !isShowingAfter ? "#45D483" : "#66717F",
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                lineHeight: 1.2,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                minWidth: 0,
+              }}
+            >
+              Production
             </button>
-            <button onClick={() => { setComparisonMode("toggle"); setIsShowingAfter(true); }} style={{ padding: "0.25rem 0.75rem", borderRadius: "4px", border: "none", background: comparisonMode === "toggle" && isShowingAfter ? "linear-gradient(135deg, #7C6CFF, #42D9FF)" : "transparent", color: comparisonMode === "toggle" && isShowingAfter ? "#ffffff" : "#66717F", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>
-              After (AI Preview)
+            <button
+              type="button"
+              className="dashboard-comparison-btn"
+              onClick={() => { setComparisonMode("toggle"); setIsShowingAfter(true); }}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxSizing: "border-box",
+                padding: "0.26rem 0.75rem",
+                borderRadius: "4px",
+                border: comparisonMode === "toggle" && isShowingAfter ? "1px solid rgba(124, 108, 255, 0.5)" : "1px solid transparent",
+                background: comparisonMode === "toggle" && isShowingAfter ? "rgba(124, 108, 255, 0.2)" : "transparent",
+                color: comparisonMode === "toggle" && isShowingAfter ? "#A78BFA" : "#66717F",
+                fontSize: "0.75rem",
+                fontWeight: 700,
+                lineHeight: 1.2,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                minWidth: 0,
+              }}
+            >
+              PREVIEW
             </button>
           </div>
-          <button onClick={() => setComparisonMode(comparisonMode === "slider" ? "toggle" : "slider")} style={{ padding: "0.25rem 0.65rem", borderRadius: "6px", background: comparisonMode === "slider" ? "rgba(124, 108, 255, 0.15)" : "transparent", border: `1px solid ${comparisonMode === "slider" ? "#7C6CFF" : "#1D2732"}`, color: comparisonMode === "slider" ? "#A78BFA" : "#A5AFBC", fontSize: "0.74rem", cursor: "pointer" }}>
+          <button onClick={() => setComparisonMode(comparisonMode === "slider" ? "toggle" : "slider")} style={{ padding: "0.25rem 0.65rem", borderRadius: "6px", background: comparisonMode === "slider" ? "rgba(124, 108, 255, 0.15)" : "transparent", border: `1px solid ${comparisonMode === "slider" ? "#7C6CFF" : "#1D2732"}`, color: comparisonMode === "slider" ? "#A78BFA" : "#A5AFBC", fontSize: "0.74rem", cursor: "pointer", whiteSpace: "nowrap" }}>
             {comparisonMode === "slider" ? "Disable Split Slider" : "Interactive Split Slider"}
           </button>
         </div>
@@ -4503,7 +5114,7 @@ function PreviewStudioFrame({
         </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto", background: "#05070A", display: "flex", justifyContent: "center", padding: viewport === "desktop" ? "0" : "1.5rem" }}>
+      <div className="dashboard-preview-canvas-wrap" style={{ flex: 1, overflowY: "auto", background: "#05070A", display: "flex", justifyContent: "center", padding: viewport === "desktop" ? "0" : "1.5rem" }}>
         <div
           ref={sliderRef}
           style={{
@@ -4538,7 +5149,7 @@ function PreviewStudioFrame({
                   if (!isDraggingRef.current || !sliderRef.current) return;
                   const rect = sliderRef.current.getBoundingClientRect();
                   const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-                  const percent = (x / rect.width) * 100;
+                  const percent = Math.max(10, Math.min(90, (x / rect.width) * 100));
                   setSliderPos(Math.round(percent));
                 }}
                 onPointerUp={(e) => {
@@ -4585,7 +5196,7 @@ function PreviewStudioFrame({
       </div>
 
       {/* Section 28 & 29: CHANGE DETAILS & CLEAR APPROVAL */}
-      <div style={{ padding: "0.95rem 1.25rem", background: "#080C11", borderTop: "1px solid #1D2732", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
+      <div className="dashboard-preview-footer" style={{ padding: "0.95rem 1.25rem", background: "#080C11", borderTop: "1px solid #1D2732", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
         <div>
           <div style={{ fontSize: "0.7rem", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", color: "#7C6CFF", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
             WHAT RYVIX CHANGED
@@ -4610,11 +5221,11 @@ function PreviewStudioFrame({
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-          <button onClick={onReject} style={{ padding: "0.6rem 1rem", borderRadius: "8px", background: "transparent", border: "1px solid #1D2732", color: "#A5AFBC", fontSize: "0.82rem", fontWeight: 500, cursor: "pointer" }}>
+        <div className="dashboard-preview-actions" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+          <button onClick={onReject} className="dashboard-preview-btn-reject" style={{ padding: "0.6rem 1rem", borderRadius: "8px", background: "transparent", border: "1px solid #1D2732", color: "#A5AFBC", fontSize: "0.82rem", fontWeight: 500, cursor: "pointer" }}>
             Reject Changes
           </button>
-          <button onClick={onApprove} style={{ padding: "0.6rem 1.35rem", borderRadius: "8px", background: "linear-gradient(135deg, #45D483 0%, #10b981 100%)", border: "none", color: "#05070A", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer", boxShadow: "0 0 18px rgba(69, 212, 131, 0.4)" }}>
+          <button onClick={onApprove} className="dashboard-preview-btn-approve" style={{ padding: "0.6rem 1.35rem", borderRadius: "8px", background: "linear-gradient(135deg, #45D483 0%, #10b981 100%)", border: "none", color: "#05070A", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer", boxShadow: "0 0 18px rgba(69, 212, 131, 0.4)" }}>
             Approve &amp; Update Website &rarr;
           </button>
         </div>
@@ -4695,6 +5306,7 @@ function RealLiveWebsiteFrame({
     <div style={{ position: "relative", width: "100%", height: "100%", minHeight: "580px", background: "#080C11", display: "flex", flexDirection: "column" }}>
       {/* Top Banner identifying Live Production URL */}
       <div
+        className="dashboard-frame-meta-bar"
         style={{
           padding: "0.45rem 1rem",
           background: "rgba(18, 25, 34, 0.95)",
@@ -4706,18 +5318,38 @@ function RealLiveWebsiteFrame({
           fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <span style={{ padding: "0.1rem 0.4rem", borderRadius: "3px", background: "rgba(69, 212, 131, 0.15)", color: "#45D483", fontWeight: 700 }}>
-            BEFORE
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", minWidth: 0, flexWrap: "wrap" }}>
+          <span
+            className="dashboard-preview-mode-badge"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxSizing: "border-box",
+              padding: "0.22rem 0.6rem",
+              borderRadius: "4px",
+              background: "rgba(69, 212, 131, 0.15)",
+              border: "1px solid #45D483",
+              color: "#45D483",
+              fontSize: "0.68rem",
+              fontWeight: 700,
+              lineHeight: 1,
+              letterSpacing: "0.04em",
+              flexShrink: 0,
+              minWidth: 0,
+              whiteSpace: "nowrap",
+            }}
+          >
+            Production
           </span>
-          <span style={{ color: "#A5AFBC" }}>Current Production:</span>
-          <span style={{ color: "#F5F7FA", fontWeight: 600 }}>{liveUrl}</span>
+          <span style={{ color: "#A5AFBC", flexShrink: 0 }}>Current Production:</span>
+          <span style={{ color: "#F5F7FA", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "200px" }}>{liveUrl}</span>
         </div>
         <a
           href={liveUrl}
           target="_blank"
           rel="noreferrer"
-          style={{ color: "#42D9FF", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+          style={{ color: "#42D9FF", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.3rem", flexShrink: 0 }}
         >
           <span>Open Live Site</span>
           <IconExternalLink size={12} color="#42D9FF" />
@@ -4827,6 +5459,7 @@ function RealPreviewWebsiteFrame({
     <div style={{ position: "relative", width: "100%", height: "100%", minHeight: "580px", background: "#080C11", display: "flex", flexDirection: "column" }}>
       {/* Top Banner identifying Preview URL and Repository Metadata */}
       <div
+        className="dashboard-frame-meta-bar"
         style={{
           padding: "0.45rem 1rem",
           background: "rgba(18, 25, 34, 0.95)",
@@ -4838,22 +5471,42 @@ function RealPreviewWebsiteFrame({
           fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <span style={{ padding: "0.1rem 0.4rem", borderRadius: "3px", background: "rgba(124, 108, 255, 0.2)", color: "#A78BFA", fontWeight: 700 }}>
-            AFTER (AI PREVIEW)
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", minWidth: 0, flexWrap: "wrap" }}>
+          <span
+            className="dashboard-preview-mode-badge"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxSizing: "border-box",
+              padding: "0.22rem 0.6rem",
+              borderRadius: "4px",
+              background: "rgba(124, 108, 255, 0.18)",
+              border: "1px solid #7C6CFF",
+              color: "#A78BFA",
+              fontSize: "0.68rem",
+              fontWeight: 700,
+              lineHeight: 1,
+              letterSpacing: "0.04em",
+              flexShrink: 0,
+              minWidth: 0,
+              whiteSpace: "nowrap",
+            }}
+          >
+            PREVIEW
           </span>
-          <span style={{ color: "#A5AFBC" }}>Repo:</span>
-          <span style={{ color: "#42D9FF", fontWeight: 600 }}>{repoName}</span>
+          <span style={{ color: "#A5AFBC", flexShrink: 0 }}>Repo:</span>
+          <span style={{ color: "#42D9FF", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "160px" }}>{repoName}</span>
           <span style={{ color: "#66717F" }}>•</span>
-          <span style={{ color: "#A78BFA" }}>branch: {branch}</span>
+          <span style={{ color: "#A78BFA", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", flexShrink: 0 }}>branch: {branch}</span>
           <span style={{ color: "#66717F" }}>•</span>
-          <span style={{ color: "#66717F" }}>commit: {commitSha}</span>
+          <span style={{ color: "#66717F", flexShrink: 0 }}>commit: {commitSha}</span>
         </div>
         <a
           href={previewUrl}
           target="_blank"
           rel="noreferrer"
-          style={{ color: "#45D483", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+          style={{ color: "#45D483", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.3rem", flexShrink: 0 }}
         >
           <span>Open Preview</span>
           <IconExternalLink size={12} color="#45D483" />
