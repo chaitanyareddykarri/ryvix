@@ -1,5 +1,14 @@
 # Current Task & Implementation State
 
+## WhatsApp assistant continuation
+
+Implemented the durable reply/history/quota/router pipeline, confirmed coding,
+recorded task/preview/PR/release/deployment updates and scoped authenticated
+approval handoffs. `/channels/assistant` controls opt-in. Migration `20261003000004`
+applied. Direct chat merge/reboot is not enabled; web approval checks remain.
+See [checkpoint](../docs/verification/WHATSAPP_ASSISTANT_2026_10_03.md).
+Provider setup, real delivery and deployed browser acceptance remain the final stage.
+
 ## WhatsApp phase 1 and Gmail SMTP correction
 
 Implemented `/profile/whatsapp`, OTP challenge/link APIs, persisted attempt/send

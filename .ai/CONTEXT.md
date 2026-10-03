@@ -1,5 +1,11 @@
 # Ryvix Current Project Context
 
+Latest: WhatsApp assistant phases implemented; migration `20261003000004` applied.
+See [checkpoint](../docs/verification/WHATSAPP_ASSISTANT_2026_10_03.md).
+Reply queue, private history, quotas, structured routing, confirmed coding and
+notifications are implemented. Release/server approvals use authenticated handoffs.
+The older phase 1 notes below are superseded. Real providers remain unverified.
+
 Latest: WhatsApp OTP identity phase and Gmail SMTP correction; migration
 `20261003000003` applied. See [checkpoint](../docs/verification/WHATSAPP_PHONE_2026_10_03.md).
 Phone linking is implemented; automatic WhatsApp AI replies and actions remain

@@ -14,8 +14,8 @@ export default function WhatsAppProfile(){
     else{setChallenge('');setCode('');setNotice(action==='verify'?'Number linked. Incoming messages can now be attributed to your account.':'Number unlinked.');await load();}
   }catch(e){setError(e instanceof Error?e.message:'Request unavailable');}finally{setBusy(false);}}
   const selected=connections.find(c=>c.id===connector);
-  return <main style={{maxWidth:650,margin:'auto',padding:30,color:'#e5e7eb'}}><Link href="/channels">Channels</Link>{' · '}<Link href="/chat">Chat</Link><h1>Connect your WhatsApp</h1>
-    <p>Verify a personal number for this organization’s business connection. Your existing permissions still apply. Messages currently enter the reviewed inbox; automated AI replies are a later phase.</p>
+  return <main style={{maxWidth:650,margin:'auto',padding:30,color:'#e5e7eb'}}><Link href="/channels">Channels</Link>{' · '}<Link href="/chat">Chat</Link> · <Link href="/channels/assistant">Assistant settings</Link><h1>Connect your WhatsApp</h1>
+    <p>Verify a personal number for this organization’s business connection. Your existing permissions still apply. After verification, enable the assistant separately to receive answers and confirm coding requests.</p>
     {error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}
     <label>Business connection <select disabled={busy} value={connector} onChange={e=>{setConnector(e.target.value);setChallenge('');setCode('');setNotice('');}}><option value="">Select connection</option>{connections.map(c=><option key={c.id} value={c.id}>{c.project_name} — {c.name}</option>)}</select></label>
     {!connections.length&&<p>An owner/admin must connect the business WhatsApp account first.</p>}

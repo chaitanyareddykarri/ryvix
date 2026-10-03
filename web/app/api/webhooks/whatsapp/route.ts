@@ -5,6 +5,7 @@ import {boundedDeviceBody} from '@/utils/device-ingestion';
 import {verifyWhatsAppSignature,whatsappMessages,whatsappStatuses} from '../../../../../services/src/communication/whatsapp';
 import {WhatsAppOutbox} from '../../../../../backend/src/services/whatsapp-outbox';
 import {ChannelInbox} from '../../../../../backend/src/services/channel-inbox';
+import {WhatsAppAssistant} from '../../../../../backend/src/services/whatsapp-assistant';
 export async function GET(request:Request){
   const params=new URL(request.url).searchParams,expected=process.env.WHATSAPP_VERIFY_TOKEN||'',supplied=params.get('hub.verify_token')||'';
   if(!expected||Buffer.byteLength(expected)!==Buffer.byteLength(supplied)||!timingSafeEqual(Buffer.from(expected),Buffer.from(supplied))||params.get('hub.mode')!=='subscribe')return new Response('Verification denied',{status:403});
@@ -21,7 +22,10 @@ export async function POST(request:Request){
     for(const status of statuses)await new WhatsAppOutbox(pool).receipt(status);
     for(const message of messages){
       const account=await pool.query("SELECT connector_id FROM channel_accounts WHERE provider_subject=$1",[`whatsapp:${message.phone}`]);
-      if(account.rows[0])await inbox.receive(account.rows[0].connector_id,message.id,message.sender,message.text);
+      if(account.rows[0]){
+        await inbox.receive(account.rows[0].connector_id,message.id,message.sender,message.text);
+        if(message.timestamp!==undefined)await new WhatsAppAssistant(pool).receive(account.rows[0].connector_id,message.id,message.sender,message.timestamp);
+      }
     }
     return NextResponse.json({received:true});
   }catch{return NextResponse.json({error:'WhatsApp delivery unavailable; retry.'},{status:503});}

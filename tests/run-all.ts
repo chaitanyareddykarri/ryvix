@@ -1,6 +1,7 @@
 import {testExperienceLearning} from './experience-learning.test';
 import {testRepositoryKnowledge} from './repository-knowledge.test';
 import {testWhatsAppPhone} from './whatsapp-phone.test';
+import {testWhatsAppAssistant} from './whatsapp-assistant.test';
 import {testRecoveryOutbound} from './recovery-outbound.test';
 import {testEmailNotifications} from './email-notifications.test';
 import { seedHealthFixtures } from './health-fixtures';
@@ -65,6 +66,7 @@ async function runAllTests() {
 
   seedHealthFixtures();
   const testCases: { name: string; fn: () => Promise<void> }[] = [
+    {name:'WhatsApp Assistant Intent and Reply Boundaries',fn:testWhatsAppAssistant},
     {name:'WhatsApp Phone and SMTP Transport Boundaries',fn:testWhatsAppPhone},
     {name:'Repository Knowledge Source Boundaries and Commit Refresh',fn:testRepositoryKnowledge},
     {name:'Truthful Learning Metrics and Experience Boundaries',fn:testExperienceLearning},

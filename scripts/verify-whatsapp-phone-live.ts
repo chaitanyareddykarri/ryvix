@@ -14,6 +14,7 @@ async function main(){
   const user=randomUUID(),other=randomUUID(),project=randomUUID(),env=randomUUID(),connector=randomUUID();let phase='connect';
   try{await c.connect();await c.query('BEGIN');await c.query("SET LOCAL statement_timeout='20s'");
     if(!(await c.query("SELECT to_regclass('public.whatsapp_phone_links') AS t")).rows[0].t)await c.query(fs.readFileSync('supabase/migrations/20261003000003_whatsapp_phone_identity.sql','utf8'));
+    if(!(await c.query("SELECT to_regclass('public.whatsapp_assistant_sessions') AS t")).rows[0].t)await c.query(fs.readFileSync('supabase/migrations/20261003000004_whatsapp_assistant.sql','utf8'));
     for(const role of ['anon','authenticated'])for(const table of ['whatsapp_phone_links','whatsapp_phone_challenges']){
       assert.equal((await c.query("SELECT has_table_privilege($1,$2,'SELECT,INSERT,UPDATE,DELETE') AS allowed",[role,table])).rows[0].allowed,false);
       assert.equal((await c.query('SELECT relrowsecurity FROM pg_class WHERE oid=$1::regclass',[table])).rows[0].relrowsecurity,true);

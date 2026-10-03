@@ -43,7 +43,7 @@ There is no free-OTP allowance assumed in this implementation. Provider setup an
 real OTP receipt remain a final deployment acceptance step. Receiving an OTP does
 not itself establish a user-initiated service-message window.
 
-## Remaining phases
+## Assistant phases implemented (migration 20261003000004)
 
 1. Durable message processor and reply sender, with per-recipient service-window
    tracking, signed receipts, duplicate prevention and uncertain-send handling.
@@ -51,11 +51,69 @@ not itself establish a user-initiated service-message window.
    per-user conversation history, quotas and structured intent validation.
 3. Clarified and confirmed coding requests, persisted task updates and notification
    preferences. Report queued/completed only from actual persisted task state.
-4. Authentication-bound approval links; later scoped, expiring interactive approval
-   tokens. A bare YES never approves an unspecified release or server operation.
-5. Real Meta/LLM/worker/browser acceptance, with measured delivery and provider usage.
+4. Authentication-bound approval handoffs. Task and release links select the exact
+   task; recovery links select the request. Existing role, independent approval,
+   expiry, reviewed-commit and target checks remain authoritative. A bare YES never
+   approves a release or server operation. Direct mobile merge/reboot is excluded.
 
-Account linking does not implement these later phases or train an external model.
+Open `/channels/assistant` after verifying a number, enable the assistant and
+separately opt into task notifications. Owners/admins/developers can use it within
+the connected project. Unlinked/disabled messages retain the existing reviewed
+inbox path. Existing inbox records are not retrospectively imported into AI chat.
+
+Coding requests produce a full bounded proposal (up to 1,800 characters), exact
+repository name, confirmation UUID and absolute expiry. Reply `CONFIRM <uuid>` or
+`REJECT <uuid>`. The backend rechecks link, current role, repository, credentials,
+queue capacity and pending inbox state before atomically creating one task/job.
+Confirming is not permission to open/merge a PR or deploy. Ambiguous repository
+requests require clarification. Repository connection uses the authenticated web
+GitHub flow; credentials must never be sent in WhatsApp.
+
+Messages and replies remain separate from web chat, with 30-day worker retention.
+Limits are 30 processed requests per user/organization/hour, six prior turns in
+context, bounded source retrieval, a 90-second model deadline and at most 1,600
+requested output tokens. Provider/model and actual response duration are recorded;
+streaming token usage and currency costs remain unknown, not estimated as measured.
+Outbox dispatch is limited to three claims per session/minute. Duplicates do not
+extend the window; only valid signed provider timestamps on new messages do so.
+
+Task updates include recorded status, unexpired preview availability, saved checks,
+PR record availability, release state and matching signed deployment results.
+Deployment notifications require the approved merge SHA and unchanged target
+mapping. None of these implies full runtime health. Notifications are polling
+snapshots, not a guaranteed journal of every intermediate transition.
+
+Text replies require an open 24-hour service window. Outside it, opted-in proactive
+updates use `WHATSAPP_ASSISTANT_UPDATE_TEMPLATE` and language (default `en_US`).
+Configure one body parameter (update UUID) and a fixed dashboard URL in that
+approved utility template. Private update details stay in the authenticated
+dashboard. Without the template, the worker records `window_closed`.
+
+Reply claims precede network calls. Ambiguous sends are `unknown` and are not
+automatically repeated. Signed status callbacks are persisted and reconciled,
+including callbacks arriving before the send result is saved. Opt-out prevents
+future processing/queued sends. Unlink or re-verification deletes the assistant
+session and its derived history/proposals/outbox. Already-sent messages cannot be
+recalled. Context/history is not external-model training.
+
+## Worker deployment and final live acceptance
+
+Apply migrations through `20261003000004` before deploying the new webhook/phone
+code. Install `infrastructure/ryvix-whatsapp-assistant.service` with
+`/etc/ryvix/whatsapp-assistant.env`: verified-TLS database settings,
+`RYVIX_WHATSAPP_ASSISTANT_ENABLED=true`, `RYVIX_PUBLIC_URL`, existing LLM credentials,
+Meta Graph version and optional approved update template configuration. The worker
+resolves business tokens through Vault; no token goes into model context.
+
+Run `npm run worker:whatsapp -- --once` on the intended host for a startup check,
+then run the service. It is separate from cloud/alert operations so model latency
+does not block recovery dispatch. Enable each user's assistant only after setup.
+
+Provider/deployment stage still requires real OTP receipt, signed inbound message,
+AI reply and delivered receipt, correct identity/role behavior in a browser, one
+confirmed coding task, task updates, preview review, authenticated release approval,
+provider deployment event and Gmail SMTP notification. No local fixture proves this.
+See [verification](../verification/WHATSAPP_ASSISTANT_2026_10_03.md).
 
 ## Gmail SMTP correction
 

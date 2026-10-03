@@ -38,6 +38,19 @@ export default function TasksPage() {
   const activeTaskStatus = activeTask?.status;
 
   useEffect(() => {
+    const id=new URLSearchParams(window.location.search).get('task');
+    if(!id)return;
+    const abort=new AbortController();
+    void fetch('/api/tasks',{signal:abort.signal,cache:'no-store'}).then(async response=>{
+      const data=await response.json();if(!response.ok)throw new Error(data.error||'Task unavailable.');
+      const task=data.tasks?.find((t:any)=>t.id===id);if(!task)throw new Error('Linked task is unavailable to this account.');
+      setActiveTask({id:task.id,prompt:task.user_prompt,title:task.summary||'Repository task',status:task.status,
+        steps:task.plans?.find((p:any)=>p.id===task.active_plan_id)?.steps||[]});
+    }).catch(error=>{if(!abort.signal.aborted)setErrorMessage(error.message);});
+    return()=>abort.abort();
+  },[]);
+
+  useEffect(() => {
     async function checkUser() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {

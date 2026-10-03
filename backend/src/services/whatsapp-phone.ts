@@ -66,6 +66,7 @@ export class WhatsAppPhone {
       await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[`phone-number:${connector}:${challenge.phone}`]);
       const other=await c.query('SELECT 1 FROM whatsapp_phone_links WHERE connector_id=$1 AND phone=$2 AND user_id<>$3',[connector,challenge.phone,user]);
       if(other.rows.length){await c.query('DELETE FROM whatsapp_phone_challenges WHERE id=$1',[id]);return false;}
+      await c.query('DELETE FROM whatsapp_assistant_sessions WHERE connector_id=$1 AND user_id=$2',[connector,user]);
       await c.query(`INSERT INTO whatsapp_phone_links(connector_id,organization_id,user_id,phone) VALUES($1,$2,$3,$4)
         ON CONFLICT(connector_id,user_id) DO UPDATE SET phone=excluded.phone,verified_at=now()`,[connector,org,user,challenge.phone]);
       await c.query("UPDATE channel_inbox SET sender_user_id=NULL WHERE connector_id=$1 AND sender_user_id=$2 AND status='pending'",[connector,user]);

@@ -1,5 +1,9 @@
 # Ryvix
 
+Latest: [WhatsApp assistant phases](docs/infrastructure/WHATSAPP_ASSISTANT.md)
+implemented, migration `20261003000004` applied. Real provider and deployed browser
+acceptance remain separate; see [verification](docs/verification/WHATSAPP_ASSISTANT_2026_10_03.md).
+
 Latest: [WhatsApp phone verification and Gmail SMTP](docs/infrastructure/WHATSAPP_ASSISTANT.md).
 Phase 1 is implemented; migration `20261003000003` is applied. Provider setup and
 real delivery remain separate from the passing code/database checks.

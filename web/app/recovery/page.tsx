@@ -7,7 +7,7 @@ export default function RecoveryPage(){
   const [user,setUser]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const refresh=useCallback(async(signal?:AbortSignal)=>{
     const read=async(path:string)=>{const r=await fetch(path,{signal});const d=await r.json();if(!r.ok)throw new Error(d.error||'Recovery unavailable');return d;};
-    const [r,s]=await Promise.all([read('/api/servers/recovery'),read('/api/servers')]);if(signal?.aborted)return;setRows(r.requests);setUser(r.userId);setServers(s.servers);
+    const [r,s]=await Promise.all([read('/api/servers/recovery'),read('/api/servers')]);if(signal?.aborted)return;const request=new URLSearchParams(window.location.search).get('request');setRows(request?r.requests.filter((r:Recovery)=>r.id===request):r.requests);setUser(r.userId);setServers(s.servers);
   },[]);
   useEffect(()=>{const abort=new AbortController();const update=()=>void refresh(abort.signal).catch(e=>{if(!abort.signal.aborted)setError(e.message);});update();const timer=setInterval(update,10000);return()=>{abort.abort();clearInterval(timer);};},[refresh]);
   async function mutate(body:unknown){setBusy(true);setError('');try{const r=await fetch('/api/servers/recovery',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw new Error(d.error||'Recovery unavailable');await refresh();}catch(e){setError(e instanceof Error?e.message:'Recovery unavailable');}finally{setBusy(false);}}

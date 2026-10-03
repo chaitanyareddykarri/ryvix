@@ -1,5 +1,12 @@
 # Ryvix implementation and deployment status
 
+Latest: [WhatsApp assistant](infrastructure/WHATSAPP_ASSISTANT.md) includes durable
+replies, history/quotas, AI routing, scoped answers/status, confirmed coding tasks,
+notifications and authenticated approval handoffs. Migration `20261003000004`
+applied. [Verification](verification/WHATSAPP_ASSISTANT_2026_10_03.md) distinguishes
+passing code/database tests from the still-unverified provider/deployment stage.
+The older phase summaries below are historical.
+
 Latest continuation: [WhatsApp phone identity and Gmail SMTP](infrastructure/WHATSAPP_ASSISTANT.md).
 Migration `20261003000003` applied. Personal number OTP linking is implemented;
 assistant routing/replies remain later phases. SMTP is the default email transport.
@@ -33,7 +40,7 @@ that external delivery, production deployment or model quality are certified.
 | Chat | Conversation reload/archive, tenant-scoped incident/task retrieval, bounded commit-pinned repository files, optional Gemini reranking and recorded HOSTED_ON relationships | No full repository semantic index or arbitrary graph traversal; live streaming/answer review pending |
 | Native operations | Independent persisted approval, signed expiring commands, nonce receipts, Linux replay journal, service allowlists, cooldowns and measured service-state receipts | Enroll a deployed agent and verify an approved restart; service state is not application health |
 | Cloud recovery | Independent approval of a frozen allowlisted target, durable one-attempt reboot dispatch, cooldowns, provider outcomes and heartbeat observation | Configure scoped cloud account/test host and verify an actual approved reboot; observed liveness does not prove a reboot |
-| WhatsApp | Signed inbound proposals requiring review; durable P1 template queue, opt-in recipients, signed delivery receipts and `/channels/alerts` | Meta account/template/consent and real delivery; two-way LLM chat and mobile approvals remain unimplemented; OTP phone linking is implemented |
+| WhatsApp | Signed inbound proposals requiring review; durable P1 template queue, opt-in recipients, signed delivery receipts and `/channels/alerts` | Meta account/template/consent and real delivery; OTP linking and opt-in AI assistant implemented in the latest continuation; release/server approval stays on authenticated web |
 | Gmail | Vault-backed read-only OAuth polling into reviewed task proposals | Real OAuth intake verification; Pub/Sub push and Gmail replies remain unimplemented |
 | Account email | `/notifications` opt-in per environment; durable SMTP sends to confirmed account email, including Gmail; security and approved-release results | Verified sender/key, actual detector and inbox verification; provider acceptance is not delivery |
 | Releases | `/releases` owner/admin approval of exact reviewed head and mapping version; protected default branch and successful checks; bounded merge and read-only reconciliation | Existing customer CI/CD performs deployment; real approved release/webhook/runtime/browser acceptance pending |

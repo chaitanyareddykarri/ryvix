@@ -52,7 +52,8 @@ previously supplied is invalid or absent from a remote secret store. Its deploym
 location still needs to be connected to the running processes. Runtime presence,
 a successful live request and answer quality are separate checks.
 
-See [WhatsApp phase 1](WHATSAPP_ASSISTANT.md) for personal number OTP linking and the SMTP correction.
+See [WhatsApp assistant](WHATSAPP_ASSISTANT.md) for OTP identity, opt-in AI replies,
+confirmed coding, notifications, approval handoffs and the SMTP correction.
 
 ## How communication works
 
@@ -68,10 +69,11 @@ this implementation. Sending replies requires `gmail.send` consent and a sender
 workflow; the current read-only grant cannot send mail.
 
 **WhatsApp inbound:** user messages the business number → Meta signed webhook →
-tenant inbox proposal → human review → coding task. This is task intake. Verified sender-to-user linking is now implemented through OTP. Full
-two-way LLM chat still needs per-user history/quotas,
-reply dispatch and customer-service-window handling. Never map an arbitrary phone
-number to tenant authority merely because a message arrived.
+tenant inbox proposal. Verified, opted-in users can use the separate assistant
+worker for answers, scoped status and confirmed coding requests. Conversation
+history, quotas, reply dispatch and service-window handling are implemented.
+Unlinked or disabled users retain web review. Phone possession never grants roles.
+PR/release/server approvals use authenticated web handoffs, not a generic YES.
 
 **WhatsApp P1 outbound:** a persisted open `P1_critical` incident → matching
 configured connector and opted-in recipient → deduplicated outbox → Meta template

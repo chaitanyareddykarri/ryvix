@@ -11,6 +11,8 @@
     "services"
   ],
   "scripts": {
+    "worker:whatsapp": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/whatsapp-assistant-worker.ts",
+    "verify:whatsapp-assistant": "tsx scripts/verify-whatsapp-assistant-live.ts",
     "verify:whatsapp-phone": "tsx scripts/verify-whatsapp-phone-live.ts",
     "verify:release-email": "tsx scripts/verify-release-email-live.ts",
     "verify:recovery-outbound": "tsx scripts/verify-recovery-outbound-live.ts",
