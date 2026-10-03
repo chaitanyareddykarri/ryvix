@@ -484,6 +484,31 @@ export default function DashboardPage() {
   const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [showApprovalModal, setShowApprovalModal] = useState<boolean>(false);
 
+  // AI Split Resizing State
+  const aiSplitContainerRef = useRef<HTMLDivElement>(null);
+  const [aiSplitRatio, setAiSplitRatio] = useState<number>(40);
+  const [isAiDragging, setIsAiDragging] = useState<boolean>(false);
+
+  const handleAiPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setIsAiDragging(true);
+  };
+
+  const handleAiPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isAiDragging || !aiSplitContainerRef.current) return;
+    const rect = aiSplitContainerRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+    let newRatio = (x / rect.width) * 100;
+    if (newRatio < 20) newRatio = 20;
+    if (newRatio > 80) newRatio = 80;
+    setAiSplitRatio(newRatio);
+  };
+
+  const handleAiPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.currentTarget.releasePointerCapture(e.pointerId);
+    setIsAiDragging(false);
+  };
+
   // Dynamic AI Chat State
   const [chatMessages, setChatMessages] = useState<Array<{ role: "user" | "assistant"; content: string; thoughtTrace?: string }>>([
     {
@@ -1156,27 +1181,7 @@ export default function DashboardPage() {
     setCardRotate({ x: 0, y: 0, mouseX: 0, mouseY: 0 });
   }
 
-  // Draggable Slider
-  useEffect(() => {
-    function handleMouseMove(e: MouseEvent) {
-      if (!isDraggingRef.current || !sliderRef.current) return;
-      const rect = sliderRef.current.getBoundingClientRect();
-      const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-      const percent = (x / rect.width) * 100;
-      setSliderPos(Math.round(percent));
-    }
-
-    function handleMouseUp() {
-      isDraggingRef.current = false;
-    }
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, []);
+  // Draggable Slider logic moved to pointer capture in components
 
   // Submit Prompt to AI & Orchestrate Workflow with Real API and Database
   async function handlePromptSubmit(e?: React.FormEvent, customPrompt?: string) {
@@ -2181,9 +2186,12 @@ export default function DashboardPage() {
 
           {/* 2. AI ASSISTANT DEEP WORKSPACE */}
                     {activeTab === "ai" && (
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(380px, 460px) 1fr", gap: "1.5rem", height: "calc(100vh - 120px)", minHeight: "680px" }}>
+            <div 
+              ref={aiSplitContainerRef}
+              style={{ display: "flex", gap: "1rem", width: "100%", height: "calc(100vh - 120px)", minHeight: "680px", position: "relative" }}
+            >
               {/* Left Column: Interactive Streaming AI Conversation */}
-              <div style={{ display: "flex", flexDirection: "column", background: "#0D1218", border: "1px solid #1D2732", borderRadius: "14px", overflow: "hidden" }}>
+              <div style={{ display: "flex", flexDirection: "column", background: "#0D1218", border: "1px solid #1D2732", borderRadius: "14px", overflow: "hidden", width: `calc(${aiSplitRatio}% - 0.5rem)`, minWidth: "140px" }}>
                 {/* Project-Aware Context Bar */}
                 <div style={{ padding: "0.85rem 1.25rem", borderBottom: "1px solid #1D2732", background: "#080C11", display: "flex", flexDirection: "column", gap: "0.65rem" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -2324,8 +2332,39 @@ export default function DashboardPage() {
                 </form>
               </div>
 
+              {/* Draggable Split Handle */}
+              <div
+                onPointerDown={handleAiPointerDown}
+                onPointerMove={handleAiPointerMove}
+                onPointerUp={handleAiPointerUp}
+                onPointerCancel={handleAiPointerUp}
+                style={{
+                  position: "absolute",
+                  left: `calc(${aiSplitRatio}%)`,
+                  top: "50%",
+                  transform: "translate(-50%, -50%)",
+                  width: "36px",
+                  height: "48px",
+                  background: isAiDragging ? "linear-gradient(135deg, #7C6CFF, #42D9FF)" : "#1D2732",
+                  borderRadius: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "col-resize",
+                  zIndex: 20,
+                  boxShadow: isAiDragging ? "0 0 15px rgba(124, 108, 255, 0.6)" : "0 2px 8px rgba(0,0,0,0.5)",
+                  border: "1px solid #2A3645",
+                  touchAction: "none"
+                }}
+              >
+                <div style={{ display: "flex", gap: "3px" }}>
+                  <div style={{ width: "2px", height: "16px", background: isAiDragging ? "#fff" : "#66717F", borderRadius: "2px" }} />
+                  <div style={{ width: "2px", height: "16px", background: isAiDragging ? "#fff" : "#66717F", borderRadius: "2px" }} />
+                </div>
+              </div>
+
               {/* Right Column: Preview studio */}
-              <div style={{ display: "flex", flexDirection: "column", background: "#0D1218", border: "1px solid #1D2732", borderRadius: "14px", overflow: "hidden" }}>
+              <div style={{ display: "flex", flexDirection: "column", background: "#0D1218", border: "1px solid #1D2732", borderRadius: "14px", overflow: "hidden", width: `calc(${100 - aiSplitRatio}% - 0.5rem)`, minWidth: "140px" }}>
                 <PreviewStudioFrame
                   orgName={orgName}
                   activeLiveUrl={activeLiveUrl}
@@ -4202,7 +4241,25 @@ function PreviewStudioFrame({
                 </div>
               </div>
               <div
-                onMouseDown={() => (isDraggingRef.current = true)}
+                onPointerDown={(e) => {
+                  e.currentTarget.setPointerCapture(e.pointerId);
+                  isDraggingRef.current = true;
+                }}
+                onPointerMove={(e) => {
+                  if (!isDraggingRef.current || !sliderRef.current) return;
+                  const rect = sliderRef.current.getBoundingClientRect();
+                  const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+                  const percent = (x / rect.width) * 100;
+                  setSliderPos(Math.round(percent));
+                }}
+                onPointerUp={(e) => {
+                  e.currentTarget.releasePointerCapture(e.pointerId);
+                  isDraggingRef.current = false;
+                }}
+                onPointerCancel={(e) => {
+                  e.currentTarget.releasePointerCapture(e.pointerId);
+                  isDraggingRef.current = false;
+                }}
                 style={{
                   position: "absolute",
                   top: "50%",
@@ -4220,6 +4277,7 @@ function PreviewStudioFrame({
                   cursor: "ew-resize",
                   zIndex: 10,
                   boxShadow: "0 0 18px rgba(124, 108, 255, 0.8)",
+                  touchAction: "none",
                 }}
               >
                 ⮂⮄
