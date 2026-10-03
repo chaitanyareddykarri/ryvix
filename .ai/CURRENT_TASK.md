@@ -1,5 +1,10 @@
 # Current Task & Implementation State
 
+## Documentation synchronization — 2026-10-03
+
+Current status and remaining provider work: [project index](../docs/PROJECT_STATUS.md).
+The sections below are chronological implementation notes, not competing current checkpoints.
+
 ## WhatsApp assistant continuation
 
 Implemented the durable reply/history/quota/router pipeline, confirmed coding,
@@ -16,7 +21,7 @@ limits and scoped inbound attribution. Applied migration `20261003000003`.
 Application OTP and notifications use shared SMTP by default; Gmail credentials
 are not visible in the current normal runtime files. No live send is claimed.
 See [checkpoint](../docs/verification/WHATSAPP_PHONE_2026_10_03.md) and
-[remaining assistant phases](../docs/infrastructure/WHATSAPP_ASSISTANT.md).
+[implemented assistant phases](../docs/infrastructure/WHATSAPP_ASSISTANT.md).
 
 ## Experience and memory continuation — 2026-10-03
 

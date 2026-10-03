@@ -50,8 +50,8 @@ Self-healing must never become uncontrolled autonomous intervention. Adhere to t
   - **Internal In-Band Connector**: Runs on customer host; collects metrics, logs, unit states.
   - **External Out-of-Band Connector**: Cloud provider API probe (AWS EC2 / GCP Compute) for recovering kernel-frozen or unreachable servers.
 - **Communication Channel Invariant**:
-  - Personal or Workspace Gmail accounts are for customer notifications and task replies only.
-  - User authentication OTPs are strictly routed through dedicated transactional SMTP (Supabase Auth).
+  - The operator-configured Gmail SMTP account sends application OTP and account notifications.
+  - Hosted Supabase Auth SMTP is configured separately. Never reuse a customer Gmail OAuth inbox token as the application authentication-mail credential.
 
 ---
 

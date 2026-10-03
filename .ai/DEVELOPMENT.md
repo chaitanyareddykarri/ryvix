@@ -41,7 +41,16 @@ no unrestricted database/provider credentials.
 ## Current verification and next work
 
 [Project status](../docs/PROJECT_STATUS.md) records migrations through
-`20261002000003`, the latest code checks and all pending live acceptance work.
+`20261003000004`, the latest code checks and all pending live acceptance work.
 Do not infer a real reboot, email, WhatsApp delivery, browser check or deployment
 from injected-provider fixtures. Reviewed learning uses `npm run train:reviewed`
 and requires actual reviewed partitions; runtime memory is not training evidence.
+
+## October 3 worker additions
+
+Run the web/API plus separate coding, operations, experience and WhatsApp processes.
+Use npm run worker:experience for opted-in collection/repository indexing and
+npm run worker:whatsapp for assistant processing; the assistant requires
+RYVIX_WHATSAPP_ASSISTANT_ENABLED=true. These do not replace the coding or
+operations workers. Apply migrations through 20261003000004 first.
+See [assistant setup](../docs/infrastructure/WHATSAPP_ASSISTANT.md) and [experience setup](../docs/infrastructure/EXPERIENCE_AND_MEMORY.md).

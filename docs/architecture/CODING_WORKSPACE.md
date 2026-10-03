@@ -1,17 +1,20 @@
 # Ryvix Coding Workspace Architecture
 
-## Implementation checkpoint — 2026-10-02
+## Implementation checkpoint — 2026-10-03
 
-Stable worker-host ownership, host-scoped cleanup, process locking and allowlisted
-preview routing are implemented. Production still needs immutable workspace/egress
-images and allowlists, public DNS/TLS, signing secrets and matching web/worker
-configuration. The separate operations worker handles cloud/WhatsApp/email queues.
-Real multi-host routing and public preview acceptance remain pending.
+Code checkpoint: `d81b281`; applied migrations through `20261003000004`.
+Implemented: reviewed experience/personal memory, bounded repository indexing,
+Gmail SMTP email, WhatsApp OTP identity, opt-in AI replies/history/quotas, confirmed
+coding requests, task notifications and authenticated approval handoffs. Releases
+and server operations retain their existing web authorization and approval checks.
+Recorded verification: 79 project suites plus 15 Node checks, typecheck/lint/build
+and 125 database boundary checks passed. Provider delivery, deployed workers/browser
+acceptance and representative model accuracy remain unverified.
 
-See the [current project status](../PROJECT_STATUS.md) for the
-implemented scope, migration checkpoint, verification evidence and remaining work.
-The specification below also includes target design; it is not evidence that
-every described capability is implemented or live-verified.
+See [project status](../PROJECT_STATUS.md), [assistant setup](../infrastructure/WHATSAPP_ASSISTANT.md) and
+[recorded verification](../verification/WHATSAPP_ASSISTANT_2026_10_03.md). This documentation update did not rerun those
+code checks. Detailed designs below may include planned capabilities; the status
+index distinguishes implemented behavior from future work.
 
 
 ## 1. Overview & Operational Need

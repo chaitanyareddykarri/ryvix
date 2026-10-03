@@ -21,8 +21,8 @@ automatically, but a received code can still be verified. This phase does not us
 the P1 alert outbox to send OTPs.
 
 Verified inbound messages receive user attribution only while membership remains
-valid. This is context, not authority to execute: existing inbox review remains
-required. Future routing must revalidate the phone link and permissions when acting.
+valid. This is context, not authority to execute. Disabled assistant messages retain
+reviewed inbox handling; enabled routing revalidates the phone link and permissions.
 Unlink removes challenges and clears attribution on pending messages. Historical
 accepted/rejected message records are retained. Phone numbers are backend-only
 personal data and must not be included in model prompts unnecessarily.

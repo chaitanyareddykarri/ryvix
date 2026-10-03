@@ -1,18 +1,20 @@
 # Ryvix Database Migration Strategy
 
-## Implementation checkpoint — 2026-10-02
+## Implementation checkpoint — 2026-10-03
 
-The recorded live migration checkpoint is `20261002000003`; the latest code
-verification passed 99 read-only database boundary checks. New protected records
-cover reviewed learning/inbox, host ownership, approvals/commands, runtime
-observations, cloud recovery, WhatsApp receipts, release requests and email
-preferences/outbox. Apply numbered migrations to other deployments; do not reset
-the hosted database. Older table counts below are historical.
+Code checkpoint: `d81b281`; applied migrations through `20261003000004`.
+Implemented: reviewed experience/personal memory, bounded repository indexing,
+Gmail SMTP email, WhatsApp OTP identity, opt-in AI replies/history/quotas, confirmed
+coding requests, task notifications and authenticated approval handoffs. Releases
+and server operations retain their existing web authorization and approval checks.
+Recorded verification: 79 project suites plus 15 Node checks, typecheck/lint/build
+and 125 database boundary checks passed. Provider delivery, deployed workers/browser
+acceptance and representative model accuracy remain unverified.
 
-See the [current project status](../PROJECT_STATUS.md) for the
-implemented scope, migration checkpoint, verification evidence and remaining work.
-The specification below also includes target design; it is not evidence that
-every described capability is implemented or live-verified.
+See [project status](../PROJECT_STATUS.md), [assistant setup](../infrastructure/WHATSAPP_ASSISTANT.md) and
+[recorded verification](../verification/WHATSAPP_ASSISTANT_2026_10_03.md). This documentation update did not rerun those
+code checks. Detailed designs below may include planned capabilities; the status
+index distinguishes implemented behavior from future work.
 
 
 ## 1. Migration Philosophy & Invariants
@@ -47,3 +49,16 @@ supabase/migrations/
 - **Local Development**: Run `supabase migration up` or `supabase db reset`.
 - **Automated Validation**: CI pipelines spin up ephemeral PostgreSQL test containers to validate migration execution and verify RLS isolation policies before PR merge.
 - **Production Application**: Executed automatically via Supabase CLI in the deployment pipeline prior to updating backend service containers.
+
+## October 3 schema additions
+
+The applied checkpoint is 20261003000004. Incremental migrations add:
+
+- 00001: experience_settings, experience_events, experience_lessons, personal_memories, experience_predictions.
+- 00002: repository_knowledge_settings, repository_knowledge_files.
+- 00003: whatsapp_phone_links, whatsapp_phone_challenges.
+- 00004: whatsapp_assistant_sessions, whatsapp_assistant_messages, whatsapp_assistant_proposals, whatsapp_assistant_outbox.
+
+These use RLS and backend-mediated authorization. Do not reset the hosted database.
+Assistant history is separate from web conversations; phone unlink invalidates its
+derived session data. See [assistant guide](../infrastructure/WHATSAPP_ASSISTANT.md).

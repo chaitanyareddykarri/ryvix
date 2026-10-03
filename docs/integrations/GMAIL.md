@@ -1,21 +1,24 @@
 # Gmail Integration Specification
 
-## Implementation checkpoint — 2026-10-02
+## Implementation checkpoint — 2026-10-03
 
-Gmail uses read-only OAuth polling into a reviewed inbox. WhatsApp supports signed
-inbound proposals and durable P1 template alerts with signed receipts. Full
-two-way WhatsApp LLM chat, mobile approvals, Gmail push and replies remain future
-work. Security/deployment email uses Resend to the confirmed account address,
-including Gmail recipients; receiving it does not require Gmail OAuth.
+Code checkpoint: `d81b281`; applied migrations through `20261003000004`.
+Implemented: reviewed experience/personal memory, bounded repository indexing,
+Gmail SMTP email, WhatsApp OTP identity, opt-in AI replies/history/quotas, confirmed
+coding requests, task notifications and authenticated approval handoffs. Releases
+and server operations retain their existing web authorization and approval checks.
+Recorded verification: 79 project suites plus 15 Node checks, typecheck/lint/build
+and 125 database boundary checks passed. Provider delivery, deployed workers/browser
+acceptance and representative model accuracy remain unverified.
 
-See the [current project status](../PROJECT_STATUS.md) for the
-implemented scope, migration checkpoint, verification evidence and remaining work.
-The specification below also includes target design; it is not evidence that
-every described capability is implemented or live-verified.
+See [project status](../PROJECT_STATUS.md), [assistant setup](../infrastructure/WHATSAPP_ASSISTANT.md) and
+[recorded verification](../verification/WHATSAPP_ASSISTANT_2026_10_03.md). This documentation update did not rerun those
+code checks. Detailed designs below may include planned capabilities; the status
+index distinguishes implemented behavior from future work.
 
 
 > Account security/deployment notifications now support Gmail recipients through
-> the application's Resend sender; see `../infrastructure/EMAIL_AND_RELEASES.md`.
+> the application's configured SMTP sender; see `../infrastructure/EMAIL_AND_RELEASES.md`.
 > This does not grant Gmail mailbox sending access or implement conversational
 > replies. Existing Gmail OAuth remains the separate read-only task inbox.
 

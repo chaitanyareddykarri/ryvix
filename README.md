@@ -1,41 +1,25 @@
 # Ryvix
 
-Latest: [WhatsApp assistant phases](docs/infrastructure/WHATSAPP_ASSISTANT.md)
-implemented, migration `20261003000004` applied. Real provider and deployed browser
-acceptance remain separate; see [verification](docs/verification/WHATSAPP_ASSISTANT_2026_10_03.md).
-
-Latest: [WhatsApp phone verification and Gmail SMTP](docs/infrastructure/WHATSAPP_ASSISTANT.md).
-Phase 1 is implemented; migration `20261003000003` is applied. Provider setup and
-real delivery remain separate from the passing code/database checks.
-
-Latest: [experience and personal memory](docs/infrastructure/EXPERIENCE_AND_MEMORY.md)
-adds explicit preferences, reviewed chat corrections, outcome collection and
-lessons reused by chat/coding, plus opt-in
-[repository knowledge](docs/infrastructure/REPOSITORY_KNOWLEDGE.md).
-Migrations through `20261003000002` are applied; see the
-[October 3 verification](docs/verification/EXPERIENCE_2026_10_03.md). The older
-checkpoint below predates this continuation.
-
 Ryvix combines repository coding tasks, isolated previews, tenant-scoped chat,
 server telemetry and approved operations in an npm monorepo.
 
-Current implementation: **45b130b, 2026-10-02**. Supabase migrations are applied
-through **20261002000003**. Live deployment, provider delivery and representative
-model quality remain unverified. Read [project status](docs/PROJECT_STATUS.md)
-for the complete implemented/pending list and recorded verification results.
+Code checkpoint: **d81b281 (2026-10-03)**. Applied schema: **20261003000004**.
+See [project status](docs/PROJECT_STATUS.md) for implementation, evidence and
+remaining live acceptance. Provider delivery and model quality are not certified.
 
 ## Main workflows
 
 - Coding: task → sandbox changes/checks → preview/diff review → approved PR →
   explicit owner/admin release approval → protected-branch merge → customer CI/CD.
 - Notifications: opted-in users receive security and approved-deployment results
-  at their confirmed account email through Resend. Gmail recipients need no
+  at their confirmed account email through configured Gmail SMTP. Gmail recipients need no
   mailbox OAuth. A matching signed deployment event is required for result mail.
 - Operations: independently approved service restart or allowlisted cloud reboot,
   with durable claims, replay/duplicate protection, cooldowns and recorded outcomes.
-- Channels: Gmail read-only polling and signed WhatsApp messages become reviewed
-  task proposals. WhatsApp P1 template alerts have durable delivery receipts.
-  Full WhatsApp LLM chat, mobile approvals and Gmail replies remain future work.
+- Channels: Gmail read-only polling creates reviewed task proposals. WhatsApp has
+  OTP phone linking, opt-in AI chat, private history, quotas, confirmed coding
+  requests, task updates and P1 alerts. Release/server approval links open the
+  authenticated web workflow. Gmail push and replies remain future work.
 - Chat and learning: persisted conversations, bounded authorized retrieval and
   provider streaming; separately reviewed tenant training examples and gated
   checkpoint promotion. Runtime memory is not evidence of trained model quality.
@@ -74,8 +58,8 @@ tests can modify tracked memory/weights. Do not include generated data in commit
 The `test:e2e` alias runs the project test runner; its name does not establish
 real browser/provider end-to-end certification.
 
-Configured worker entry points are `npm run worker:workspaces` and
-`npm run worker:operations`. Production host, images, allowlists and secrets must
+Configured worker entry points are `npm run worker:workspaces`,
+`npm run worker:operations`, `npm run worker:experience` and `npm run worker:whatsapp`. Production host, images, allowlists and secrets must
 be configured before starting them. Reviewed learning uses `npm run train:reviewed`
 with the [reviewed-data process](docs/ai/EVALUATION_DATA.md); legacy `train` commands
 are not a substitute for representative held-out evaluation and promotion.
@@ -89,9 +73,9 @@ are not a substitute for representative held-out evaluation and promotion.
 - [Worker deployment](docs/infrastructure/WORKER_DEPLOYMENT.md)
 - [Gmail and WhatsApp inbox / reviewed learning](docs/infrastructure/CHANNELS_AND_LEARNING.md)
 - [Agent setup](agent/README.md)
-- [Latest code verification](docs/verification/EMAIL_RELEASE_2026_10_02.md)
+- [Latest code verification](docs/verification/WHATSAPP_ASSISTANT_2026_10_03.md)
 
-The latest code checkpoint recorded 75 project suites plus 15 Node checks,
-typecheck/lint/build and 99 read-only database checks passing. These are recorded
+The latest code checkpoint recorded 79 project suites plus 15 Node checks,
+typecheck/lint/build and 125 read-only database checks passing. These are recorded
 results, not a production-readiness claim. Historical reports retain their original
 counts; use the current status index to resolve superseded pending lists.

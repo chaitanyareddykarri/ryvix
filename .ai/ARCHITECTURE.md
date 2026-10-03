@@ -1,17 +1,20 @@
 # Ryvix System Architecture Reference
 
-## Implementation checkpoint — 2026-10-02
+## Implementation checkpoint — 2026-10-03
 
-Security, chat/history, reviewed learning, worker ownership, approved service/cloud
-operations, WhatsApp P1 alerts and approved release/account emails have implemented
-paths. Migrations are applied through `20261002000003`. Provider credentials,
-public deployment, actual delivery/recovery and representative model quality
-remain separate acceptance work. Use the current status index before old phase lists.
+Code checkpoint: `d81b281`; applied migrations through `20261003000004`.
+Implemented: reviewed experience/personal memory, bounded repository indexing,
+Gmail SMTP email, WhatsApp OTP identity, opt-in AI replies/history/quotas, confirmed
+coding requests, task notifications and authenticated approval handoffs. Releases
+and server operations retain their existing web authorization and approval checks.
+Recorded verification: 79 project suites plus 15 Node checks, typecheck/lint/build
+and 125 database boundary checks passed. Provider delivery, deployed workers/browser
+acceptance and representative model accuracy remain unverified.
 
-See the [current project status](../docs/PROJECT_STATUS.md) for the
-implemented scope, migration checkpoint, verification evidence and remaining work.
-The specification below also includes target design; it is not evidence that
-every described capability is implemented or live-verified.
+See [project status](../docs/PROJECT_STATUS.md), [assistant setup](../docs/infrastructure/WHATSAPP_ASSISTANT.md) and
+[recorded verification](../docs/verification/WHATSAPP_ASSISTANT_2026_10_03.md). This documentation update did not rerun those
+code checks. Detailed designs below may include planned capabilities; the status
+index distinguishes implemented behavior from future work.
 
 
 This document provides the authoritative architectural map for AI agents and engineers working on Ryvix.

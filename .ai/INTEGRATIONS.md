@@ -4,13 +4,13 @@ Current contracts are summarized in [project status](../docs/PROJECT_STATUS.md)
 and the [provider plan](../docs/infrastructure/PRODUCTION_PROVIDER_PLAN.md).
 The sections below include target contracts, not a list of live-certified adapters.
 
-Implemented communication paths are Gmail read-only polling into reviewed proposals,
-Meta signed inbox/P1 template dispatch with receipts, and Resend account security
-and approved-deployment notifications. WhatsApp chat/mobile approvals and Gmail
-push/replies remain unimplemented. GitHub execution resolves project-scoped Vault
-credentials; signed deployment_status events correlate approved release merge SHAs.
-Do not assume push, pull_request or check_run ingestion is enabled from the target
-contract below. Cloud recovery supports independently approved allowlisted reboots.
+Implemented communication paths: Gmail read-only polling into reviewed proposals;
+Meta signed inbox, OTP identity, opt-in AI assistant and durable template/reply
+delivery; Gmail SMTP account security and approved-deployment notifications.
+WhatsApp coding requires an expiring exact proposal confirmation. Release/server
+approvals remain authenticated web handoffs. Gmail push/replies are unimplemented.
+GitHub execution resolves project-scoped Vault credentials. Signed deployment
+events correlate the approved merge SHA. The contracts below include future scope.
 
 ---
 
@@ -50,14 +50,14 @@ contract below. Cloud recovery supports independently approved allowlisted reboo
 ## 4. Communication Integrations
 
 ### WhatsApp
-- **Provider**: Meta WhatsApp Cloud API or Twilio Business API.
-- **Channel Purpose**: Urgent incident notifications, interactive approval prompts (interactive buttons), and mobile status queries.
+- **Provider**: Meta WhatsApp Cloud API (the implemented adapter; no Twilio adapter).
+- **Channel Purpose**: OTP identity, scoped AI chat/status, confirmed coding, task/P1 notifications and authenticated approval links.
 - **Payload Handling**: Inbound webhooks validated via HMAC-SHA256 signature; user numbers mapped to verified Ryvix profile IDs.
 
 ### Gmail
 - **Provider**: Google Workspace / Gmail API (OAuth 2.0).
-- **Channel Purpose**: Asynchronous notifications, task summary digests, and customer command ingestion via email replies.
-- **Strict Distinction**: Transactional authentication emails (login OTPs, password resets) use dedicated high-reputation SMTP providers (e.g., SendGrid/Postmark), NOT customer Gmail OAuth credentials.
+- **Channel Purpose**: Read-only OAuth task intake requiring review; account notifications use separately configured SMTP.
+- **Strict Distinction**: Application login OTP and account notifications use configured Gmail SMTP. Hosted Supabase Auth SMTP is separate. Customer Gmail OAuth credentials are only for the read-only inbox.
 
 ---
 

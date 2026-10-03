@@ -24,3 +24,11 @@ preferences and source scope are checked again when claiming a send.
 New tables enable RLS and deny direct browser access. Preferences, release actions
 and notification mutations are audited. Actual account sends and cloud mutations
 require configured providers and designated live targets.
+
+## Transport supersession — 2026-10-03
+
+Commit 4d1369a changes the default notification transport to the operator's Gmail
+SMTP and shares it with application OTP mail. Resend is only an explicitly selected
+optional adapter, never an automatic fallback. Hosted Supabase Auth mail settings
+remain separate. The original release authorization and deployment correlation
+decisions above remain applicable. See [current setup](../infrastructure/WHATSAPP_ASSISTANT.md).

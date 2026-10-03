@@ -1,29 +1,12 @@
 # Ryvix Current Project Context
 
-Latest: WhatsApp assistant phases implemented; migration `20261003000004` applied.
-See [checkpoint](../docs/verification/WHATSAPP_ASSISTANT_2026_10_03.md).
-Reply queue, private history, quotas, structured routing, confirmed coding and
-notifications are implemented. Release/server approvals use authenticated handoffs.
-The older phase 1 notes below are superseded. Real providers remain unverified.
-
-Latest: WhatsApp OTP identity phase and Gmail SMTP correction; migration
-`20261003000003` applied. See [checkpoint](../docs/verification/WHATSAPP_PHONE_2026_10_03.md).
-Phone linking is implemented; automatic WhatsApp AI replies and actions remain
-subsequent phases. SMTP runtime credentials and live delivery are still unverified.
-
-Latest continuation: 2026-10-03 experience/memory pipeline, applied migration
-`20261003000002`, including bounded repository knowledge indexing.
-Read [the current checkpoint](../docs/verification/EXPERIENCE_2026_10_03.md)
-and [experience guide](../docs/infrastructure/EXPERIENCE_AND_MEMORY.md). Collection,
-review and retrieval are implemented; no representative training or live provider
-quality has been established. The October 2 snapshot below is superseded.
-
-Current code checkpoint: `45b130b` (2026-10-02), published to main.
-Use [PROJECT_STATUS](../docs/PROJECT_STATUS.md) for implemented behavior, provider
-requirements, evidence and remaining work. Migrations are applied through
-`20261002000003`. Latest code checks: 75 suites plus 15 Node checks; 99 database
-checks. Live provider delivery, deployed browser flows and model quality remain
-unverified. See [email/release evidence](../docs/verification/EMAIL_RELEASE_2026_10_02.md).
+Current code checkpoint: d81b281 (2026-10-03); applied schema 20261003000004.
+See [project status](../docs/PROJECT_STATUS.md) and
+[assistant verification](../docs/verification/WHATSAPP_ASSISTANT_2026_10_03.md).
+WhatsApp OTP, opt-in assistant, confirmed coding, history/quotas and notifications
+are implemented. Server/release approvals use authenticated web handoffs. Email
+defaults to the user's Gmail SMTP. Experience collection and reviewed lessons are
+implemented; representative model quality and live provider delivery are unverified.
 
 ## Historical project overview
 
