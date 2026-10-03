@@ -3873,7 +3873,7 @@ export default function DashboardPage() {
                     minWidth: 0,
                   }}
                 >
-                  {isShowingAfter ? "PREVIEW" : "Production"}
+                  {isShowingAfter ? "After" : "Before"}
                 </button>
               </div>
 
@@ -5023,7 +5023,7 @@ function PreviewStudioFrame({
               whiteSpace: "nowrap",
             }}
           >
-            {isShowingAfter ? "PREVIEW" : "Production"}
+            {isShowingAfter ? "AFTER" : "BEFORE"}
           </span>
           <span style={{ color: "#42D9FF", fontSize: "0.72rem", fontWeight: 600, flexShrink: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "160px" }}>
             {repoName}
@@ -5076,7 +5076,7 @@ function PreviewStudioFrame({
                 minWidth: 0,
               }}
             >
-              Production
+              Before
             </button>
             <button
               type="button"
@@ -5100,7 +5100,7 @@ function PreviewStudioFrame({
                 minWidth: 0,
               }}
             >
-              PREVIEW
+              After
             </button>
           </div>
           <button onClick={() => setComparisonMode(comparisonMode === "slider" ? "toggle" : "slider")} style={{ padding: "0.25rem 0.65rem", borderRadius: "6px", background: comparisonMode === "slider" ? "rgba(124, 108, 255, 0.15)" : "transparent", border: `1px solid ${comparisonMode === "slider" ? "#7C6CFF" : "#1D2732"}`, color: comparisonMode === "slider" ? "#A78BFA" : "#A5AFBC", fontSize: "0.74rem", cursor: "pointer", whiteSpace: "nowrap" }}>
@@ -5340,7 +5340,7 @@ function RealLiveWebsiteFrame({
               whiteSpace: "nowrap",
             }}
           >
-            Production
+            BEFORE
           </span>
           <span style={{ color: "#A5AFBC", flexShrink: 0 }}>Current Production:</span>
           <span style={{ color: "#F5F7FA", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "200px" }}>{liveUrl}</span>
@@ -5493,7 +5493,7 @@ function RealPreviewWebsiteFrame({
               whiteSpace: "nowrap",
             }}
           >
-            PREVIEW
+            AFTER
           </span>
           <span style={{ color: "#A5AFBC", flexShrink: 0 }}>Repo:</span>
           <span style={{ color: "#42D9FF", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "160px" }}>{repoName}</span>
