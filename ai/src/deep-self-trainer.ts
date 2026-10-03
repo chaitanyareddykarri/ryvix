@@ -8,6 +8,7 @@
  * AGI Cognitive Subsystem Hardening, and Continuous Neural Weight Refinement.
  */
 
+import {assertOfflineExperiment} from './offline-boundary';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { neuralThreatClassifier, NeuralThreatClassifier } from './neural-network';
@@ -387,6 +388,7 @@ export class DeepSelfTrainer {
    * Executes continuous meta-learning across generated perturbations.
    */
   public executeMetaLearningCycle(threatClasses: string[], epochs = 3): TrainingRunSummary {
+    assertOfflineExperiment();
     if (!threatClasses.length || !Number.isInteger(epochs) || epochs < 1) throw new Error('Training classes and positive epochs are required');
     const t0 = performance.now();
     const runId = `meta-train-${Date.now()}`;
@@ -436,6 +438,7 @@ export class DeepSelfTrainer {
    * AGI Cognitive Subsystems, and System Threats with Self-Critique Reward Optimization.
    */
   public executeComprehensiveDeepTraining(options?: { epochs?: number }): ComprehensiveTrainingRunSummary {
+    assertOfflineExperiment();
     const t0 = performance.now();
     const runId = `comp-deep-train-${Date.now()}`;
     const epochs = options?.epochs || 3;

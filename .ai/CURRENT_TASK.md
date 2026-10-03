@@ -366,3 +366,7 @@ current production-readiness claims. See the latest checkpoint linked above.
 ### 2. Strict User Constraints
 - **CRITICAL**: Do NOT run `git commit` or `git push` until the user explicitly instructs to do so.
 - Keep all auth sessions backed by genuine Supabase HTTP-only cookies; never introduce mock flags or fake client-side authentication bypasses.
+
+Audit follow-up: production legacy-weight/memory isolation, unseeded topology,
+import-aware bounded coding context and opt-in scheduled Gmail polling are implemented.
+See [remaining work](../docs/PENDING_WORK.md) for unresolved dependency and live acceptance requirements.

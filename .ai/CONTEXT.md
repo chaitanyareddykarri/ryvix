@@ -85,3 +85,7 @@ Ryvix is an **AI-powered autonomous software and infrastructure operations platf
 - **Path 2**: Internal Agent (`internal-agent.ts`), Cloud Recovery Bridge (`cloud-recovery.bridge.ts`), Server Console (`/servers`, `/api/servers`).
 - **Database**: PostgreSQL 17.6 on Supabase (`tsoyrpgifovzwqtgpkkb`). All 35 tables present, 100% RLS enforced.
 - **Master Test Runner**: `tests/run-all.ts` running 9 comprehensive test suites (100% pass).
+
+Audit follow-up: production legacy-weight/memory isolation, unseeded topology,
+import-aware bounded coding context and opt-in scheduled Gmail polling are implemented.
+See [remaining work](../docs/PENDING_WORK.md) for unresolved dependency and live acceptance requirements.

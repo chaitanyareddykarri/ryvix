@@ -105,3 +105,9 @@ npm run worker:whatsapp for assistant processing; the assistant requires
 RYVIX_WHATSAPP_ASSISTANT_ENABLED=true. These do not replace the coding or
 operations workers. Apply migrations through 20261003000004 first.
 See [assistant setup](WHATSAPP_ASSISTANT.md) and [experience setup](EXPERIENCE_AND_MEMORY.md).
+
+## Scheduled Gmail continuation
+
+Optional npm run worker:gmail polls explicitly allowlisted connected accounts.
+It preserves reviewed task intake and requires current owner/admin authorization.
+See [Gmail worker setup](GMAIL_POLLING.md). Real Google acceptance is still required.

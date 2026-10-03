@@ -1,3 +1,4 @@
+import {assertOfflineExperiment} from './offline-boundary';
 import {
   mixtureOfExperts,
   graphNeuralNetwork,
@@ -222,6 +223,7 @@ export class RyvixAgiCore {
    * Autonomous OODA Loop Execution on Raw Perception
    */
   public async executeOodaCycle(perception: AgiPerceptionInput): Promise<OodaCycleResult> {
+    assertOfflineExperiment();
     const t0 = performance.now();
     this.cognitiveStatus = 'observing';
     this.totalCycles++;

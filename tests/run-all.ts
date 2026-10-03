@@ -1,4 +1,5 @@
 import {testAuditRegressions} from './audit-regressions.test';
+import {testOfflineAndGmail} from './offline-and-gmail.test';
 import {testExperienceLearning} from './experience-learning.test';
 import {testRepositoryKnowledge} from './repository-knowledge.test';
 import {testWhatsAppPhone} from './whatsapp-phone.test';
@@ -68,6 +69,7 @@ async function runAllTests() {
   seedHealthFixtures();
   const testCases: { name: string; fn: () => Promise<void> }[] = [
     {name:'Audit Safety and Evidence Regressions',fn:testAuditRegressions},
+    {name:'Offline AI Isolation and Gmail Scheduling',fn:testOfflineAndGmail},
     {name:'WhatsApp Assistant Intent and Reply Boundaries',fn:testWhatsAppAssistant},
     {name:'WhatsApp Phone and SMTP Transport Boundaries',fn:testWhatsAppPhone},
     {name:'Repository Knowledge Source Boundaries and Commit Refresh',fn:testRepositoryKnowledge},

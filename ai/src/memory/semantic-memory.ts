@@ -1,3 +1,4 @@
+import {assertOfflineExperiment} from '../offline-boundary';
 /**
  * @file semantic-memory.ts
  * @module @ryvix/ai/memory
@@ -107,6 +108,7 @@ export class SemanticMemoryManager {
    * Loads persisted semantic items from disk or seeds defaults
    */
   private load(): void {
+    if (process.env.NODE_ENV === 'production') return;
     try {
       if (fs.existsSync(this.persistencePath)) {
         const raw = fs.readFileSync(this.persistencePath, 'utf8');
@@ -182,6 +184,7 @@ export class SemanticMemoryManager {
    * Persists items to disk
    */
   public save(): void {
+    assertOfflineExperiment();
     try {
       const dir = path.dirname(this.persistencePath);
       if (!fs.existsSync(dir)) {
@@ -204,6 +207,7 @@ export class SemanticMemoryManager {
     tags: string[] = [],
     metadata?: Record<string, any>
   ): SemanticMemoryItem {
+    assertOfflineExperiment();
     const textToEmbed = `${title}. ${content} Tags: ${tags.join(' ')}`;
     const vec = this.embedText(textToEmbed);
     const id = `sem_${Date.now()}_${randomUUID()}`;
@@ -229,6 +233,7 @@ export class SemanticMemoryManager {
    * Recalls semantically related memory items via cosine similarity
    */
   public recall(query: string, topK: number = 3, minScore: number = 0.25): SemanticSearchResult[] {
+    assertOfflineExperiment();
     const queryVec = this.embedText(query);
     const results: SemanticSearchResult[] = [];
 

@@ -1,6 +1,8 @@
+import {systemTopologyGraph} from '../ai/src/graph-rag';
 // Synthetic operational records belong exclusively to test setup.
 import { customerHealthStore } from '../services/src/health-query-tools';
 export function seedHealthFixtures() {
+  systemTopologyGraph.seedProductionTopology();
   const store = customerHealthStore as any;
     const now = Date.now();
 

@@ -53,7 +53,7 @@ jobs:
         run: npm test
 
   ai-neural-training-and-rag:
-    name: AI Neural Training, Benchmarks & RAG Vector Validation
+    name: Offline Synthetic AI Regression (Not Production Training)
     needs: lint-and-typecheck
     runs-on: ubuntu-latest
     steps:
@@ -69,10 +69,10 @@ jobs:
       - name: Install Monorepo Dependencies
         run: npm ci
 
-      - name: Run Master Local AI Model Training
+      - name: Run isolated synthetic regression training
         run: npx tsx ai/scripts/train-local-model.ts
 
-      - name: Verify Neural Weights Artifacts Exist
+      - name: Verify offline regression artifacts (not promoted)
         run: |
           test -f ai/data/neural_weights.json || exit 1
           test -f ai/data/rag_vector_store.json || exit 1

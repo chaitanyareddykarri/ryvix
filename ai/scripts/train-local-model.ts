@@ -1,3 +1,5 @@
+import {assertOfflineExperiment} from '../src/offline-boundary';
+assertOfflineExperiment();
 import {
   mixtureOfExperts,
   graphNeuralNetwork,

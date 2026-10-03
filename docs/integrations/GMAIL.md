@@ -55,3 +55,9 @@ Gmail functions as an **asynchronous customer communication channel** for Ryvix.
 2. **Inbound Reply Processing**:
    - Customers can reply directly to notification threads (e.g., *"Deploy this now"*).
    - Inbound email webhook maps the sender address to an authenticated project user and enqueues a corresponding Task.
+
+## Scheduled Gmail continuation
+
+Optional npm run worker:gmail polls explicitly allowlisted connected accounts.
+It preserves reviewed task intake and requires current owner/admin authorization.
+See [Gmail worker setup](../infrastructure/GMAIL_POLLING.md). Real Google acceptance is still required.

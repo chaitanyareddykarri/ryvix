@@ -1,3 +1,4 @@
+import {assertOfflineExperiment} from '../offline-boundary';
 /**
  * @file long-term-memory.ts
  * @module @ryvix/ai/memory
@@ -47,6 +48,7 @@ export class LongTermMemoryManager {
    * Loads persisted facts from disk or initializes defaults
    */
   private load(): void {
+    if (process.env.NODE_ENV === 'production') return;
     try {
       if (fs.existsSync(this.persistencePath)) {
         const raw = fs.readFileSync(this.persistencePath, 'utf8');
@@ -118,6 +120,7 @@ export class LongTermMemoryManager {
    * Persists all facts atomically to disk
    */
   public save(): void {
+    assertOfflineExperiment();
     try {
       const dir = path.dirname(this.persistencePath);
       if (!fs.existsSync(dir)) {
@@ -140,6 +143,7 @@ export class LongTermMemoryManager {
     confidence: number = 0.9,
     tags: string[] = []
   ): LongTermFact {
+    assertOfflineExperiment();
     const normalizedFact = fact.trim();
     const now = new Date().toISOString();
 
@@ -187,6 +191,7 @@ export class LongTermMemoryManager {
     category?: FactCategory,
     minConfidence: number = 0.5
   ): LongTermFact[] {
+    assertOfflineExperiment();
     const results: LongTermFact[] = [];
     const now = new Date().toISOString();
 
@@ -209,6 +214,7 @@ export class LongTermMemoryManager {
    * Searches facts relevant to a given query string
    */
   public searchFacts(entityId: string, query: string, limit: number = 5): LongTermFact[] {
+    assertOfflineExperiment();
     const tokens = query.toLowerCase().split(/[^a-z0-9_.]+/).filter((w) => w.length >= 3);
     const scored: Array<{ fact: LongTermFact; score: number }> = [];
     const now = new Date().toISOString();
@@ -245,6 +251,7 @@ export class LongTermMemoryManager {
    * Automatically extracts and learns user facts/preferences from text
    */
   public extractFactsFromInteraction(entityId: string, text: string): LongTermFact[] {
+    assertOfflineExperiment();
     const learned: LongTermFact[] = [];
 
     // Pattern 1: User preferences ('I prefer...', 'I like...', 'Always use...')
@@ -290,6 +297,7 @@ export class LongTermMemoryManager {
    * Deletes a fact by ID
    */
   public deleteFact(factId: string): boolean {
+    assertOfflineExperiment();
     const deleted = this.facts.delete(factId);
     if (deleted) this.save();
     return deleted;

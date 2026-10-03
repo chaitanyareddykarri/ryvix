@@ -4,6 +4,7 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
+Environment=NODE_ENV=production
 Type=simple
 User=ryvix-worker
 WorkingDirectory=/opt/ryvix/current

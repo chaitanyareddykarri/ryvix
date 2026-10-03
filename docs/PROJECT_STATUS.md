@@ -20,7 +20,7 @@ indexing (5d3a3d5), Gmail SMTP and WhatsApp OTP (4d1369a), then the WhatsApp ass
 | Native operations | Independent persisted approval, signed expiring commands, nonce receipts, Linux replay journal, service allowlists, cooldowns and measured service-state receipts | Enroll a deployed agent and verify an approved restart; service state is not application health |
 | Cloud recovery | Independent approval of a frozen allowlisted target, durable one-attempt reboot dispatch, cooldowns, provider outcomes and heartbeat observation | Configure scoped cloud account/test host and verify an actual approved reboot; observed liveness does not prove a reboot |
 | WhatsApp | OTP identity, opt-in assistant, durable replies/history/quotas, authorized answers/status, confirmed coding requests, task notifications and P1 alerts | Real Meta OTP/reply/template delivery and browser acceptance; release/server approvals remain authenticated web handoffs |
-| Gmail | Vault-backed read-only OAuth polling into reviewed task proposals | Real OAuth intake verification; Pub/Sub push and Gmail replies remain unimplemented |
+| Gmail | Vault-backed manual and explicit-allowlist scheduled read-only OAuth polling into reviewed task proposals | Real OAuth intake verification; Pub/Sub push and Gmail replies remain unimplemented |
 | Experience and repository knowledge | Explicit personal memory, owned corrections, opt-in outcome snapshots, independently reviewed lessons and bounded commit-pinned text index | Representative reviewed data and live answer quality; full vector/graph retrieval and external LLM training are not established |
 | Account email | `/notifications` opt-in per environment; durable SMTP sends to confirmed account email, including Gmail; security and approved-release results | Authorized SMTP sender/credentials, actual detector and inbox verification; provider acceptance is not delivery |
 | Releases | `/releases` owner/admin approval of exact reviewed head and mapping version; protected default branch and successful checks; bounded merge and read-only reconciliation | Existing customer CI/CD performs deployment; real approved release/webhook/runtime/browser acceptance pending |
@@ -120,3 +120,5 @@ for variable names and rollout order, and
 
 Architecture specifications describe intended scope where explicitly marked.
 They must not override this measured implementation status or the approval rules.
+
+Audit follow-up: [production isolation and Gmail scheduling](verification/AUDIT_FOLLOWUP_2026_10_03.md). Legacy JSON weights/memory are disabled in production; bounded coding context now follows local imports.

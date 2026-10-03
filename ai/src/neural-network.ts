@@ -1,3 +1,4 @@
+import {allowLegacyWeightFile} from './offline-boundary';
 /**
  * Ryvix Deep Dual-Stage Residual Self-Attention Neural Network (Deep-ResAttnNet)
  * 
@@ -1001,6 +1002,7 @@ export class NeuralThreatClassifier {
 export const neuralThreatClassifier = new NeuralThreatClassifier();
 export const neuralWeightsStatus: { loaded: boolean; reason: string } = { loaded:false, reason:'Saved weights unavailable' };
 try {
+  if (!allowLegacyWeightFile()) throw new Error('Offline weights are disabled in production');
   const candidates = process.env.RYVIX_NEURAL_WEIGHTS_PATH ? [process.env.RYVIX_NEURAL_WEIGHTS_PATH] :
     [resolve(process.cwd(),'ai/data/neural_weights.json'),resolve(process.cwd(),'../ai/data/neural_weights.json')];
   const filename = candidates.find(value => existsSync(value));
@@ -1009,4 +1011,4 @@ try {
     neuralThreatClassifier.loadWeights(JSON.parse(readFileSync(filename,'utf8')));
     neuralWeightsStatus.loaded = true; neuralWeightsStatus.reason = 'Validated saved classifier weights loaded';
   }
-} catch { neuralWeightsStatus.reason = 'Saved weights rejected: invalid or incompatible'; }
+} catch { neuralWeightsStatus.reason = allowLegacyWeightFile() ? 'Saved weights rejected: invalid or incompatible' : 'Offline weights disabled in production; use reviewed project checkpoints'; }

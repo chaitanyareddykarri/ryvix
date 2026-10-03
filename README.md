@@ -82,3 +82,7 @@ The latest code checkpoint recorded 79 project suites plus 15 Node checks,
 typecheck/lint/build and 125 read-only database checks passing. These are recorded
 results, not a production-readiness claim. Historical reports retain their original
 counts; use the current status index to resolve superseded pending lists.
+
+Audit follow-up: production legacy-weight/memory isolation, unseeded topology,
+import-aware bounded coding context and opt-in scheduled Gmail polling are implemented.
+See [remaining work](docs/PENDING_WORK.md) for unresolved dependency and live acceptance requirements.

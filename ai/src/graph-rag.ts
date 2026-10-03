@@ -13,6 +13,8 @@
  *   3. Context Augmentation: injects structured topological relationships into LLM prompts
  */
 
+import {assertOfflineExperiment} from './offline-boundary';
+
 export type TopologyNodeType = 
   | 'SERVER'
   | 'SERVICE'
@@ -57,7 +59,7 @@ export class SystemTopologyGraph {
   private nodes = new Map<string, TopologyNode>();
   private edges: TopologyEdge[] = [];
 
-  constructor(seedDefaults = true) {
+  constructor(seedDefaults = false) {
     if (seedDefaults) this.seedProductionTopology();
   }
 
@@ -174,6 +176,7 @@ export class SystemTopologyGraph {
    * Seeds realistic production infrastructure topology
    */
   public seedProductionTopology(): void {
+    assertOfflineExperiment(); // Historical method name; these are synthetic fixtures.
     // 1. Host Server
     this.addNode({
       id: 'srv_prod_01',
