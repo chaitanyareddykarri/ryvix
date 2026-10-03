@@ -57,10 +57,11 @@ export default async function LandingPage() {
           style={{
             maxWidth: "1280px",
             margin: "0 auto",
-            padding: "0.9rem 1.5rem",
+            padding: "0.85rem 1.5rem",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            gap: "1.5rem",
           }}
         >
           {/* Brand Logo */}
@@ -71,6 +72,7 @@ export default async function LandingPage() {
               display: "flex",
               alignItems: "center",
               gap: "0.6rem",
+              flexShrink: 0,
             }}
           >
             <div
@@ -86,6 +88,7 @@ export default async function LandingPage() {
                 fontSize: "1.1rem",
                 color: "#ffffff",
                 boxShadow: "0 0 16px rgba(99, 102, 241, 0.5)",
+                flexShrink: 0,
               }}
             >
               R
@@ -96,49 +99,52 @@ export default async function LandingPage() {
                 fontWeight: 800,
                 letterSpacing: "-0.04em",
                 color: "#ffffff",
+                whiteSpace: "nowrap",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.45rem",
               }}
             >
-              RY<span className="gradient-text">VIX</span>
+              <span>RY<span className="gradient-text">VIX</span></span>
+              <span style={{ fontSize: "0.88rem", fontWeight: 600, color: "var(--text-secondary)", letterSpacing: "normal" }}>Platform</span>
             </span>
           </Link>
 
-          {/* Navigation Links */}
+          {/* Curved Navigation Container */}
           <nav
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "2rem",
+              gap: "1.5rem",
+              padding: "0.35rem 1.15rem",
+              backgroundColor: "rgba(13, 18, 26, 0.8)",
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              borderRadius: "9999px",
+              boxShadow: "0 4px 20px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.03)",
+              flexShrink: 0,
             }}
             className="hidden md:flex"
           >
             <a
-              href="#features"
-              className="nav-link-animated"
-            >
-              Platform
-            </a>
-            <a
               href="#architecture"
               className="nav-link-animated"
+              style={{ fontSize: "0.88rem", whiteSpace: "nowrap" }}
             >
               Architecture
             </a>
             <a
               href="#metrics"
               className="nav-link-animated"
+              style={{ fontSize: "0.88rem", whiteSpace: "nowrap" }}
             >
               Fleet &amp; SRE
             </a>
-            <Link
-              href="/dashboard"
-              className="nav-link-animated"
-            >
-              Console
-            </Link>
           </nav>
 
           {/* Auth CTA Actions */}
-          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexShrink: 0 }}>
             {user ? (
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                 <span
@@ -164,6 +170,8 @@ export default async function LandingPage() {
                     color: "#ffffff",
                     textDecoration: "none",
                     boxShadow: "0 0 20px rgba(99, 102, 241, 0.4)",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
                   }}
                 >
                   Launch Console &rarr;
@@ -180,6 +188,8 @@ export default async function LandingPage() {
                     fontWeight: 500,
                     padding: "0.45rem 0.85rem",
                     transition: "color 0.15s ease",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
                   }}
                 >
                   Sign In
@@ -187,6 +197,7 @@ export default async function LandingPage() {
                 <Link
                   href="/login"
                   className="btn-nav-pill"
+                  style={{ whiteSpace: "nowrap", flexShrink: 0 }}
                 >
                   Get Started &rarr;
                 </Link>

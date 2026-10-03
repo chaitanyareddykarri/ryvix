@@ -1,8 +1,8 @@
 "use client";
 
-import Link from 'next/link';
-
 import React, { useState, useEffect } from "react";
+import Link from 'next/link';
+import AppNav, { ReturnToDashboardButton } from "@/components/AppNav";
 import { createClient } from "@/utils/supabase/client";
 
 interface PlanStep {
@@ -127,11 +127,64 @@ export default function TasksPage() {
   }
 
   return (
-    <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "2.5rem 1.5rem" }}>
+    <div className="tasks-page-container" style={{ maxWidth: "1200px", margin: "0 auto", padding: "2.5rem 1.5rem", boxSizing: "border-box" }}>
+      {/* Responsive Styles for Coding Workspace */}
+      <style>{`
+        .tasks-pipeline-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+          gap: 1.5rem;
+        }
+        @media (max-width: 640px) {
+          .tasks-page-container {
+            padding: 1.5rem 1rem !important;
+          }
+          .tasks-header {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 1rem !important;
+          }
+          .tasks-card {
+            padding: 1.25rem 1rem !important;
+          }
+          .tasks-prompt-form {
+            flex-direction: column !important;
+            align-items: stretch !important;
+          }
+          .tasks-prompt-form > * {
+            width: 100% !important;
+            flex: 1 1 100% !important;
+            box-sizing: border-box !important;
+          }
+          .tasks-pipeline-grid {
+            grid-template-columns: 1fr !important;
+            gap: 1rem !important;
+          }
+        }
+      `}</style>
+
+      {/* Contextual Breadcrumbs */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          fontSize: '0.85rem',
+          color: 'var(--text-secondary)',
+          marginBottom: '1rem',
+        }}
+      >
+        <Link href="/servers" style={{ color: '#38bdf8', textDecoration: 'none' }}>
+          Servers
+        </Link>
+        <span>/</span>
+        <span style={{ color: '#e2e8f0', fontWeight: 600 }}>Tasks</span>
+      </div>
+
       {/* Header Bar */}
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2.5rem", flexWrap: "wrap", gap: "1rem" }}>
+      <header className="tasks-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2.5rem", flexWrap: "wrap", gap: "1rem" }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
             <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
               <h1 style={{ fontSize: "1.8rem", fontWeight: 700, letterSpacing: "-0.03em" }}>
                 RY<span className="gradient-text">VIX</span>
@@ -145,23 +198,19 @@ export default function TasksPage() {
             Autonomous AI software modification, verification &amp; live preview sandbox
           </p>
         </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          {userEmail && (
-            <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-              {userEmail}
-            </span>
-          )}
-          <Link href="/" className="btn-secondary" style={{ padding: "0.4rem 0.9rem", fontSize: "0.82rem", textDecoration: "none" }}>
-            Return to Dashboard
-          </Link>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.85rem", flexWrap: "wrap" }}>
+          <AppNav
+            userEmail={userEmail || undefined}
+            className="tasks-nav"
+          />
+          <ReturnToDashboardButton />
         </div>
       </header>
 
       {/* Main Coding Workspace Grid */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "2rem" }}>
         {/* Prompt Input Panel */}
-        <div className="glass-panel glow-indigo" style={{ padding: "2rem" }}>
+        <div className="glass-panel glow-indigo tasks-card" style={{ padding: "2rem" }}>
           <h2 style={{ fontSize: "1.2rem", fontWeight: 600, marginBottom: "0.5rem" }}>
             Autonomous Coding Prompt
           </h2>
@@ -169,8 +218,16 @@ export default function TasksPage() {
             Describe the feature, bugfix, or website modification. The AI will analyze the repository stack, generate unified diffs, run verification tests in an isolated sandbox, and expose a live preview.
           </p>
 
-          <form onSubmit={handleSubmitPrompt} style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-            <select required value={repositoryId} onChange={event => setRepositoryId(event.target.value)} disabled={loading} aria-label="Repository">
+          <form onSubmit={handleSubmitPrompt} className="tasks-prompt-form" style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+            <select
+              required
+              value={repositoryId}
+              onChange={event => setRepositoryId(event.target.value)}
+              disabled={loading}
+              aria-label="Repository"
+              className="input-field"
+              style={{ flex: "1 1 240px", minWidth: 0, boxSizing: "border-box" }}
+            >
               <option value="">Select a connected repository</option>
               {connectedRepos.map(repo => <option key={repo.id} value={repo.id}>{repo.full_name}</option>)}
             </select>
@@ -182,14 +239,14 @@ export default function TasksPage() {
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="e.g. Build a dark mode toggle button on the top navigation bar..."
               className="input-field"
-              style={{ flex: "1 1 300px" }}
+              style={{ flex: "2 1 280px", minWidth: 0, boxSizing: "border-box" }}
               disabled={loading}
             />
             <button
               type="submit"
               disabled={loading || !prompt.trim()}
               className="btn-primary"
-              style={{ width: "auto", padding: "0.85rem 1.8rem" }}
+              style={{ width: "auto", padding: "0.85rem 1.8rem", flexShrink: 0, whiteSpace: "nowrap" }}
             >
               {loading ? (
                 <>
@@ -203,7 +260,7 @@ export default function TasksPage() {
           </form>
 
           {errorMessage && (
-            <div style={{ marginTop: "1rem", background: "rgba(239, 68, 68, 0.12)", border: "1px solid rgba(239, 68, 68, 0.35)", color: "#fca5a5", padding: "0.75rem 1rem", borderRadius: "8px", fontSize: "0.88rem" }}>
+            <div style={{ marginTop: "1rem", background: "rgba(239, 68, 68, 0.12)", border: "1px solid rgba(239, 68, 68, 0.35)", color: "#fca5a5", padding: "0.75rem 1rem", borderRadius: "8px", fontSize: "0.88rem", overflowWrap: "anywhere", wordBreak: "break-word" }}>
               {errorMessage}
             </div>
           )}
@@ -211,9 +268,9 @@ export default function TasksPage() {
 
         {/* Active Task & Verification Pipeline */}
         {activeTask && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "1.5rem" }}>
+          <div className="tasks-pipeline-grid">
             {/* Left: AI Reasoning & Plan Steps */}
-            <div className="glass-panel" style={{ padding: "1.75rem" }}>
+            <div className="glass-panel tasks-card" style={{ padding: "1.75rem", minWidth: 0, boxSizing: "border-box" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
                 <h3 style={{ fontSize: "1.1rem", fontWeight: 600 }}>AI Execution Plan</h3>
                 <span style={{ fontSize: "0.78rem", background: activeTask.status === "completed" ? "rgba(16, 185, 129, 0.2)" : "rgba(245, 158, 11, 0.2)", color: activeTask.status === "completed" ? "#34d399" : "#fbbf24", padding: "0.2rem 0.6rem", borderRadius: "4px" }}>
@@ -246,7 +303,7 @@ export default function TasksPage() {
             </div>
 
             {/* Right: Sandbox Verification & Live Preview */}
-            <div className="glass-panel glow-cyan" style={{ padding: "1.75rem" }}>
+            <div className="glass-panel glow-cyan tasks-card" style={{ padding: "1.75rem", minWidth: 0, boxSizing: "border-box" }}>
               <h3 style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "1rem" }}>
                 Sandbox Verification &amp; Live Preview
               </h3>
@@ -263,7 +320,7 @@ export default function TasksPage() {
                 </div>
                 {activeTask.previewUrl && (
                   <div style={{ color: "#9ca3af", marginTop: "0.5rem" }}>
-                    Preview Port: <a href={activeTask.previewUrl} target="_blank" rel="noreferrer" style={{ color: "#38bdf8", textDecoration: "underline" }}>{activeTask.previewUrl}</a>
+                    Preview Port: <a href={activeTask.previewUrl} target="_blank" rel="noreferrer" style={{ color: "#38bdf8", textDecoration: "underline", wordBreak: "break-all" }}>{activeTask.previewUrl}</a>
                   </div>
                 )}
               </div>
@@ -278,7 +335,7 @@ export default function TasksPage() {
                     type="button"
                     onClick={handleApproveAndShip}
                     className="btn-primary"
-                    style={{ background: "linear-gradient(135deg, #10b981 0%, #06b6d4 100%)" }}
+                    style={{ background: "linear-gradient(135deg, #10b981 0%, #06b6d4 100%)", whiteSpace: "normal", textAlign: "center" }}
                   >
                     ✓ Approve, Commit Branch &amp; Open GitHub PR
                   </button>
@@ -295,11 +352,15 @@ export default function TasksPage() {
                     href={prCreated || "#"}
                     target="_blank"
                     rel="noreferrer"
-                    style={{ color: "#38bdf8", fontSize: "0.85rem", textDecoration: "underline", display: "inline-block", marginTop: "0.5rem", fontFamily: "var(--font-mono)" }}
+                    style={{ color: "#38bdf8", fontSize: "0.85rem", textDecoration: "underline", display: "inline-block", marginTop: "0.5rem", fontFamily: "var(--font-mono)", wordBreak: "break-all", overflowWrap: "anywhere", maxWidth: "100%" }}
                   >
                     {prCreated}
                   </a>
-                  <p><Link href="/releases">Review and approve release</Link> · <Link href="/notifications">Enable deployment email</Link></p>
+                  <p style={{ marginTop: "0.75rem", display: "flex", gap: "0.75rem", flexWrap: "wrap", fontSize: "0.82rem" }}>
+                    <Link href="/releases" style={{ color: "#93c5fd" }}>Review and approve release</Link>
+                    <span style={{ color: "var(--text-secondary)" }}>&bull;</span>
+                    <Link href="/notifications" style={{ color: "#93c5fd" }}>Enable deployment email</Link>
+                  </p>
                 </div>
               )}
             </div>

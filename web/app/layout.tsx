@@ -1,9 +1,15 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Ryvix — Autonomous Software & Infrastructure Operations",
   description: "AI-powered autonomous software and infrastructure operations platform",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#020617",
 };
 
 export default function RootLayout({

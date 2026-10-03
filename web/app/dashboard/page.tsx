@@ -8,6 +8,7 @@ import MovingBlocks3D from "@/components/MovingBlocks3D";
 import ConnectRepositoryModal from "@/components/ConnectRepositoryModal";
 import ConnectServerModal from "@/components/ConnectServerModal";
 import ConnectionsPanel from "@/components/ConnectionsPanel";
+import AppNav, { ReturnToDashboardButton } from "@/components/AppNav";
 
 // =========================================================================
 // 1. LUCIDE-STYLE VECTOR ICONS (Zero external dependencies, pixel-perfect)
@@ -265,6 +266,35 @@ function IconSliders({ size = 16, color = "currentColor" }: { size?: number; col
   );
 }
 
+function IconMenu({ size = 18, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="3" y1="12" x2="21" y2="12" />
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <line x1="3" y1="18" x2="21" y2="18" />
+    </svg>
+  );
+}
+
+function IconX({ size = 18, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
+function IconMoreHorizontal({ size = 18, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="1.5" fill={color} />
+      <circle cx="19" cy="12" r="1.5" fill={color} />
+      <circle cx="5" cy="12" r="1.5" fill={color} />
+    </svg>
+  );
+}
+
 // =========================================================================
 // 2. DATA CONTRACTS & STATE DEFINITIONS
 // =========================================================================
@@ -409,6 +439,36 @@ export default function DashboardPage() {
   // Navigation State
   const [activeTab, setActiveTab] = useState<NavSection>("overview");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
+  const [showMobileOverflow, setShowMobileOverflow] = useState<boolean>(false);
+
+  // Mobile Navigation: Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMobileMenuOpen(false);
+        setShowMobileOverflow(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // Mobile Navigation: Lock background scroll when drawer is open
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      if (mobileMenuOpen) {
+        document.body.style.overflow = "hidden";
+      } else {
+        document.body.style.overflow = "";
+      }
+    }
+    return () => {
+      if (typeof document !== "undefined") {
+        document.body.style.overflow = "";
+      }
+    };
+  }, [mobileMenuOpen]);
 
   // User & Workspace Identity
   const [userEmail, setUserEmail] = useState<string>("");
@@ -1317,6 +1377,76 @@ export default function DashboardPage() {
         overflowX: "hidden",
       }}
     >
+      {/* Responsive Styles for Mobile Phone (< 768px) */}
+      <style>{`
+        @media (max-width: 768px) {
+          .dashboard-mobile-only { display: flex !important; }
+          .dashboard-desktop-only { display: none !important; }
+          .dashboard-header-inner { padding: 0.5rem 0.85rem !important; gap: 0.5rem !important; }
+          .dashboard-main-content {
+            padding: 1.25rem 0.85rem 3rem !important;
+            max-width: 100vw !important;
+            box-sizing: border-box !important;
+            overflow-x: hidden !important;
+          }
+          .dashboard-shell {
+            position: relative !important;
+            width: 100% !important;
+            max-width: 100vw !important;
+            overflow-x: hidden !important;
+          }
+          .dashboard-sidebar {
+            position: fixed !important;
+            top: 0 !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            height: 100vh !important;
+            height: 100dvh !important;
+            z-index: 100 !important;
+            width: min(290px, 86vw) !important;
+            max-width: 100vw !important;
+            box-sizing: border-box !important;
+            transform: translateX(-100%) !important;
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.95) !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            overscroll-behavior: contain !important;
+            -webkit-overflow-scrolling: touch !important;
+          }
+          .dashboard-sidebar.mobile-open {
+            transform: translateX(0) !important;
+          }
+          .dashboard-sidebar-collapse-btn {
+            display: none !important;
+          }
+          .dashboard-timeline-scroll {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            padding-bottom: 0.5rem !important;
+          }
+          .dashboard-timeline-track {
+            min-width: 520px !important;
+          }
+          .dashboard-project-dropdown {
+            position: fixed !important;
+            top: calc(env(safe-area-inset-top, 0px) + 54px) !important;
+            left: 50% !important;
+            right: auto !important;
+            transform: translateX(-50%) !important;
+            width: min(300px, calc(100vw - 32px)) !important;
+            max-width: calc(100vw - 32px) !important;
+            box-sizing: border-box !important;
+            z-index: 60 !important;
+          }
+        }
+        @media (min-width: 769px) {
+          .dashboard-mobile-only { display: none !important; }
+          .dashboard-desktop-only { display: flex !important; }
+          .dashboard-mobile-close { display: none !important; }
+        }
+      `}</style>
+
       {/* Background Kinetic Layer */}
       <div style={{ opacity: 0.18, pointerEvents: "none", position: "fixed", inset: 0, zIndex: 0 }}>
         <MovingBlocks3D density="spacious" interactive={false} />
@@ -1403,7 +1533,27 @@ export default function DashboardPage() {
       >
         <div style={{ maxWidth: "1680px", margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
           {/* Left: Brand + Breadcrumb */}
-          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            {/* Mobile Hamburger Menu Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen((prev) => !prev)}
+              className="dashboard-mobile-only"
+              aria-label="Toggle Navigation Menu"
+              style={{
+                background: "#0D1218",
+                border: "1px solid #1D2732",
+                color: "#F5F7FA",
+                padding: "0.35rem 0.5rem",
+                borderRadius: "7px",
+                cursor: "pointer",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <IconMenu size={18} color="#F5F7FA" />
+            </button>
+
             <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "0.6rem" }}>
               <div
                 style={{
@@ -1456,6 +1606,7 @@ export default function DashboardPage() {
 
               {showWebsiteModal && (
                 <div
+                  className="dashboard-project-dropdown"
                   style={{
                     position: "absolute",
                     top: "115%",
@@ -1596,27 +1747,14 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Center Context Pill */}
-          <div
-            style={{
-              display: "none",
-              alignItems: "center",
-              gap: "0.5rem",
-              fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)",
-              fontSize: "0.74rem",
-              color: "#66717F",
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-            }}
-            className="desktop-only-flex"
-          >
-            <span>AI WORKSPACE</span>
-            <span>{"//"}</span>
-            <span style={{ color: "#F5F7FA" }}>{activeTab}</span>
+          {/* Primary Navigation Sections */}
+          <div className="dashboard-desktop-only" style={{ display: "flex", alignItems: "center" }}>
+            <AppNav className="dashboard-top-nav" />
           </div>
 
-          {/* Right: AI Status, Telemetry & User */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          {/* Right: AI Status, Telemetry & User (Desktop) */}
+          <div className="dashboard-desktop-only" style={{ alignItems: "center", gap: "0.75rem" }}>
+            <ReturnToDashboardButton />
             <div
               style={{
                 display: "inline-flex",
@@ -1669,6 +1807,98 @@ export default function DashboardPage() {
               </button>
             </div>
           </div>
+
+          {/* Right: Mobile Overflow Menu Button & Dropdown (...) */}
+          <div className="dashboard-mobile-only" style={{ position: "relative", alignItems: "center", gap: "0.5rem" }}>
+            <button
+              type="button"
+              onClick={() => setShowMobileOverflow((prev) => !prev)}
+              aria-label="More options"
+              style={{
+                background: "#0D1218",
+                border: "1px solid #1D2732",
+                color: "#A5AFBC",
+                padding: "0.35rem 0.55rem",
+                borderRadius: "7px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <IconMoreHorizontal size={18} color="#A5AFBC" />
+            </button>
+
+            {showMobileOverflow && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "125%",
+                  right: 0,
+                  width: "220px",
+                  background: "#0D1218",
+                  border: "1px solid #2A3542",
+                  borderRadius: "10px",
+                  padding: "0.6rem",
+                  boxShadow: "0 15px 35px rgba(0, 0, 0, 0.9)",
+                  zIndex: 70,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.4rem",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "0.3rem 0.5rem", borderBottom: "1px solid #1D2732" }}>
+                  <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "linear-gradient(135deg, #7C6CFF, #A78BFA)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: 700, color: "#ffffff" }}>
+                    {userEmail.charAt(0).toUpperCase()}
+                  </div>
+                  <span style={{ fontSize: "0.76rem", color: "#F5F7FA", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {userEmail.split("@")[0]}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => { setShowTelemetry(!showTelemetry); setShowMobileOverflow(false); }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    padding: "0.45rem 0.5rem",
+                    borderRadius: "6px",
+                    background: "transparent",
+                    border: "none",
+                    color: "#A5AFBC",
+                    fontSize: "0.8rem",
+                    cursor: "pointer",
+                    textAlign: "left",
+                  }}
+                >
+                  <IconTerminal size={14} color="#7C6CFF" />
+                  <span>Telemetry</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    padding: "0.45rem 0.5rem",
+                    borderRadius: "6px",
+                    background: "transparent",
+                    border: "none",
+                    color: "#EF4444",
+                    fontSize: "0.8rem",
+                    cursor: "pointer",
+                    textAlign: "left",
+                  }}
+                >
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -1676,9 +1906,25 @@ export default function DashboardPage() {
       {/* MAIN APPLICATION SHELL (COLLAPSIBLE SIDEBAR + FULL WORKSPACE)             */}
       {/* ========================================================================= */}
       <div className="dashboard-shell" style={{ display: "flex", flex: 1, maxWidth: "1680px", width: "100%", margin: "0 auto", position: "relative", zIndex: 2 }}>
-        {/* COLLAPSIBLE PREMIUM SIDEBAR */}
+        {/* Mobile Backdrop Overlay */}
+        {mobileMenuOpen && (
+          <div
+            onClick={() => setMobileMenuOpen(false)}
+            aria-hidden="true"
+            style={{
+              position: "fixed",
+              inset: 0,
+              backgroundColor: "rgba(0, 0, 0, 0.75)",
+              backdropFilter: "blur(3px)",
+              WebkitBackdropFilter: "blur(3px)",
+              zIndex: 90,
+            }}
+          />
+        )}
+
+        {/* COLLAPSIBLE PREMIUM SIDEBAR (Desktop inline + Mobile off-canvas drawer) */}
         <aside
-          className="dashboard-sidebar"
+          className={`dashboard-sidebar ${mobileMenuOpen ? "mobile-open" : ""}`}
           style={{
             width: isSidebarCollapsed ? "68px" : "220px",
             borderRight: "1px solid #1D2732",
@@ -1692,6 +1938,50 @@ export default function DashboardPage() {
             overflowX: "hidden",
           }}
         >
+          {/* Mobile Close Bar */}
+          <div
+            className="dashboard-mobile-only dashboard-mobile-close"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "0.3rem 0.5rem 0.75rem",
+              borderBottom: "1px solid #1D2732",
+              marginBottom: "0.6rem",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <div
+                style={{
+                  width: "22px",
+                  height: "22px",
+                  borderRadius: "5px",
+                  background: "linear-gradient(135deg, #7C6CFF 0%, #42D9FF 100%)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#ffffff",
+                  fontSize: "0.75rem",
+                  fontWeight: 800,
+                  boxShadow: "0 0 10px rgba(124, 108, 255, 0.4)",
+                }}
+              >
+                ✦
+              </div>
+              <span style={{ fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)", fontSize: "1.05rem", fontWeight: 800, letterSpacing: "-0.02em", color: "#F5F7FA" }}>
+                RYVIX
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(false)}
+              aria-label="Close Navigation Menu"
+              style={{ background: "none", border: "none", color: "#A5AFBC", cursor: "pointer", padding: "0.2rem", display: "flex", alignItems: "center" }}
+            >
+              <IconX size={18} />
+            </button>
+          </div>
+
           {/* Collapse Toggle Button */}
           <div className="dashboard-sidebar-collapse-btn" style={{ display: "flex", justifyContent: isSidebarCollapsed ? "center" : "flex-end", padding: "0 0.4rem 0.75rem" }}>
             <button
@@ -1713,10 +2003,36 @@ export default function DashboardPage() {
             </button>
           </div>
 
+          {/* PRIMARY PLATFORM SECTIONS (Mobile Drawer) */}
+          {mobileMenuOpen && (
+            <div style={{ padding: "0.5rem 0.5rem 0.75rem", borderBottom: "1px solid #1D2732", marginBottom: "0.5rem" }}>
+              <div style={{ fontSize: "0.64rem", fontFamily: "var(--font-mono, monospace)", color: "#66717F", textTransform: "uppercase", padding: "0.2rem 0.5rem 0.4rem" }}>
+                Primary Sections
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+                <Link href="/servers" onClick={() => setMobileMenuOpen(false)} style={{ textDecoration: "none", fontSize: "0.82rem", color: "#F5F7FA", padding: "0.4rem 0.6rem", borderRadius: "6px", background: "rgba(255, 255, 255, 0.04)" }}>
+                  🖥️ Servers
+                </Link>
+                <Link href="/observability" onClick={() => setMobileMenuOpen(false)} style={{ textDecoration: "none", fontSize: "0.82rem", color: "#F5F7FA", padding: "0.4rem 0.6rem", borderRadius: "6px", background: "rgba(255, 255, 255, 0.04)" }}>
+                  📡 Observability
+                </Link>
+                <Link href="/tasks" onClick={() => setMobileMenuOpen(false)} style={{ textDecoration: "none", fontSize: "0.82rem", color: "#F5F7FA", padding: "0.4rem 0.6rem", borderRadius: "6px", background: "rgba(255, 255, 255, 0.04)" }}>
+                  ⚡ Tasks
+                </Link>
+                <Link href="/operations" onClick={() => setMobileMenuOpen(false)} style={{ textDecoration: "none", fontSize: "0.82rem", color: "#F5F7FA", padding: "0.4rem 0.6rem", borderRadius: "6px", background: "rgba(255, 255, 255, 0.04)" }}>
+                  Server Approvals
+                </Link>
+                <Link href="/notifications" onClick={() => setMobileMenuOpen(false)} style={{ textDecoration: "none", fontSize: "0.82rem", color: "#F5F7FA", padding: "0.4rem 0.6rem", borderRadius: "6px", background: "rgba(255, 255, 255, 0.04)" }}>
+                  Security Emails
+                </Link>
+              </div>
+            </div>
+          )}
+
           {/* NAVIGATION SECTIONS */}
           <SidebarNavGroup
             title="MAIN"
-            collapsed={isSidebarCollapsed}
+            collapsed={isSidebarCollapsed && !mobileMenuOpen}
             items={[
               { id: "overview", label: "Overview", icon: <IconHome size={16} /> },
               { id: "ai", label: "AI Assistant", icon: <IconSparkles size={16} />, badge: previewState !== "none" ? "●" : undefined },
@@ -1725,57 +2041,57 @@ export default function DashboardPage() {
               { id: "tasks", label: "Tasks", icon: <IconCpu size={16} />, badge: tasks.length ? `${tasks.length}` : undefined },
             ]}
             activeTab={activeTab}
-            onSelect={setActiveTab}
+            onSelect={(id) => { setActiveTab(id); setMobileMenuOpen(false); }}
           />
 
           <SidebarNavGroup
             title="WORKSPACE"
-            collapsed={isSidebarCollapsed}
+            collapsed={isSidebarCollapsed && !mobileMenuOpen}
             items={[
               { id: "workspaces", label: "Workspaces", icon: <IconLayers size={16} /> },
               { id: "previews", label: "Previews", icon: <IconEye size={16} /> },
               { id: "changes", label: "Changes / History", icon: <IconHistory size={16} />, badge: `${changeHistory.length}` },
             ]}
             activeTab={activeTab}
-            onSelect={setActiveTab}
+            onSelect={(id) => { setActiveTab(id); setMobileMenuOpen(false); }}
           />
 
           <SidebarNavGroup
             title="DELIVERY"
-            collapsed={isSidebarCollapsed}
+            collapsed={isSidebarCollapsed && !mobileMenuOpen}
             items={[
               { id: "deployments", label: "Deployments", icon: <IconRocket size={16} /> },
               { id: "monitoring", label: "Monitoring", icon: <IconActivity size={16} /> },
               { id: "incidents", label: "Incidents", icon: <IconAlertCircle size={16} /> },
             ]}
             activeTab={activeTab}
-            onSelect={setActiveTab}
+            onSelect={(id) => { setActiveTab(id); setMobileMenuOpen(false); }}
           />
 
           <SidebarNavGroup
             title="TRUST"
-            collapsed={isSidebarCollapsed}
+            collapsed={isSidebarCollapsed && !mobileMenuOpen}
             items={[
               { id: "security", label: "Security", icon: <IconShield size={16} /> },
               { id: "audit", label: "Audit", icon: <IconFileText size={16} /> },
               { id: "connections", label: "Connections", icon: <IconSliders size={16} /> },
             ]}
             activeTab={activeTab}
-            onSelect={setActiveTab}
+            onSelect={(id) => { setActiveTab(id); setMobileMenuOpen(false); }}
           />
 
           <SidebarNavGroup
             title="SYSTEM"
-            collapsed={isSidebarCollapsed}
+            collapsed={isSidebarCollapsed && !mobileMenuOpen}
             items={[
               { id: "settings", label: "Settings", icon: <IconSettings size={16} /> },
             ]}
             activeTab={activeTab}
-            onSelect={setActiveTab}
+            onSelect={(id) => { setActiveTab(id); setMobileMenuOpen(false); }}
           />
 
           {/* Bottom Project Box */}
-          {!isSidebarCollapsed && (
+          {(!isSidebarCollapsed || mobileMenuOpen) && (
             <div style={{ marginTop: "auto", padding: "0.85rem", borderRadius: "8px", background: "#0D1218", border: "1px solid #1D2732", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <span style={{ fontSize: "0.64rem", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", color: "#66717F", textTransform: "uppercase" }}>
@@ -2085,40 +2401,42 @@ export default function DashboardPage() {
                   </span>
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative", padding: "0.5rem 0" }}>
-                  {["Analyzing", "Planning", "Coding", "Testing", "Preview", "Review", "Deploy"].map((step, idx) => {
-                    const stepStage = isProcessing ? analyzingStep : previewState === "preview_ready" ? 4 : previewState === "deploying" ? 5 + (deploymentStep >= 2 ? 1 : 0) : previewState === "deployed" ? 6 : 4;
-                    const isDone = idx <= stepStage;
-                    const isCurrent = idx === stepStage;
-                    return (
-                      <div key={step} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.35rem", zIndex: 2 }}>
-                        <div
-                          style={{
-                            width: "26px",
-                            height: "26px",
-                            borderRadius: "50%",
-                            background: isCurrent ? "linear-gradient(135deg, #7C6CFF, #42D9FF)" : isDone ? "#7C6CFF" : "#121922",
-                            border: `2px solid ${isCurrent ? "#42D9FF" : isDone ? "#A78BFA" : "#1D2732"}`,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: "0.68rem",
-                            fontWeight: 700,
-                            color: "#ffffff",
-                            boxShadow: isCurrent ? "0 0 14px rgba(66, 217, 255, 0.5)" : "none",
-                            transition: "all 0.3s ease",
-                          }}
-                        >
-                          {isDone ? "✓" : `${idx + 1}`}
+                <div className="dashboard-timeline-scroll" style={{ width: "100%", overflowX: "auto" }}>
+                  <div className="dashboard-timeline-track" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative", padding: "0.5rem 0", minWidth: "520px" }}>
+                    {["Analyzing", "Planning", "Coding", "Testing", "Preview", "Review", "Deploy"].map((step, idx) => {
+                      const stepStage = isProcessing ? analyzingStep : previewState === "preview_ready" ? 4 : previewState === "deploying" ? 5 + (deploymentStep >= 2 ? 1 : 0) : previewState === "deployed" ? 6 : 4;
+                      const isDone = idx <= stepStage;
+                      const isCurrent = idx === stepStage;
+                      return (
+                        <div key={step} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.35rem", zIndex: 2 }}>
+                          <div
+                            style={{
+                              width: "26px",
+                              height: "26px",
+                              borderRadius: "50%",
+                              background: isCurrent ? "linear-gradient(135deg, #7C6CFF, #42D9FF)" : isDone ? "#7C6CFF" : "#121922",
+                              border: `2px solid ${isCurrent ? "#42D9FF" : isDone ? "#A78BFA" : "#1D2732"}`,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "0.68rem",
+                              fontWeight: 700,
+                              color: "#ffffff",
+                              boxShadow: isCurrent ? "0 0 14px rgba(66, 217, 255, 0.5)" : "none",
+                              transition: "all 0.3s ease",
+                            }}
+                          >
+                            {isDone ? "✓" : `${idx + 1}`}
+                          </div>
+                          <span style={{ fontSize: "0.68rem", color: isDone ? "#F5F7FA" : "#66717F", fontWeight: isCurrent ? 600 : 400, fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)" }}>
+                            {step}
+                          </span>
                         </div>
-                        <span style={{ fontSize: "0.68rem", color: isDone ? "#F5F7FA" : "#66717F", fontWeight: isCurrent ? 600 : 400, fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)" }}>
-                          {step}
-                        </span>
-                      </div>
-                    );
-                  })}
-                  {/* Connecting Line */}
-                  <div style={{ position: "absolute", top: "18px", left: "20px", right: "20px", height: "2px", background: "#1D2732", zIndex: 1 }} />
+                      );
+                    })}
+                    {/* Connecting Line */}
+                    <div style={{ position: "absolute", top: "18px", left: "20px", right: "20px", height: "2px", background: "#1D2732", zIndex: 1 }} />
+                  </div>
                 </div>
               </div>
 
@@ -4013,7 +4331,7 @@ function SidebarNavGroup({
   return (
     <div style={{ marginBottom: "0.6rem" }}>
       {!collapsed && (
-        <div className="desktop-only" style={{ fontSize: "0.62rem", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", color: "#66717F", fontWeight: 700, padding: "0.2rem 0.65rem", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+        <div style={{ fontSize: "0.62rem", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", color: "#66717F", fontWeight: 700, padding: "0.2rem 0.65rem", letterSpacing: "0.08em", textTransform: "uppercase" }}>
           {title}
         </div>
       )}

@@ -4,6 +4,7 @@ import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
 import ConnectServerModal from "@/components/ConnectServerModal";
+import AppNav, { ReturnToDashboardButton } from "@/components/AppNav";
 
 interface SystemdService {
   name: string;
@@ -79,11 +80,73 @@ export default function ServersPage() {
   });
 
   return (
-    <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "2.5rem 1.5rem" }}>
+    <div className="servers-page-container" style={{ maxWidth: "1200px", margin: "0 auto", padding: "2.5rem 1.5rem" }}>
+      {/* Responsive Styles for Mobile Navigation & Content */}
+      <style>{`
+        .servers-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+          gap: 1.5rem;
+        }
+        @media (max-width: 640px) {
+          .servers-page-container {
+            padding: 1.5rem 1rem !important;
+          }
+          .servers-header {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 1rem !important;
+          }
+          .servers-nav {
+            width: 100% !important;
+            gap: 0.45rem !important;
+          }
+          .servers-user-email {
+            width: 100% !important;
+            margin-bottom: 0.2rem !important;
+          }
+          .servers-nav-link {
+            font-size: 0.8rem !important;
+            padding: 0.38rem 0.75rem !important;
+          }
+          .servers-guidance-banner {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 0.75rem !important;
+          }
+          .servers-action-bar {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 0.85rem !important;
+          }
+          .servers-filter-tabs {
+            width: 100% !important;
+            justify-content: flex-start !important;
+          }
+          .servers-enroll-btn {
+            width: 100% !important;
+            text-align: center !important;
+            justify-content: center !important;
+          }
+          .servers-grid {
+            grid-template-columns: 1fr !important;
+            gap: 1rem !important;
+          }
+          .servers-card {
+            padding: 1.25rem 1rem !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .servers-card-actions {
+            flex-direction: column !important;
+          }
+        }
+      `}</style>
+
       {/* Header Bar */}
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2.5rem", flexWrap: "wrap", gap: "1rem" }}>
+      <header className="servers-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2.5rem", flexWrap: "wrap", gap: "1rem" }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
             <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
               <h1 style={{ fontSize: "1.8rem", fontWeight: 700, letterSpacing: "-0.03em" }}>
                 RY<span className="gradient-text">VIX</span>
@@ -98,26 +161,17 @@ export default function ServersPage() {
           </p>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          {userEmail && (
-            <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-              {userEmail}
-            </span>
-          )}
-          <Link href="/observability" className="btn-secondary" style={{ padding: "0.4rem 0.9rem", fontSize: "0.82rem", textDecoration: "none", color: "#38bdf8", borderColor: "rgba(56, 189, 248, 0.3)" }}>📡 Observability</Link>
-          <Link href="/operations" className="btn-secondary" style={{ padding: "0.4rem 0.9rem", fontSize: "0.82rem", textDecoration: "none" }}>Service approvals</Link>
-          <Link href="/notifications" className="btn-secondary" style={{ padding: "0.4rem 0.9rem", fontSize: "0.82rem", textDecoration: "none" }}>Security emails</Link>
-          <Link href="/tasks" className="btn-secondary" style={{ padding: "0.4rem 0.9rem", fontSize: "0.82rem", textDecoration: "none" }}>
-            Coding Workspace
-          </Link>
-          <Link href="/" className="btn-secondary" style={{ padding: "0.4rem 0.9rem", fontSize: "0.82rem", textDecoration: "none" }}>
-            Dashboard
-          </Link>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.85rem", flexWrap: "wrap" }}>
+          <AppNav
+            userEmail={userEmail || undefined}
+            className="servers-nav"
+          />
+          <ReturnToDashboardButton />
         </div>
       </header>
 
       {/* Non-Coder Guidance: GitHub vs. Server */}
-      <div style={{
+      <div className="servers-guidance-banner" style={{
         background: "rgba(99, 102, 241, 0.08)",
         border: "1px solid rgba(99, 102, 241, 0.25)",
         borderRadius: "10px",
@@ -142,9 +196,9 @@ export default function ServersPage() {
       </div>
 
       {/* Top Action Bar */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: "1rem" }}>
+      <div className="servers-action-bar" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: "1rem" }}>
         {/* Filter Tabs */}
-        <div style={{ display: "flex", gap: "0.5rem" }}>
+        <div className="servers-filter-tabs" style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           {(["all", "healthy", "degraded"] as const).map((tab) => (
             <button
               key={tab}
@@ -169,8 +223,7 @@ export default function ServersPage() {
         {/* Enroll Button */}
         <button
           onClick={() => setShowEnrollModal(true)}
-
-          className="btn-primary"
+          className="btn-primary servers-enroll-btn"
           style={{
             padding: "0.5rem 1.25rem",
             fontSize: "0.88rem",
@@ -188,7 +241,7 @@ export default function ServersPage() {
 
       {/* Action Notification Banner */}
       {actionMessage && (
-        <div style={{ padding: "0.85rem 1.25rem", borderRadius: "8px", background: "rgba(99, 102, 241, 0.15)", border: "1px solid rgba(99, 102, 241, 0.3)", color: "#c7d2fe", marginBottom: "1.5rem", fontSize: "0.88rem" }}>
+        <div style={{ padding: "0.85rem 1.25rem", borderRadius: "8px", background: "rgba(99, 102, 241, 0.15)", border: "1px solid rgba(99, 102, 241, 0.3)", color: "#c7d2fe", marginBottom: "1.5rem", fontSize: "0.88rem", overflowWrap: "anywhere", wordBreak: "break-word" }}>
           {actionMessage}
         </div>
       )}
@@ -199,16 +252,16 @@ export default function ServersPage() {
           Loading enrolled infrastructure...
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "1.5rem" }}>
+        <div className="servers-grid">
           {filteredServers.map((server) => (
-            <div key={server.id} className="glass-panel glow-cyan" style={{ padding: "1.75rem" }}>
+            <div key={server.id} className="glass-panel glow-cyan servers-card" style={{ padding: "1.75rem", minWidth: 0, boxSizing: "border-box" }}>
               {/* Server Title & Status */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-                <div>
-                  <h3 style={{ fontSize: "1.15rem", fontWeight: 600, color: "#f3f4f6" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "0.5rem" }}>
+                <div style={{ minWidth: 0 }}>
+                  <h3 style={{ fontSize: "1.15rem", fontWeight: 600, color: "#f3f4f6", wordBreak: "break-word" }}>
                     {server.hostname}
                   </h3>
-                  <div style={{ fontSize: "0.8rem", color: "#9ca3af", fontFamily: "var(--font-mono)", marginTop: "0.2rem" }}>
+                  <div style={{ fontSize: "0.8rem", color: "#9ca3af", fontFamily: "var(--font-mono)", marginTop: "0.2rem", wordBreak: "break-word" }}>
                     {server.ip ?? "IP unavailable"} &bull; {server.provider ?? "Provider unavailable"}
                   </div>
                 </div>
@@ -329,7 +382,7 @@ export default function ServersPage() {
               </div>
 
               {/* Action Buttons */}
-              <div style={{ display: "flex", gap: "0.5rem", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "1rem" }}>
+              <div className="servers-card-actions" style={{ display: "flex", gap: "0.5rem", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "1rem" }}>
                 <button
                   disabled
                   title="Unavailable until authenticated command dispatch and persisted approval are implemented"
