@@ -89,12 +89,12 @@ export class DirectPreferenceOptimizationTuner {
    */
   public evaluateBatch(pairs: TrajectoryDpoPair[]): {
     evaluatedCount: number;
-    averageDpoLoss: number;
-    alignmentRatio: number;
-    averageRewardMargin: number;
+    averageDpoLoss: number | null;
+    alignmentRatio: number | null;
+    averageRewardMargin: number | null;
   } {
     if (pairs.length === 0) {
-      return { evaluatedCount: 0, averageDpoLoss: 0, alignmentRatio: 1.0, averageRewardMargin: 0 };
+      return { evaluatedCount: 0, averageDpoLoss: null, alignmentRatio: null, averageRewardMargin: null };
     }
 
     let lossSum = 0;

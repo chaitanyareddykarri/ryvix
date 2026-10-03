@@ -1,5 +1,8 @@
 # Ryvix
 
+Active follow-up: [audit remediation queue](docs/PENDING_WORK.md). The October 3 audit found
+legacy AI safety/evidence defects; earlier passing suites are not full live acceptance.
+
 Ryvix combines repository coding tasks, isolated previews, tenant-scoped chat,
 server telemetry and approved operations in an npm monorepo.
 

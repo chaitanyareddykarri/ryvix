@@ -2,13 +2,8 @@
  * @file speculative-simulator.ts
  * @module @ryvix/ai
  *
- * Speculative Execution & Shadow Dry-Run Simulator
- * 
- * Simulates systemic side-effects of commands and operations before production dispatch:
- * - Identifies destructive flags (rm -rf, mkfs, dd, iptables flush, raw disk writes)
- * - Detects socket binding conflicts (ports 80, 443, 3000, 5432)
- * - Predicts filesystem mutation delta and process signals
- * - Emits a cryptographically hashed DryRunCertificate required by execution gates
+ * Legacy command-risk heuristic. Does not execute a sandbox or authorize commands.
+ * The result hash is an integrity fingerprint, not a signature or approval token.
  */
 
 import * as crypto from 'node:crypto';
@@ -27,17 +22,17 @@ export interface DryRunCertificate {
 
 export class SpeculativeExecutionSimulator {
   /**
-   * Pre-simulates a command in an ephemeral shadow sandbox model
+   * Classifies a limited command syntax; unknown input requires independent review.
    */
   public simulate(command: string, context?: Record<string, any>): DryRunCertificate {
     const t0 = performance.now();
-    const certificateId = `cert_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const certificateId = crypto.randomUUID();
     const lower = command.toLowerCase().trim();
     const sideEffects: string[] = [];
 
-    let isSafe = true;
-    let riskScore = 0.05;
-    let recommendation: 'DISPATCH_APPROVED' | 'MANUAL_OVERRIDE_REQUIRED' | 'STRICTLY_BLOCKED' = 'DISPATCH_APPROVED';
+    let isSafe = false;
+    let riskScore = 0.5;
+    let recommendation: 'DISPATCH_APPROVED' | 'MANUAL_OVERRIDE_REQUIRED' | 'STRICTLY_BLOCKED' = 'MANUAL_OVERRIDE_REQUIRED';
 
     // 1. Destructive Commands & Filesystem Wipe Detection
     if (/rm\s+-[a-z]*r[a-z]*f\s+(\/|\/\*|~\/|\.\/)/.test(lower) || /mkfs|dd\s+if=|:\(\)\{/i.test(lower)) {
@@ -50,21 +45,21 @@ export class SpeculativeExecutionSimulator {
     // 2. Firewall & Network Blackhole
     if (/iptables\s+-[a-z]*f|ufw\s+disable|ip\s+link\s+set.*down/i.test(lower)) {
       isSafe = false;
-      riskScore = 0.85;
-      recommendation = 'MANUAL_OVERRIDE_REQUIRED';
+      riskScore = Math.max(riskScore, 0.85);
+      if (recommendation !== 'STRICTLY_BLOCKED') recommendation = 'MANUAL_OVERRIDE_REQUIRED';
       sideEffects.push('HIGH: Total firewall flush or interface down will sever remote management access.');
     }
 
     // 3. Process Signals
     if (/pkill\s+-9|killall\s+-9|kill\s+-9\s+1\b/i.test(lower)) {
       riskScore = Math.max(riskScore, 0.65);
-      recommendation = 'MANUAL_OVERRIDE_REQUIRED';
+      if (recommendation !== 'STRICTLY_BLOCKED') recommendation = 'MANUAL_OVERRIDE_REQUIRED';
       sideEffects.push('MODERATE: SIGKILL (signal 9) prevents graceful socket cleanup; state corruption possible.');
     }
 
     // 4. Socket and Port Binding Mutations
     if (/bind.*:3000|--port\s+3000|-p\s+3000:3000/i.test(lower)) {
-      sideEffects.push('SOCKET: Will attempt to bind port 3000. Verified against active EADDRINUSE conflict.');
+      sideEffects.push('SOCKET: References port 3000; actual availability has not been checked.');
     }
 
     // 5. Systemctl Service Lifecycle
@@ -72,12 +67,14 @@ export class SpeculativeExecutionSimulator {
       const match = lower.match(/systemctl\s+(restart|reload|start)\s+([a-z0-9_-]+)/i);
       const action = match ? match[1] : 'restart';
       const service = match ? match[2] : 'daemon';
-      sideEffects.push(`SYSTEMD: Triggers ${action} on ${service}.service (Estimated transition latency: ~400ms).`);
+      sideEffects.push(`SYSTEMD: Requests ${action} on ${service}.service; execution and timing are unverified.`);
     }
 
-    // If completely benign (e.g. status, curl, triage, cat, ss)
-    if (/^(ss|netstat|ps|systemctl status|journalctl|curl|ping|cat|ls|head|tail|git status)\b/i.test(lower)) {
-      sideEffects.push('READ_ONLY: Zero state mutation. Query operation strictly safe.');
+    // Reject shell composition, expansion and redirection. This is deliberately
+    // not a shell parser: only a narrow exact observation form receives a low-risk hint.
+    const simpleStatus = /^systemctl[ \t]+status[ \t]+[a-zA-Z0-9_][a-zA-Z0-9_.@-]*$/.test(command.trim());
+    if (simpleStatus && recommendation !== 'STRICTLY_BLOCKED') {
+      sideEffects.push('HEURISTIC: Recognized service-status syntax; backend authorization remains required.');
       riskScore = 0.01;
       isSafe = true;
       recommendation = 'DISPATCH_APPROVED';
@@ -86,7 +83,7 @@ export class SpeculativeExecutionSimulator {
     const latencyMs = performance.now() - t0;
     const now = new Date().toISOString();
 
-    // Cryptographic Certificate Seal
+    // Unkeyed fingerprint only; not a cryptographic authorization seal
     const hash = crypto
       .createHash('sha256')
       .update(`${certificateId}:${command}:${isSafe}:${riskScore}:${now}`)
@@ -96,7 +93,7 @@ export class SpeculativeExecutionSimulator {
       certificateId,
       command,
       isSafe,
-      predictedSideEffects: sideEffects.length > 0 ? sideEffects : ['Nominal execution trajectory with standard runtime boundaries.'],
+      predictedSideEffects: sideEffects.length > 0 ? sideEffects : ['Unrecognized command: no execution or safety verification performed.'],
       mutationRiskScore: Math.round(riskScore * 100) / 100,
       recommendation,
       certificateHash: hash,

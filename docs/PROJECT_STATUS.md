@@ -1,5 +1,8 @@
 # Ryvix implementation and deployment status
 
+Active follow-up: [audit remediation queue](PENDING_WORK.md). The October 3 audit found
+legacy AI safety/evidence defects; earlier passing suites are not full live acceptance.
+
 Updated 2026-10-03. Code checkpoint: **d81b281**; applied migrations through
 **20261003000004**. This index supersedes older pending lists. Dated verification
 reports retain their original results; no live certification is implied.

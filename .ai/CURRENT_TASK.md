@@ -1,5 +1,8 @@
 # Current Task & Implementation State
 
+Active follow-up: [audit remediation queue](../docs/PENDING_WORK.md). The October 3 audit found
+legacy AI safety/evidence defects; earlier passing suites are not full live acceptance.
+
 ## Documentation synchronization — 2026-10-03
 
 Current status and remaining provider work: [project index](../docs/PROJECT_STATUS.md).

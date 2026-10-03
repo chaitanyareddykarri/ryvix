@@ -1,5 +1,8 @@
 # Ryvix Current Project Context
 
+Active follow-up: [audit remediation queue](../docs/PENDING_WORK.md). The October 3 audit found
+legacy AI safety/evidence defects; earlier passing suites are not full live acceptance.
+
 Current code checkpoint: d81b281 (2026-10-03); applied schema 20261003000004.
 See [project status](../docs/PROJECT_STATUS.md) and
 [assistant verification](../docs/verification/WHATSAPP_ASSISTANT_2026_10_03.md).

@@ -1,18 +1,6 @@
 import { InternalAgent } from './helpers/internal-agent-fixture';
 import { fakeCloud, testApproval, healthyProbe as fixtureProbe } from './helpers/execution-fixtures';
-/**
- * Master End-to-End Total Project Integration Test Suite
- * 
- * Orchestrates and proves all 8 layers of the Ryvix platform simultaneously:
- * 1. Multi-Tenant Organization & Cryptographic Auth Lifecycle (Tokens, RLS, API Keys).
- * 2. Tri-Pathway Server Access (Agent Enrollment, Ed25519 SSH Keypair, Cloud Out-of-Band).
- * 3. Server Archetypes & Module Inspection (Web Ingress, Database Host, App Runtime).
- * 4. Neural Network Engine & Threat Detection (<0.05ms forward pass, IP auto-extraction).
- * 5. Proactive Cluster-Wide Firewall Containment (iptables & peer node broadcast).
- * 6. Autonomous Self-Healing & Out-of-Band Cloud Recovery Bridge.
- * 7. AI Coding Workspace, Docker Sandbox & GitHub PR Pipeline.
- * 8. Live Next.js HTTP API Endpoints (GET /api/servers, POST actions).
- */
+/** Fixture integration coverage. Does not certify real cloud, firewall or deployment behavior. */
 
 import assert from 'node:assert/strict';
 import * as http from 'node:http';
@@ -43,6 +31,7 @@ function testHttpRequest(options: http.RequestOptions, postData?: Record<string,
         }
       });
     });
+    req.setTimeout(5000, () => req.destroy(new Error('HTTP acceptance request timed out')));
     req.on('error', (err) => reject(err));
     if (postData) {
       req.write(JSON.stringify(postData));
@@ -53,7 +42,7 @@ function testHttpRequest(options: http.RequestOptions, postData?: Record<string,
 
 export async function testTotalProjectIntegration(): Promise<void> {
   console.log('======================================================================');
-  console.log('RYVIX MASTER END-TO-END TOTAL PROJECT INTEGRATION TEST');
+  console.log('RYVIX FIXTURE INTEGRATION TEST');
   console.log('======================================================================\n');
 
   // =========================================================================
@@ -190,70 +179,25 @@ export async function testTotalProjectIntegration(): Promise<void> {
 
   const capExec = await agentApp.executeCapability('service.restart', { unit: 'node-app' });
   assert.equal(capExec.success, true);
-  console.log('  ✓ Layer 6 PASSED: Out-of-band cloud recovery power-cycle & service restoration verified.');
+  console.log('  ✓ Layer 6 PASSED: Injected cloud response and fixture service-state checks passed; no real reboot.');
 
-  // =========================================================================
-  // LAYER 7: LIVE NEXT.JS HTTP API VERIFICATION
-  // =========================================================================
-  console.log('\n--- [LAYER 7: LIVE NEXT.JS HTTP API ENDPOINTS VERIFICATION] ---');
-  try {
-    // 1. GET /api/servers
-    const getRes = await testHttpRequest({
-      hostname: 'localhost',
-      port: 3000,
-      path: '/api/servers',
-      method: 'GET',
-    });
-    assert.equal(getRes.statusCode, 200, 'GET /api/servers must return 200');
-    assert.equal(getRes.body.success, true);
-    console.log(`  ✓ HTTP GET /api/servers -> 200 OK (${getRes.body.servers.length} servers active).`);
-
-    // 2. POST /api/servers (diagnose_threat_neural)
-    const postRes = await testHttpRequest(
-      {
-        hostname: 'localhost',
-        port: 3000,
-        path: '/api/servers',
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      },
-      {
-        action: 'diagnose_threat_neural',
-        params: {
-          serverId: 'srv_live_01',
-          hostname: 'api-gateway-edge',
-          metrics: { cpuPercent: 95, memPercent: 82, diskPercent: 30 },
-          recentLogs: ['maximum query depth exceeded in GraphQL query { user { friends { friends'],
-        },
-      }
-    );
-    assert.equal(postRes.statusCode, 200);
-    assert.equal(postRes.body.analysis.threatType, 'GRAPHQL_DEPTH_DOS');
-    assert.ok(postRes.body.analysis.neuralPrediction);
-    console.log(`  ✓ HTTP POST /api/servers [diagnose_threat_neural] -> 200 OK (Threat: ${postRes.body.analysis.threatType}, Latency: ${postRes.body.analysis.neuralPrediction.inferenceLatencyMs.toFixed(3)}ms).`);
-
-    // 3. POST /api/servers (generate_ssh_keypair)
-    const keyRes = await testHttpRequest(
-      {
-        hostname: 'localhost',
-        port: 3000,
-        path: '/api/servers',
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      },
-      { action: 'generate_ssh_keypair', params: { label: 'prod-cluster-key' } }
-    );
-    assert.equal(keyRes.statusCode, 200);
-    assert.ok(keyRes.body.keypair.publicKey.startsWith('ssh-ed25519'));
-    console.log('  ✓ HTTP POST /api/servers [generate_ssh_keypair] -> 200 OK (Ed25519 generated).');
-
-  } catch (err: any) {
-    console.warn(`  [INFO] HTTP Dev server check note: ${err.message}`);
+  if (process.env.RYVIX_TEST_LOCAL_HTTP === 'true') {
+    await verifyUnauthenticatedServerBoundary();
+    console.log('Local HTTP authentication rejection checks passed. Authenticated acceptance remains separate.');
+  } else {
+    console.log('SKIP local HTTP checks: set RYVIX_TEST_LOCAL_HTTP=true with localhost:3000 running.');
   }
+  console.log('Fixture integration checks passed. Real provider/deployment acceptance was not tested.');
+}
 
-  console.log('\n======================================================================');
-  console.log('✓ MASTER END-TO-END TOTAL PROJECT INTEGRATION TEST 100% PASSED!');
-  console.log('======================================================================\n');
+export async function verifyUnauthenticatedServerBoundary(
+  request: typeof testHttpRequest = testHttpRequest,
+): Promise<void> {
+  for (const method of ['GET', 'POST']) {
+    const result = await request({ hostname:'localhost', port:3000, path:'/api/servers', method,
+      headers:{'Content-Type':'application/json'} }, method === 'POST' ? {} : undefined);
+    assert.equal(result.statusCode,401, method + ' /api/servers must reject unauthenticated access');
+  }
 }
 
 if (require.main === module) {
