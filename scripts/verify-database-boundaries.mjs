@@ -36,7 +36,7 @@ try {
       EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
         WHERE n.nspname='vault' AND c.relkind IN ('r','v','m') AND has_table_privilege($1,c.oid,'SELECT')) AS secret_access`, [role]);
     check(`${role}: no Vault access`, Object.values(vault.rows[0]).every(value => value === false));
-    for (const table of ['auth_challenge_limits','repository_jobs','connector_enrollments','connector_telemetry_receipts','connector_credentials','deployment_events','chat_request_budgets','channel_accounts','channel_inbox','learning_checkpoints','learning_deployments','server_commands','deployment_targets','deployment_runtime_observations','cloud_recovery_requests','whatsapp_alert_outbox','whatsapp_alert_receipts','release_requests','email_notification_preferences','email_notification_outbox']) {
+    for (const table of ['auth_challenge_limits','repository_jobs','connector_enrollments','connector_telemetry_receipts','connector_credentials','deployment_events','chat_request_budgets','channel_accounts','channel_inbox','learning_checkpoints','learning_deployments','server_commands','deployment_targets','deployment_runtime_observations','cloud_recovery_requests','whatsapp_alert_outbox','whatsapp_alert_receipts','release_requests','email_notification_preferences','email_notification_outbox','experience_settings','experience_events','experience_lessons','personal_memories','experience_predictions']) {
       const result = await client.query(`SELECT has_table_privilege($1,$2,'SELECT,INSERT,UPDATE,DELETE') AS allowed`, [role, `public.${table}`]);
       check(`${role}: ${table} is backend-only`, !result.rows[0].allowed);
     }

@@ -20,8 +20,9 @@ export async function runRepositoryJob(store: RepositoryJobStore, workerId: stri
   }, 10000);
   try {
     const githubToken = await store.credentials(job,workerId);
+    const lessons=await store.learningContext(job);
     const result = await executeRepositoryTask({ taskId: job.task_id,projectId: job.project_id,
-      fullName: job.full_name,branch: job.default_branch,prompt: job.user_prompt,githubToken,
+      fullName: job.full_name,branch: job.default_branch,prompt: job.user_prompt,githubToken,lessons,
       onSession: async session => {
         sessionId = session.id;
         if (lostLease) throw new Error('Worker lease lost');

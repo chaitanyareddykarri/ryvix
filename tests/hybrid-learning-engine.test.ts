@@ -126,22 +126,15 @@ export async function runHybridLearningEngineTests(): Promise<void> {
     res1 = await orchestrator.analyzeServerEvent(zeroDayEvent);
     assert.equal(res1.threatType, diagnosis.threatType);
   } finally { modelGateway.complete = originalComplete; }
-  if (res1.llmCallsUsed !== 1 || res1.source !== 'llm_escalated' || !res1.learnedNewPattern) {
-    throw new Error('Expected unknown event to escalate to LLM and trigger autonomous learning');
-  }
-  console.log(`  âœ“ Zero-day anomaly escalated to LLM and learned into local memory (fingerprint: ${res1.fingerprint}).`);
-
-  // 3. Repeat Encounter with different IP/timestamp -> Verified 0 LLM Calls via Self-Learning Store
-  const repeatEvent: ServerEventData = {
-    ...zeroDayEvent,
-    recentLogs: ['ZERO_DAY_ANOMALY: unmapped binary heap corruption exploit pattern at 2026-09-22T04:00:00Z from 10.0.0.55'],
-  };
-
-  const res2 = await orchestrator.analyzeServerEvent(repeatEvent);
-  if (res2.llmCallsUsed !== 0 || res2.source !== 'learned_memory' || !res2.resolvedLocally) {
-    throw new Error(`Expected repeat encounter to resolve from learned memory with 0 calls, got source=${res2.source}, calls=${res2.llmCallsUsed}`);
-  }
-  console.log('  âœ“ PROVEN SELF-LEARNING: Repeat encounter resolved from local memory with 0 LLM calls!');
+  assert.equal(res1.llmCallsUsed,1);
+  assert.equal(res1.learnedNewPattern,false);
+  assert.equal(selfLearningStore.getLearnedCount(),0,'Valid provider JSON must not automatically become trusted memory');
+  // Even an old global cached diagnosis must not suppress a fresh provider call.
+  selfLearningStore.learnPattern(res1.fingerprint,{patternSignature:'ZERO_DAY_ANOMALY',threatType:'UNTRUSTED',diagnosis:'Old unverified diagnosis',remediationAction:'Do nothing',capabilityToInvoke:{action:'system.diagnostics',params:{}},confidence:0.95});
+  try {
+    modelGateway.complete=async()=>{throw new Error('Fresh diagnosis required');};
+    await assert.rejects(()=>orchestrator.analyzeServerEvent(zeroDayEvent),/Fresh diagnosis required/);
+  } finally {modelGateway.complete=originalComplete;selfLearningStore.clear();}
 
   // 4. Coding Task Routing Verification
   const codingPlan = await orchestrator.generateTaskPlan('task_coding_test', 'Refactor auth middleware to support PKCE');
@@ -150,12 +143,7 @@ export async function runHybridLearningEngineTests(): Promise<void> {
   }
   console.log(`  âœ“ Coding task routed directly to LLM Gateway as architected (${codingPlan.steps.length} steps).`);
 
-  // 5. Test Continuous Fine-Tuning Dataset Export
-  const dataset = selfLearningStore.exportFineTuningDataset();
-  if (!dataset || !dataset.includes('prompt')) {
-    throw new Error('Expected exportFineTuningDataset to produce valid JSONL');
-  }
-  console.log('  âœ“ Continuous fine-tuning dataset successfully exported in JSONL format.');
+  assert.equal(selfLearningStore.getLearnedCount(),0);
 
   console.log('âœ“ Expanded Hybrid Autonomous Engine & Self-Learning Test ALL PASSED!\n');
 }

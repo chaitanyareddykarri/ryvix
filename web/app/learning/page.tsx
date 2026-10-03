@@ -18,7 +18,7 @@ export default function LearningPage(){
   }catch(e){setError(e instanceof Error?e.message:'Invalid request');}finally{setBusy(false);}}
   const field={background:'#111827',color:'#e5e7eb',padding:8,border:'1px solid #475569',borderRadius:6};
   return <main style={{maxWidth:1000,margin:'auto',padding:32,color:'#e5e7eb'}}><Link href="/chat">Back to chat</Link><h1>Reviewed learning</h1>
-    <p>Submit real labeled observations with their source. Another owner or administrator must verify the label and provenance. Chat conversations do not automatically train a model.</p>
+    <p>Submit real labeled observations with their source. Another owner or administrator must verify the label and provenance. Chat conversations do not automatically train a model. <Link href="/experience">Review collected experience and personal memory</Link>.</p>
     {error&&<p role="alert">{error}</p>}
     <select aria-label="Project" value={project} onChange={e=>setProject(e.target.value)} style={field}><option value="">Select project</option>{projects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>
     {project&&<><h2>Submit an example</h2>

@@ -30,6 +30,10 @@ export async function testWebChatStreaming() {
     if (name === '@/utils/repository-chat-context') return {repositoryChatContext:async()=>({sources:[]})};
     if (name.endsWith('/semantic-reranking')) return {rerankSources:async(_question:string,sources:unknown[])=>({sources,mode:'fixture'})};
     if (name === '@/utils/direct-db') return { getDirectDbPool: () => ({}) };
+    if (name.endsWith('/experience-store')) return {ExperienceStore:class {
+      async memories(org:string,user:string){assert.equal(org,'verified-organization');assert.equal(user,'verified-user');return [{kind:'preference',content:'Use brief explanations.',expires_at:'2026-12-01'}];}
+      async retrieve(){return [];}
+    }};
     if (name.endsWith('/conversation-store')) return { ConversationError: RequestError, ConversationStore: class {
       async begin() { return { id: randomUUID(), lease: randomUUID(), history: [{ role:'user',content:'Earlier I asked about server health.' }] }; }
       async finish() { saved++; }
@@ -45,6 +49,7 @@ export async function testWebChatStreaming() {
       assert.equal(options.maxTokens, 4096);
       assert.equal(messages[1].content,'Earlier I asked about server health.');
       const context = JSON.parse(messages[messages.length-1].content);
+      assert.equal(context.personalMemory[0].content,'Use brief explanations.');
       assert.deepEqual(JSON.parse(context.observations), observations);
       assert.ok(!messages.some(message => message.content.includes('attacker-organization')));
       if (providerFailure) throw new Error('private provider detail');

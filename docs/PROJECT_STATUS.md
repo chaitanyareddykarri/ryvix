@@ -1,5 +1,19 @@
 # Ryvix implementation and deployment status
 
+## Latest continuation — 2026-10-03
+
+Personal memory, chat corrections, opt-in outcome collection, independently
+reviewed lessons in chat/coding, measured response metadata and observation-only
+classifier predictions are implemented. Migration `20261003000001` is applied.
+Latest evidence: 76 project suites plus 15 Node checks, typecheck/lint/build,
+real SQL rollback fixtures and 109 read-only database checks.
+Read [setup and remaining limitations](infrastructure/EXPERIENCE_AND_MEMORY.md)
+and [verification](verification/EXPERIENCE_2026_10_03.md). Zero approved examples,
+evaluated checkpoints or active classifiers exist in the inspected database;
+universal self-learning and live model quality are not claimed.
+
+## Previous implementation snapshot — 2026-10-02
+
 Updated 2026-10-02. Code checkpoint: `45b130b`, following `e719f05` and
 `a9e8459`, published to `main`. This is the current status index; dated reports
 retain their original evidence. Implemented code and applied schema do not imply

@@ -1,0 +1,24 @@
+[Unit]
+Description=Ryvix bounded experience collection and observation-only classifier
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ryvix-worker
+WorkingDirectory=/opt/ryvix/current
+EnvironmentFile=/etc/ryvix/experience.env
+ExecStart=/usr/bin/node --import tsx scripts/experience-worker.ts
+Restart=on-failure
+RestartSec=15
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+UMask=0077
+TimeoutStopSec=45
+MemoryMax=512M
+CPUQuota=50%
+
+[Install]
+WantedBy=multi-user.target

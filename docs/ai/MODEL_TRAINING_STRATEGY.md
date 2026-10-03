@@ -1,5 +1,12 @@
 # Ryvix Model-Readiness & Fine-Tuning Strategy
 
+October 3: [experience collection and personal memory](../infrastructure/EXPERIENCE_AND_MEMORY.md)
+are implemented. The legacy readiness helper remains an offline utility; it now
+returns unavailable metrics for empty data and uses actual supplied latency.
+The database-reviewed classifier is the implemented training path. External LLM
+fine-tuning, production drift attribution and staged model traffic rollout are
+not implemented by the target strategy below.
+
 ## Implementation checkpoint — 2026-10-02
 
 The reviewed tenant learning path persists examples, requires independent label

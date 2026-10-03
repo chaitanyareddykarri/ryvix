@@ -1,5 +1,10 @@
 # Channels and reviewed learning rollout
 
+October 3: [personal memory and reviewed experience](EXPERIENCE_AND_MEMORY.md)
+adds durable outcome collection, explicit chat corrections, independent lesson
+review and context reuse. The existing classifier training/review requirements
+below still apply; collected events are not automatically trusted training labels.
+
 ## Implementation checkpoint — 2026-10-02
 
 Gmail uses read-only OAuth polling into a reviewed inbox. WhatsApp supports signed

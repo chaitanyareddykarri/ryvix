@@ -5,14 +5,12 @@
  * 1. Coding Tasks: Always routed directly to LLM Reasoning Gateway.
  * 2. Server Operations & Security Incidents:
  *    - Tier 1: Evaluated locally by LocalSecurityEngine (<1ms latency, ZERO external LLM calls).
- *    - Tier 2: Checked against persistent SelfLearningStore (<1ms latency, ZERO external LLM calls).
- *    - Tier 3: If unknown zero-day, escalated to LLM Gateway -> diagnosed -> automatically
- *              learned into persistent local store for future 0-call instant remediation!
+ *    - Legacy global pattern caches are excluded from production diagnosis.
+ *    - Unknown events are escalated to a provider; returned hypotheses require review.
  */
 
 import { modelGateway, LLMResponse } from './model-gateway';
 import { LocalSecurityEngine, ServerEventData, LocalAnalysisResult } from './local-security-engine';
-import { selfLearningStore, LearnedPattern } from './self-learning-store';
 import { parseIncidentDiagnosis } from './incident-diagnosis';
 import { ContextBuilder } from './context/context-builder';
 
@@ -143,20 +141,8 @@ export class RyvixOrchestrator {
       };
     }
 
-    // TIER 2: Check Persistent Self-Learning Store (<1ms, 0 LLM calls)
-    const learned: LearnedPattern | null = selfLearningStore.lookup(localResult.fingerprint, rawLog);
-    if (learned) {
-      return {
-        resolvedLocally: true,
-        source: 'learned_memory',
-        threatType: learned.threatType,
-        diagnosis: `[Self-Learned] ${learned.diagnosis}`,
-        recommendedAction: learned.remediationAction,
-        capabilityToInvoke: learned.capabilityToInvoke,
-        llmCallsUsed: 0,
-        fingerprint: localResult.fingerprint,
-      };
-    }
+    // Legacy global patterns have no tenant provenance or independent review.
+    // Never trust them as production diagnoses. Reviewed lessons are backend-scoped.
 
     // TIER 3: Novel Zero-Day Anomaly -> Escalate to LLM Reasoning Gateway
     const prompt = `You are the Ryvix Autonomous Security Specialist. An unrecognized server anomaly has occurred:
@@ -183,18 +169,7 @@ Diagnose this threat and output JSON format:
     }
     const parsedData = parseIncidentDiagnosis(llmResp.content);
 
-    // CONTINUOUS SELF-LEARNING: Commit the LLM's solution into permanent local memory
-    selfLearningStore.learnPattern(localResult.fingerprint, {
-      patternSignature: ContextBuilder.sanitizeText(rawLog || `CPU:${event.metrics.cpuPercent}%_MEM:${event.metrics.memPercent}%`),
-      threatType: parsedData.threatType,
-      diagnosis: parsedData.diagnosis,
-      remediationAction: parsedData.remediationAction,
-      capabilityToInvoke: {
-        action: parsedData.action,
-        params: parsedData.params,
-      },
-      confidence: 0.95,
-    });
+    // A valid model response is an unverified hypothesis, not a learned fact.
 
     return {
       resolvedLocally: false,
@@ -208,7 +183,7 @@ Diagnose this threat and output JSON format:
       },
       llmCallsUsed: 1,
       fingerprint: localResult.fingerprint,
-      learnedNewPattern: true,
+      learnedNewPattern: false,
     };
   }
 }

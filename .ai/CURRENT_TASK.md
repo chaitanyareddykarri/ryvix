@@ -1,5 +1,22 @@
 # Current Task & Implementation State
 
+## Experience and memory continuation — 2026-10-03
+
+Implemented `/experience`, explicit personal memory, owned chat corrections,
+opt-in durable collection, independent lesson review/revocation, chat/coding lesson
+retrieval, measured response metadata and observation-only classifier predictions.
+Migration `20261003000001` is applied. Legacy automatic diagnosis caching and fake
+empty-data quality/latency values are removed. See
+[the checkpoint](../docs/verification/EXPERIENCE_2026_10_03.md) and
+[deployment guide](../docs/infrastructure/EXPERIENCE_AND_MEMORY.md).
+Latest checks: 76 project suites plus 15 Node checks, typecheck/lint/build, real SQL
+rollback fixtures and 109 database boundary checks. No live quality claim: the
+database has zero approved examples/checkpoints/active classifiers. Normal local
+environment sources have no LLM key/public URL. External fine-tuning, broader
+repository indexing and staged model traffic rollout remain further work.
+
+The older checkpoint summary below is historical.
+
 Current status: [implementation and deployment index](../docs/PROJECT_STATUS.md).
 Code is published through `45b130b`; migration checkpoint is `20261002000003`.
 Documentation synchronized on 2026-10-02. Remaining work is live configuration

@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 import type { WorkspaceSession } from '@ryvix/database';
 import type { ChangedFile } from '../../../services/src/workspace/task-artifacts';
+import {ExperienceStore} from './experience-store';
 
 export interface RepositoryJob {
   task_id: string; repository_id: string; project_id: string; organization_id: string;
@@ -10,6 +11,11 @@ export interface RepositoryJob {
 
 export class RepositoryJobStore {
   constructor(private readonly pool: Pool, private readonly hostId?: string) {}
+  async learningContext(job:RepositoryJob){
+    const store=new ExperienceStore(this.pool);
+    const lessons=await store.retrieve(job.organization_id,job.created_by,job.project_id,job.user_prompt);
+    return lessons.map(l=>({id:l.id,content:l.content,evidenceId:l.event_id,observedAt:l.observed_at,expiresAt:l.expires_at}));
+  }
   private workerHost() {
     if(!this.hostId || !/^[a-z0-9][a-z0-9-]{0,62}$/.test(this.hostId))throw new Error('Stable worker host required');
     return this.hostId;

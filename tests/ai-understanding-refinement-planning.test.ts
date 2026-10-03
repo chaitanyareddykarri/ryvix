@@ -379,7 +379,7 @@ export async function testAIUnderstandingRefinementPlanning() {
 
   const metrics = modelReadinessManager.getEvaluationMetrics();
   assert.ok(metrics.totalInteractions >= 1);
-  assert.ok(metrics.userApprovalRate > 0);
+  assert.ok((metrics.userApprovalRate ?? 0) > 0);
   console.log('  ✓ Evaluation & fine-tuning dataset verified: 100% sanitized with ZERO credentials/secrets.\n');
 
   console.log('======================================================================');

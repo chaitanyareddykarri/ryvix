@@ -37,7 +37,9 @@
     "train:ai": "tsx ai/scripts/train-local-model.ts",
     "train:deep": "tsx ai/scripts/deep-train-ai.ts",
     "db:reset-users": "tsx scripts/delete-all-users.ts",
-    "verify:workspace": "tsx scripts/verify-workspace-live.ts"
+    "verify:workspace": "tsx scripts/verify-workspace-live.ts",
+    "verify:experience": "tsx scripts/verify-experience-live.ts",
+    "worker:experience": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/experience-worker.ts"
   },
   "devDependencies": {
     "@types/node": "^22.13.4",

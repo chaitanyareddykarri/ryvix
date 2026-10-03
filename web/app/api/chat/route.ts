@@ -1,3 +1,4 @@
+import {ExperienceStore} from '../../../../backend/src/services/experience-store';
 import { NextResponse } from 'next/server';
 import { modelGateway } from '@ryvix/services';
 import { requireTenant, RequestError } from '@/utils/tenant-context';
@@ -43,15 +44,21 @@ export async function POST(request: Request) {
     store = new ConversationStore(getDirectDbPool());
     session = await store.begin(organizationId,user.id,body.conversationId);
     const current = session, historyStore = store;
+    const retrievalQuery=[...session.history.filter(message=>message.role==='user').slice(-2).map(message=>message.content),prompt].join('\n');
+    const experience=new ExperienceStore(getDirectDbPool());
+    const memories=await experience.memories(organizationId,user.id);
+    const lessonSources=(lessons:any[])=>lessons.map(l=>({id:'lesson:'+l.id,kind:'independently reviewed lesson',title:`Prior experience: ${l.project_name}`,date:l.observed_at,
+      excerpt:ContextBuilder.sanitizeText(JSON.stringify({projectId:l.project_id,lesson:l.content,evidence:l.evidence,expires:l.expires_at})).slice(0,3000)}));
     const [context, excerpts] = await Promise.all([
-      diagnosticContext(organizationId,user.id), retrieveChatSources(organizationId,user.id,
-        [...session.history.filter(message=>message.role==='user').slice(-2).map(message=>message.content),prompt].join('\n')),
+      diagnosticContext(organizationId,user.id), retrieveChatSources(organizationId,user.id,retrievalQuery),
     ]);
     if(body.repositoryId !== undefined) {
       if(typeof body.repositoryId !== 'string')throw new RequestError('Invalid repository.',400);
       const repository=await repositoryChatContext(organizationId,user.id,body.repositoryId,prompt,signal);
       excerpts.push(...repository.sources);
-    }
+      const lessons=await experience.retrieve(organizationId,user.id,repository.projectId,retrievalQuery);
+      excerpts.push(...lessonSources(lessons));
+    }else excerpts.push(...lessonSources(await experience.retrieve(organizationId,user.id,null,retrievalQuery)));
     const ranked=await rerankSources(prompt,excerpts,signal);
     const intent = /deploy|release|commit|workflow/i.test(prompt) ? 'deployment'
       : /server|health|cpu|memory|disk|incident|security|latency/i.test(prompt) ? 'diagnostics'
@@ -63,6 +70,7 @@ export async function POST(request: Request) {
       { role: 'system', content: CHAT_SYSTEM_PROMPT },
       ...session.history.map(message => ({ ...message, content: ContextBuilder.sanitizeText(message.content) })),
       { role: 'user', content: ContextBuilder.sanitizeText(JSON.stringify({ question: prompt, intent,
+        personalMemory:memories.slice(0,12).map(m=>({kind:m.kind,content:m.content,expires:m.expires_at})),
         observations: JSON.stringify(context).slice(0,24000),
         observationsTruncated: JSON.stringify(context).length>24000, sources: ranked.sources,retrievalMode:ranked.mode })) },
     ], { temperature: 0.2, maxTokens: 4096, signal,
@@ -78,8 +86,8 @@ export async function POST(request: Request) {
       try {
         for await (const chunk of iterator) append(chunk);
         signal.throwIfAborted();
-        await historyStore.finish(current.id,current.lease,organizationId,user.id,prompt,ContextBuilder.sanitizeText(answer));
-        return NextResponse.json({ success: true, conversationId: current.id, response: answer,
+        const turnId=await historyStore.finish(current.id,current.lease,organizationId,user.id,prompt,ContextBuilder.sanitizeText(answer),{latencyMs:Date.now()-started,provider:modelInfo?.provider,model:modelInfo?.model});
+        return NextResponse.json({ success: true, conversationId: current.id, turnId, response: answer,
           sources: context, retrievedSources: excerpts, modelInfo, metrics: { totalDurationMs: Date.now()-started } },
           { headers: { 'Cache-Control':'no-store' } });
       } finally { await iterator.return(undefined); }
@@ -93,8 +101,8 @@ export async function POST(request: Request) {
         yield ['token',{ chunk: first.value }];
         for await (const chunk of iterator) { append(chunk); yield ['token',{ chunk }]; }
         signal.throwIfAborted();
-        await historyStore.finish(current.id,current.lease,organizationId,user.id,prompt,ContextBuilder.sanitizeText(answer));
-        yield ['done',{ totalDurationMs:Date.now()-started,status:'success' }];
+        const turnId=await historyStore.finish(current.id,current.lease,organizationId,user.id,prompt,ContextBuilder.sanitizeText(answer),{latencyMs:Date.now()-started,provider:modelInfo?.provider,model:modelInfo?.model});
+        yield ['done',{ turnId,conversationId:current.id,totalDurationMs:Date.now()-started,status:'success' }];
       } catch {
         yield ['error',{ error:'Response interrupted or could not be saved. Please retry.' }];
       } finally { abort.abort(); await iterator.return(undefined); await release(); }

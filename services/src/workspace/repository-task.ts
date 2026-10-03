@@ -7,6 +7,7 @@ import { repositoryPreviewCommand } from './preview-command';
 /** Worker orchestration; customer commands are executed exclusively by DockerWorkspaceManager. */
 export async function executeRepositoryTask(input: {
   taskId: string; projectId: string; fullName: string; branch: string; githubToken: string; prompt: string;
+  lessons?:Array<{id:string;content:string;evidenceId:string;observedAt:string;expiresAt:string}>;
   onPlan: (summary: string, steps: string[]) => Promise<void>;
   onSession?: (session: Awaited<ReturnType<typeof manager.createSession>>) => Promise<void>;
 }) {
@@ -51,7 +52,7 @@ export async function executeRepositoryTask(input: {
     if (!candidates.length) throw new Error('No supported source files found; specify a supported repository');
     const files: Array<{ path: string; content: string }> = [];
     for (const file of candidates) files.push({ path: file.path, content: (await manager.readFile(session.id, file.path)) || '' });
-    const plan = await codingAssistant.generateRepositoryChanges(input.prompt, profile.stack, files);
+    const plan = await codingAssistant.generateRepositoryChanges(input.prompt, profile.stack, files,input.lessons);
     await input.onPlan(plan.summary, plan.steps);
     for (const change of plan.changes) {
       if (change.action === 'create' && entries.some((file: any) => file.path === change.path)) throw new Error('AI attempted to overwrite an unreviewed file');

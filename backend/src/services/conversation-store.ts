@@ -55,15 +55,19 @@ export class ConversationStore {
       ]) };
     });
   }
-  async finish(id: string, lease: string, organizationId: string, userId: string, question: string, answer: string) {
+  async finish(id: string, lease: string, organizationId: string, userId: string, question: string, answer: string,measurement?:{latencyMs:number;provider?:string;model?:string}) {
+    if(measurement&&(!Number.isInteger(measurement.latencyMs)||measurement.latencyMs<0||measurement.latencyMs>300000||
+      (measurement.provider?.length||0)>100||(measurement.model?.length||0)>200))throw new ConversationError('Invalid response measurement.',400);
     return this.transaction(async client => {
       const member = await client.query('SELECT 1 FROM organization_members WHERE organization_id=$1 AND user_id=$2 FOR SHARE',[organizationId,userId]);
       if (!member.rows.length) throw new ConversationError('Organization access denied.',403);
       const owned = await client.query(`UPDATE chat_conversations SET lease_id=NULL,lease_expires_at=NULL
         WHERE id=$1 AND lease_id=$2 AND organization_id=$3 AND user_id=$4 AND lease_expires_at>now() RETURNING id`,[id,lease,organizationId,userId]);
       if (!owned.rows.length) throw new ConversationError('Conversation lease expired.',409);
-      await client.query('INSERT INTO chat_turns(conversation_id,question,answer) VALUES($1,$2,$3)',[id,question,answer]);
+      const saved=await client.query(`INSERT INTO chat_turns(conversation_id,question,answer,response_latency_ms,response_provider,response_model)
+        VALUES($1,$2,$3,$4,$5,$6) RETURNING id`,[id,question,answer,measurement?.latencyMs??null,measurement?.provider??null,measurement?.model??null]);
       await client.query('DELETE FROM chat_turns WHERE conversation_id=$1 AND id NOT IN (SELECT id FROM chat_turns WHERE conversation_id=$1 ORDER BY id DESC LIMIT 100)',[id]);
+      return String(saved.rows[0].id);
     });
   }
   async release(id: string, lease: string) {

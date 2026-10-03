@@ -7,7 +7,7 @@
  *   1. Production Execution Data (transient, active session state)
  *   2. Evaluation Data (benchmarks, regression tests, accuracy scoring)
  *   3. Future Fine-Tuning Datasets (sanitized, validated JSONL instruction pairs)
- * - Zero Secrets Guarantee: Strips all credentials, PII, and customer private data before export
+ * - Legacy offline helper; sanitization does not establish consent or anonymization
  * - Evaluates model quality based on plan validity, build success, and user acceptance rates
  */
 
@@ -15,6 +15,7 @@ import { RefinedRequirement } from '../understanding/intent-processor';
 import { TaskContext } from '../context/context-builder';
 import type { Plan } from '@ryvix/database';
 import { PlanValidationResult } from '../validation/plan-validator';
+import {sanitizeLearningEvent} from '../learning-event';
 
 export interface ExecutionDataPoint {
   id: string;
@@ -38,16 +39,17 @@ export interface ExecutionDataPoint {
     feedbackNotes?: string;
   };
   finalOutcome: 'success' | 'failure' | 'discarded';
+  latencyMs?: number;
   qualityScore: number; // 0.0 - 1.0
 }
 
 export interface ModelEvaluationMetrics {
   totalInteractions: number;
-  planValidationPassRate: number;
-  userApprovalRate: number;
-  buildSuccessRate: number;
-  averageLatencyMs: number;
-  averageQualityScore: number;
+  planValidationPassRate: number | null;
+  userApprovalRate: number | null;
+  buildSuccessRate: number | null;
+  averageLatencyMs: number | null;
+  averageQualityScore: number | null;
 }
 
 export class ModelReadinessManager {
@@ -59,6 +61,7 @@ export class ModelReadinessManager {
    */
   recordInteraction(point: ExecutionDataPoint): void {
     // Sanitize any stray secret tokens in user prompt or notes
+    if(!Number.isFinite(point.qualityScore)||point.qualityScore<0||point.qualityScore>1)throw new Error('Measured quality score required');
     const sanitized = this.sanitizeDataPoint(point);
     this.productionInteractions.push(sanitized);
 
@@ -76,11 +79,11 @@ export class ModelReadinessManager {
     if (total === 0) {
       return {
         totalInteractions: 0,
-        planValidationPassRate: 1.0,
-        userApprovalRate: 1.0,
-        buildSuccessRate: 1.0,
-        averageLatencyMs: 0,
-        averageQualityScore: 1.0,
+        planValidationPassRate: null,
+        userApprovalRate: null,
+        buildSuccessRate: null,
+        averageLatencyMs: null,
+        averageQualityScore: null,
       };
     }
 
@@ -90,12 +93,13 @@ export class ModelReadinessManager {
     const avgScore =
       this.productionInteractions.reduce((acc, p) => acc + p.qualityScore, 0) / total;
 
+    const latencies = this.productionInteractions.map(p=>p.latencyMs).filter((v): v is number=>typeof v==='number'&&Number.isFinite(v)&&v>=0);
     return {
       totalInteractions: total,
       planValidationPassRate: Number((validPlans / total).toFixed(3)),
       userApprovalRate: Number((approved / total).toFixed(3)),
       buildSuccessRate: Number((buildPassed / total).toFixed(3)),
-      averageLatencyMs: 45,
+      averageLatencyMs: latencies.length ? latencies.reduce((sum,v)=>sum+v,0)/latencies.length : null,
       averageQualityScore: Number(avgScore.toFixed(3)),
     };
   }
@@ -140,6 +144,7 @@ export class ModelReadinessManager {
    * Strips all secrets, tokens, passwords, and private keys.
    */
   private sanitizeDataPoint(point: ExecutionDataPoint): ExecutionDataPoint {
+    point=sanitizeLearningEvent(point as unknown as Record<string,unknown>) as unknown as ExecutionDataPoint;
     const secretRegex = /(?:password|secret|token|key|api_key|bearer|ghp_|sk-)[\s:=]+[a-zA-Z0-9_\-\.]+/gi;
     
     const cleanPrompt = point.rawUserPrompt.replace(secretRegex, '[REDACTED_SECRET]');

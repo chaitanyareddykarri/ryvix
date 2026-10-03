@@ -87,6 +87,12 @@ proof that the instance rebooted or that its application is healthy.
 
 ## Deployment sequence
 
+October 3 addition: apply `20261003000001`, deploy the
+[experience worker](EXPERIENCE_AND_MEMORY.md), and explicitly opt projects into
+collection. This worker needs the existing trusted database connection, no new
+LLM subscription. Live answer evaluation reuses a configured provider; external
+fine-tuning is not automatically enabled by collection or user memory.
+
 1. **Choose the first environment.** Select one hosting provider, the application
    domain, a distinct preview domain, an authorized test repository, and an
    authorized disposable server for recovery verification. Start with one worker.

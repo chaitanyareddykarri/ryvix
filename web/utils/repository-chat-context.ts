@@ -43,5 +43,5 @@ export async function repositoryChatContext(org:string,user:string,repositoryId:
     sources.push({id:`github:${repo.full_name}:${commit.sha}:${file.path}`,kind:'repository file at verified commit',
       title:file.path,date:commit.commit?.committer?.date,excerpt});
   }
-  return {sources,commit:commit.sha,truncated:!!tree.truncated};
+  return {sources,projectId:repo.project_id,commit:commit.sha,truncated:!!tree.truncated};
 }

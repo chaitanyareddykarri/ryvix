@@ -1,5 +1,11 @@
 # Ryvix
 
+Latest: [experience and personal memory](docs/infrastructure/EXPERIENCE_AND_MEMORY.md)
+adds explicit preferences, reviewed chat corrections, outcome collection and
+lessons reused by chat/coding. Migration `20261003000001` is applied; see the
+[October 3 verification](docs/verification/EXPERIENCE_2026_10_03.md). The older
+checkpoint below predates this continuation.
+
 Ryvix combines repository coding tasks, isolated previews, tenant-scoped chat,
 server telemetry and approved operations in an npm monorepo.
 
