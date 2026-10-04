@@ -1,5 +1,8 @@
 # Ryvix implementation and deployment status
 
+October 4 follow-up: [mobile layout and nine-item pending recheck](verification/PENDING_RECHECK_2026_10_04.md).
+Servers navigation/cards now fit small viewports. Classifier promotion gates and measured/null latency already existed.
+
 Active follow-up: [audit remediation queue](PENDING_WORK.md). The October 3 audit found
 legacy AI safety/evidence defects; earlier passing suites are not full live acceptance.
 

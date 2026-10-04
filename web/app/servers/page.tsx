@@ -82,8 +82,8 @@ export default function ServersPage() {
     <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "2.5rem 1.5rem" }}>
       {/* Header Bar */}
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2.5rem", flexWrap: "wrap", gap: "1rem" }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+        <div style={{ minWidth: 0, maxWidth: "100%" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.75rem" }}>
             <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
               <h1 style={{ fontSize: "1.8rem", fontWeight: 700, letterSpacing: "-0.03em" }}>
                 RY<span className="gradient-text">VIX</span>
@@ -98,9 +98,9 @@ export default function ServersPage() {
           </p>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+        <nav aria-label="Infrastructure navigation" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.75rem", minWidth: 0, maxWidth: "100%" }}>
           {userEmail && (
-            <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
+            <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)", overflowWrap: "anywhere", maxWidth: "100%" }}>
               {userEmail}
             </span>
           )}
@@ -113,7 +113,7 @@ export default function ServersPage() {
           <Link href="/" className="btn-secondary" style={{ padding: "0.4rem 0.9rem", fontSize: "0.82rem", textDecoration: "none" }}>
             Dashboard
           </Link>
-        </div>
+        </nav>
       </header>
 
       {/* Non-Coder Guidance: GitHub vs. Server */}
@@ -144,7 +144,7 @@ export default function ServersPage() {
       {/* Top Action Bar */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: "1rem" }}>
         {/* Filter Tabs */}
-        <div style={{ display: "flex", gap: "0.5rem" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
           {(["all", "healthy", "degraded"] as const).map((tab) => (
             <button
               key={tab}
@@ -199,12 +199,12 @@ export default function ServersPage() {
           Loading enrolled infrastructure...
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "1.5rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))", gap: "1.5rem" }}>
           {filteredServers.map((server) => (
-            <div key={server.id} className="glass-panel glow-cyan" style={{ padding: "1.75rem" }}>
+            <div key={server.id} className="glass-panel glow-cyan" style={{ padding: "1.75rem", minWidth: 0, overflowWrap: "anywhere" }}>
               {/* Server Title & Status */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-                <div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                <div style={{ minWidth: 0, maxWidth: "100%" }}>
                   <h3 style={{ fontSize: "1.15rem", fontWeight: 600, color: "#f3f4f6" }}>
                     {server.hostname}
                   </h3>

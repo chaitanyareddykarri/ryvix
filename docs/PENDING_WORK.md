@@ -3,6 +3,11 @@
 This is the active remediation queue. The [audit](verification/WORKSPACE_AUDIT_2026_10_03.md)
 preserves the original findings; [project status](PROJECT_STATUS.md) describes implemented workflows.
 
+Latest [nine-item recheck](verification/PENDING_RECHECK_2026_10_04.md): servers mobile
+overflow fixed and viewport settings made explicit. Missing viewport, absent classifier
+promotion gates and hardcoded 45ms latency were stale findings. Deployment/provider
+acceptance and representative reviewed quality evidence remain pending.
+
 | Order | Work | Status |
 | --- | --- | --- |
 | 1 | Prevent the experimental simulator from approving compound/destructive commands; correct its safety claims | Fixed; regression checks passed |
