@@ -2,8 +2,9 @@
 
 The existing Google read-only OAuth connector can now be polled by a separate
 worker. Messages remain untrusted inbox proposals and require existing review
-before a coding task is created. This does not send Gmail replies or implement
-Google Pub/Sub push notifications. Application OTP/alert mail still uses SMTP.
+before a coding task is created. Optional authenticated Pub/Sub now wakes this same
+poller; separate owner-reviewed replies require a send OAuth grant. Application
+OTP/alert mail still uses SMTP. See [push/reply setup](CAPABILITY_PROVIDERS.md).
 
 1. Connect Gmail through the authenticated Channels page using an owner/admin.
 2. Put the connector UUID in the comma-separated RYVIX_GMAIL_POLL_CONNECTORS
@@ -14,7 +15,8 @@ Google Pub/Sub push notifications. Application OTP/alert mail still uses SMTP.
 4. Run `npm run worker:gmail -- --once` for a configured startup/poll check, then
    install infrastructure/ryvix-gmail.service with /etc/ryvix/gmail.env.
 
-Each cycle polls allowed connectors sequentially and waits 60 seconds. Active
+Periodic cycles poll allowed connectors every minute; push work is checked every
+five seconds, with a one-minute failure backoff. Enabled watches renew before expiry. Active
 connector state and current owner/admin membership are checked before dispatch;
 the existing credential resolver independently rechecks authorization. A session
 advisory lock prevents overlapping scheduled polls of the same connector. Existing

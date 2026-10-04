@@ -1,5 +1,8 @@
 # Channels and reviewed learning rollout
 
+October 4 update: [current capability setup and limits](CAPABILITY_PROVIDERS.md). Gmail push/reviewed replies, additional P1 transports, measured response usage, bounded semantic retrieval and separate external-training dataset preparation now have implementations. Prior descriptions of these features as wholly absent are superseded; provider verification and actual external training remain pending.
+
+
 October 3: [personal memory and reviewed experience](EXPERIENCE_AND_MEMORY.md)
 adds durable outcome collection, explicit chat corrections, independent lesson
 review and context reuse. The existing classifier training/review requirements

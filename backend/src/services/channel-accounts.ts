@@ -12,7 +12,7 @@ export async function channelProviderJson(url:string,init:RequestInit={},max=200
 }
 export class ChannelAccounts {
   constructor(private readonly pool:Pool){}
-  async connect(org:string,user:string,environment:string,channel:'gmail'|'whatsapp',subject:string,secret:string,cursor?:string) {
+  async connect(org:string,user:string,environment:string,channel:'gmail'|'whatsapp',subject:string,secret:string,cursor?:string,gmailSend=false) {
     const client=await this.pool.connect();try{
       await client.query('BEGIN');await client.query("SET LOCAL lock_timeout='5s'");
       const scope=await client.query(`SELECT p.id FROM environments e JOIN projects p ON p.id=e.project_id JOIN organization_members m ON m.organization_id=p.organization_id
@@ -36,8 +36,8 @@ export class ChannelAccounts {
       }
       const vault=await client.query('SELECT vault.create_secret($1,$2) AS id',[secret,`channel-${id}`]);
       await client.query("INSERT INTO connector_credentials(connector_id,credential_type,vault_secret_ref) VALUES($1,'oauth_token',$2)",[id,vault.rows[0].id]);
-      await client.query(`INSERT INTO channel_accounts(connector_id,owner_id,provider_subject,cursor) VALUES($1,$2,$3,$4)
-        ON CONFLICT(connector_id) DO UPDATE SET owner_id=excluded.owner_id,cursor=excluded.cursor`,[id,user,`${channel}:${subject}`,cursor||null]);
+      await client.query(`INSERT INTO channel_accounts(connector_id,owner_id,provider_subject,cursor,gmail_send_enabled) VALUES($1,$2,$3,$4,$5)
+        ON CONFLICT(connector_id) DO UPDATE SET owner_id=excluded.owner_id,cursor=excluded.cursor,gmail_send_enabled=excluded.gmail_send_enabled`,[id,user,`${channel}:${subject}`,cursor||null,channel==='gmail'&&gmailSend]);
       await client.query(`INSERT INTO audit_events(project_id,actor_id,actor_type,action_name,parameters_hash,diff_summary,status)
         VALUES($1,$2,'user','channel.connect',$3,'Verified channel account connected','success')`,[scope.rows[0].id,user,createHash('sha256').update(id).digest('hex')]);
       await client.query('COMMIT');return {connectorId:id};

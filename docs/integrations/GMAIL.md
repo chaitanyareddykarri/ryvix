@@ -1,5 +1,8 @@
 # Gmail Integration Specification
 
+October 4 update: [current capability setup and limits](../infrastructure/CAPABILITY_PROVIDERS.md). Gmail push/reviewed replies, additional P1 transports, measured response usage, bounded semantic retrieval and separate external-training dataset preparation now have implementations. Prior descriptions of these features as wholly absent are superseded; provider verification and actual external training remain pending.
+
+
 ## Implementation checkpoint — 2026-10-03
 
 Code checkpoint: `d81b281`; applied migrations through `20261003000004`.

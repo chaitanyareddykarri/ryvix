@@ -1,6 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { streamProvider } from './provider-stream';
+import type {TokenUsage} from './token-usage';
+import {tokenCount} from './token-usage';
 /**
  * Ryvix Multi-Provider LLM Gateway with Automatic Rate-Limit Failover
  * 
@@ -32,8 +34,8 @@ export interface LLMCompletionResult {
   content: string;
   providerUsed: string;
   modelUsed: string;
-  promptTokens: number;
-  completionTokens: number;
+  promptTokens: number|null;
+  completionTokens: number|null;
   latencyMs: number;
   failoverOccurred: boolean;
   failedProviders: string[];
@@ -43,7 +45,7 @@ export class ModelGateway {
   private providers: ProviderDefinition[] = [];
 
   async *stream(messages: LLMMessage[], options: { maxTokens?: number; temperature?: number; signal?: AbortSignal;
-    onProvider?: (provider: string, model: string) => void } = {}) {
+    onProvider?: (provider: string, model: string) => void;onUsage?:(usage:TokenUsage&{provider:string;model:string})=>void } = {}) {
     const signal = AbortSignal.any([AbortSignal.timeout(120000), ...(options.signal ? [options.signal] : [])]);
     for (const provider of [...this.providers].sort((a,b) => a.priority-b.priority)) {
       if (process.env.RYVIX_CHAT_PROVIDER && provider.id !== process.env.RYVIX_CHAT_PROVIDER) continue;
@@ -54,12 +56,14 @@ export class ModelGateway {
       let emitted = false;
       try {
         const model = process.env[`${provider.id.toUpperCase()}_MODEL`] || provider.model;
-        for await (const chunk of streamProvider({ ...provider, apiKey, model }, messages, { ...options, signal })) {
+        let usage:TokenUsage|undefined;
+        for await (const chunk of streamProvider({ ...provider, apiKey, model }, messages, { ...options, signal,onUsage:value=>{usage=value;} })) {
           if (!emitted) options.onProvider?.(provider.id,model);
           emitted = true;
           yield chunk;
         }
         if (!emitted) throw new Error('Empty provider response');
+        if(usage)options.onUsage?.({...usage,provider:provider.id,model});
         return;
       } catch (error) {
         if (emitted || signal.aborted) throw new Error('Model stream interrupted. Please retry.');
@@ -303,7 +307,6 @@ export class ModelGateway {
     // the local reasoning engine synthesizes a high-quality response deterministically.
     const latencyMs = Date.now() - startTime;
     if (options?.requireProvider) throw new Error('No AI provider is available. Configure a provider and retry.');
-    const promptText = messages.map((m) => m.content).join('\n');
     const userMsg = messages.find((m) => m.role === 'user')?.content || 'Autonomous Task';
     const localContent = this.generateLocalReasoning(userMsg);
 
@@ -311,8 +314,8 @@ export class ModelGateway {
       content: localContent,
       providerUsed: 'local_deterministic_engine',
       modelUsed: 'ryvix-deterministic-planner-v1',
-      promptTokens: Math.round(promptText.length / 4),
-      completionTokens: Math.round(localContent.length / 4),
+      promptTokens: null,
+      completionTokens: null,
       latencyMs,
       failoverOccurred: failedProviders.length > 0,
       failedProviders,
@@ -328,7 +331,7 @@ export class ModelGateway {
     modelName: string,
     messages: LLMMessage[],
     options?: { temperature?: number; maxTokens?: number }
-  ): Promise<{ content: string; promptTokens: number; completionTokens: number }> {
+  ): Promise<{ content: string; promptTokens: number|null; completionTokens: number|null }> {
     const url = `${provider.baseUrl}/chat/completions`;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -361,8 +364,8 @@ export class ModelGateway {
     const content = data.choices?.[0]?.message?.content || '';
     return {
       content,
-      promptTokens: data.usage?.prompt_tokens || 100,
-      completionTokens: data.usage?.completion_tokens || 100,
+      promptTokens: tokenCount(data.usage?.prompt_tokens),
+      completionTokens: tokenCount(data.usage?.completion_tokens),
     };
   }
 
@@ -370,7 +373,7 @@ export class ModelGateway {
     provider: ProviderDefinition,
     messages: LLMMessage[],
     options?: { temperature?: number; maxTokens?: number }
-  ): Promise<{ content: string; promptTokens: number; completionTokens: number }> {
+  ): Promise<{ content: string; promptTokens: number|null; completionTokens: number|null }> {
     // A. Native Anthropic Claude API
     if (provider.id === 'claude') {
       const claudePayload = {
@@ -404,8 +407,8 @@ export class ModelGateway {
       const content = data.content?.[0]?.text || '';
       return {
         content,
-        promptTokens: data.usage?.input_tokens || 100,
-        completionTokens: data.usage?.output_tokens || 100,
+        promptTokens: tokenCount(data.usage?.input_tokens),
+        completionTokens: tokenCount(data.usage?.output_tokens),
       };
     }
     const url = provider.id === 'huggingface'
@@ -451,15 +454,15 @@ export class ModelGateway {
 
     const data = await res.json();
     let content = '';
-    let promptTokens = 120;
-    let completionTokens = 85;
+    let promptTokens:number|null = null;
+    let completionTokens:number|null = null;
 
     if (Array.isArray(data) && data[0]?.generated_text) {
       content = data[0].generated_text;
     } else if (data.choices && data.choices[0]?.message?.content) {
       content = data.choices[0].message.content;
-      promptTokens = data.usage?.prompt_tokens || promptTokens;
-      completionTokens = data.usage?.completion_tokens || completionTokens;
+      promptTokens = tokenCount(data.usage?.prompt_tokens);
+      completionTokens = tokenCount(data.usage?.completion_tokens);
     } else {
       content = JSON.stringify(data);
     }

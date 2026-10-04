@@ -1,3 +1,4 @@
+import {watchGmail} from '../../../../../backend/src/connectors/gmail-api';
 import {NextResponse} from 'next/server';
 import {cookies} from 'next/headers';
 import {randomBytes,createHash,timingSafeEqual} from 'node:crypto';
@@ -23,18 +24,19 @@ export async function GET(request:Request){try{
     if(typeof token.refresh_token!=='string'||typeof token.access_token!=='string')throw new RequestError('Offline Gmail consent required. Reconnect with consent.',409);
     const profile=await channelProviderJson('https://gmail.googleapis.com/gmail/v1/users/me/profile',{headers:{Authorization:`Bearer ${token.access_token}`}});
     if(typeof profile.emailAddress!=='string'||!/^\d+$/.test(profile.historyId))throw new Error('Invalid Gmail profile');
-    await new ChannelAccounts(getDirectDbPool()).connect(organizationId,user.id,state.environment,'gmail',profile.emailAddress.toLowerCase(),JSON.stringify({refresh_token:token.refresh_token}),profile.historyId);
+    await new ChannelAccounts(getDirectDbPool()).connect(organizationId,user.id,state.environment,'gmail',profile.emailAddress.toLowerCase(),JSON.stringify({refresh_token:token.refresh_token}),profile.historyId,state.replies===true&&String(token.scope||'').split(' ').includes('https://www.googleapis.com/auth/gmail.send'));
     return NextResponse.redirect(new URL('/channels',origin));
   }
   const environment=params.get('environmentId')||'';if(!uuid.test(environment))throw new RequestError('Select an environment.',400);
   const state=randomBytes(24).toString('hex'),verifier=randomBytes(48).toString('base64url');
-  jar.set('ryvix_gmail_oauth',JSON.stringify({state,verifier,user:user.id,org:organizationId,environment,expires:Date.now()+600000}),{httpOnly:true,secure:true,sameSite:'lax',path:'/api/channels/gmail',maxAge:600});
+  jar.set('ryvix_gmail_oauth',JSON.stringify({state,verifier,user:user.id,org:organizationId,environment,replies:params.get('replies')==='1',expires:Date.now()+600000}),{httpOnly:true,secure:true,sameSite:'lax',path:'/api/channels/gmail',maxAge:600});
   const url=new URL('https://accounts.google.com/o/oauth2/v2/auth');
-  url.search=new URLSearchParams({client_id:clientId,redirect_uri:redirect,response_type:'code',scope:'https://www.googleapis.com/auth/gmail.readonly',access_type:'offline',prompt:'consent',state,code_challenge:createHash('sha256').update(verifier).digest('base64url'),code_challenge_method:'S256'}).toString();
+  url.search=new URLSearchParams({client_id:clientId,redirect_uri:redirect,response_type:'code',scope:'https://www.googleapis.com/auth/gmail.readonly'+(params.get('replies')==='1'?' https://www.googleapis.com/auth/gmail.send':''),access_type:'offline',prompt:'consent',state,code_challenge:createHash('sha256').update(verifier).digest('base64url'),code_challenge_method:'S256'}).toString();
   return NextResponse.redirect(url);
 }catch(error){return failure(error);}}
 export async function POST(request:Request){try{
   const {organizationId,user}=await requireTenant();const body=await request.json().catch(()=>null);
   if(!uuid.test(body?.connectorId||''))throw new RequestError('Select a Gmail connection.',400);
+  if(body.action==='watch')return NextResponse.json(await watchGmail(getDirectDbPool(),organizationId,user.id,body.connectorId));
   return NextResponse.json(await pollGmail(getDirectDbPool(),organizationId,user.id,body.connectorId));
 }catch(error){return failure(error);}}

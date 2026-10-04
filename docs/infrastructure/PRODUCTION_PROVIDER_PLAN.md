@@ -1,5 +1,8 @@
 # Ryvix provider and deployment plan
 
+October 4 update: [current capability setup and limits](CAPABILITY_PROVIDERS.md). Gmail push/reviewed replies, additional P1 transports, measured response usage, bounded semantic retrieval and separate external-training dataset preparation now have implementations. Prior descriptions of these features as wholly absent are superseded; provider verification and actual external training remain pending.
+
+
 This plan follows the current repository architecture. Accounts/configuration
 alone do not certify live delivery, model quality or server recovery.
 

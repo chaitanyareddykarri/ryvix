@@ -44,7 +44,7 @@ export class WhatsAppAssistant {
   }
   async dashboard(org:string,user:string){const sessions=(await this.pool.query(`SELECT s.id,s.connector_id,s.enabled,s.notifications,p.name AS project_name ${this.joins} WHERE p.organization_id=$1 AND s.user_id=$2 AND co.status='active'`,[org,user])).rows;
     const ids=sessions.map(s=>s.id);if(!ids.length)return {sessions,messages:[],deliveries:[],proposals:[]};
-    const messages=(await this.pool.query('SELECT id,question,answer,status,provider,model,prompt_tokens,completion_tokens,created_at FROM whatsapp_assistant_messages WHERE session_id=ANY($1::uuid[]) ORDER BY created_at DESC LIMIT 50',[ids])).rows;
+    const messages=(await this.pool.query('SELECT id,question,answer,status,provider,model,prompt_tokens,completion_tokens,response_usage,created_at FROM whatsapp_assistant_messages WHERE session_id=ANY($1::uuid[]) ORDER BY created_at DESC LIMIT 50',[ids])).rows;
     const deliveries=(await this.pool.query('SELECT id,body,status,created_at FROM whatsapp_assistant_outbox WHERE session_id=ANY($1::uuid[]) ORDER BY created_at DESC LIMIT 50',[ids])).rows;
     const proposals=(await this.pool.query('SELECT id,repository_id,prompt,status,task_id,expires_at FROM whatsapp_assistant_proposals WHERE session_id=ANY($1::uuid[]) ORDER BY created_at DESC LIMIT 20',[ids])).rows;
     return {sessions,messages,deliveries,proposals};
@@ -116,7 +116,7 @@ export class WhatsAppAssistant {
           else answer=decision.reply||'Ask about this project, your tasks, server status, or a coding change.';
         }
         answer=clean(answer);await this.enqueue(c,current,`reply:${message.id}`,answer);
-        await c.query("UPDATE whatsapp_assistant_messages SET status='done',answer=$2,provider=$3,model=$4,prompt_tokens=$5,completion_tokens=$6,latency_ms=$7 WHERE id=$1",[message.id,answer,result?.provider||null,result?.model||null,result?.promptTokens??null,result?.completionTokens??null,result?.latencyMs??null]);
+        await c.query("UPDATE whatsapp_assistant_messages SET status='done',answer=$2,provider=$3,model=$4,prompt_tokens=$5,completion_tokens=$6,latency_ms=$7,response_usage=$8::jsonb WHERE id=$1",[message.id,answer,result?.provider||null,result?.model||null,result?.promptTokens??null,result?.completionTokens??null,result?.latencyMs??null,result?.usage?JSON.stringify(result.usage):null]);
         if(!await c.query('SELECT 1 FROM whatsapp_assistant_proposals WHERE message_id=$1',[message.id]).then(r=>r.rows.length))await c.query("UPDATE channel_inbox SET status='rejected' WHERE id=$1 AND status='pending'",[message.inbox_id]);
         await c.query('UPDATE whatsapp_assistant_sessions SET claim=NULL,claim_until=NULL WHERE id=$1',[s.id]);await this.audit(c,current,'whatsapp.assistant.processed',message.id);
       });return true;

@@ -55,7 +55,7 @@ export class ConversationStore {
       ]) };
     });
   }
-  async finish(id: string, lease: string, organizationId: string, userId: string, question: string, answer: string,measurement?:{latencyMs:number;provider?:string;model?:string}) {
+  async finish(id: string, lease: string, organizationId: string, userId: string, question: string, answer: string,measurement?:{latencyMs:number;provider?:string;model?:string;usage?:unknown}) {
     if(measurement&&(!Number.isInteger(measurement.latencyMs)||measurement.latencyMs<0||measurement.latencyMs>300000||
       (measurement.provider?.length||0)>100||(measurement.model?.length||0)>200))throw new ConversationError('Invalid response measurement.',400);
     return this.transaction(async client => {
@@ -64,8 +64,8 @@ export class ConversationStore {
       const owned = await client.query(`UPDATE chat_conversations SET lease_id=NULL,lease_expires_at=NULL
         WHERE id=$1 AND lease_id=$2 AND organization_id=$3 AND user_id=$4 AND lease_expires_at>now() RETURNING id`,[id,lease,organizationId,userId]);
       if (!owned.rows.length) throw new ConversationError('Conversation lease expired.',409);
-      const saved=await client.query(`INSERT INTO chat_turns(conversation_id,question,answer,response_latency_ms,response_provider,response_model)
-        VALUES($1,$2,$3,$4,$5,$6) RETURNING id`,[id,question,answer,measurement?.latencyMs??null,measurement?.provider??null,measurement?.model??null]);
+      const saved=await client.query(`INSERT INTO chat_turns(conversation_id,question,answer,response_latency_ms,response_provider,response_model,response_usage)
+        VALUES($1,$2,$3,$4,$5,$6,$7::jsonb) RETURNING id`,[id,question,answer,measurement?.latencyMs??null,measurement?.provider??null,measurement?.model??null,measurement?.usage?JSON.stringify(measurement.usage):null]);
       await client.query('DELETE FROM chat_turns WHERE conversation_id=$1 AND id NOT IN (SELECT id FROM chat_turns WHERE conversation_id=$1 ORDER BY id DESC LIMIT 100)',[id]);
       return String(saved.rows[0].id);
     });

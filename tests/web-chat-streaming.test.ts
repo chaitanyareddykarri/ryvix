@@ -1,3 +1,4 @@
+import {estimateUsageCost} from '../ai/src/token-usage';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -16,6 +17,7 @@ export async function testWebChatStreaming() {
   vm.runInNewContext(ts.transpileModule(fs.readFileSync('web/app/api/chat/route.ts', 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS },
   }).outputText, { exports, Response, ReadableStream, TextEncoder, Buffer, AbortController, AbortSignal, require(name: string) {
+    if (name.endsWith('/token-usage')) return {estimateUsageCost};
     if (name === 'next/server') return { NextResponse: { json: Response.json } };
     if (name === 'node:crypto') return { randomUUID };
     if (name === '@/utils/tenant-context') return { RequestError, requireTenant: async () => {

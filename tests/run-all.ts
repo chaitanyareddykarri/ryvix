@@ -1,5 +1,9 @@
 import {testAuditRegressions} from './audit-regressions.test';
 import {testOfflineAndGmail} from './offline-and-gmail.test';
+import {testCapabilityFoundations} from './capability-foundations.test';
+import {testGmailWorkflows} from './gmail-workflows.test';
+import {testIncidentTransports} from './incident-transports.test';
+import {testRepositorySemantics} from './repository-semantics.test';
 import {testExperienceLearning} from './experience-learning.test';
 import {testRepositoryKnowledge} from './repository-knowledge.test';
 import {testWhatsAppPhone} from './whatsapp-phone.test';
@@ -70,6 +74,7 @@ async function runAllTests() {
   const testCases: { name: string; fn: () => Promise<void> }[] = [
     {name:'Audit Safety and Evidence Regressions',fn:testAuditRegressions},
     {name:'Offline AI Isolation and Gmail Scheduling',fn:testOfflineAndGmail},
+    {name:'Measured Stream Usage and Repository Dependencies',fn:testCapabilityFoundations},
     {name:'WhatsApp Assistant Intent and Reply Boundaries',fn:testWhatsAppAssistant},
     {name:'WhatsApp Phone and SMTP Transport Boundaries',fn:testWhatsAppPhone},
     {name:'Repository Knowledge Source Boundaries and Commit Refresh',fn:testRepositoryKnowledge},
@@ -152,6 +157,9 @@ async function runAllTests() {
 
   ];
 
+  testCases.push({name:'Gmail authenticated push and reviewed reply boundaries',fn:testGmailWorkflows});
+  testCases.push({name:'Explicit P1 transport configuration and provider acknowledgments',fn:testIncidentTransports});
+  testCases.push({name:'Scoped semantic retrieval and post-provider authorization',fn:testRepositorySemantics});
   testCases.push({name:'Cloud target and WhatsApp outbound boundaries',fn:testRecoveryOutbound});
   testCases.push({name:'Email notification content and sender boundaries',fn:testEmailNotifications});
   for (const tc of testCases) {

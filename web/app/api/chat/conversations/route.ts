@@ -14,7 +14,7 @@ export async function GET(request: Request) {
         ON m.organization_id=c.organization_id AND m.user_id=c.user_id
         WHERE c.id=$1 AND c.organization_id=$2 AND c.user_id=$3`,[id,organizationId,user.id]);
       if (!owned.length) throw new RequestError('Conversation unavailable.',404);
-      const turns = await queryDirectDb(`SELECT t.id::text,t.question,t.answer,t.created_at FROM chat_turns t
+      const turns = await queryDirectDb(`SELECT t.id::text,t.question,t.answer,t.created_at,t.response_usage FROM chat_turns t
         JOIN chat_conversations c ON c.id=t.conversation_id JOIN organization_members m
         ON m.organization_id=c.organization_id AND m.user_id=c.user_id
         WHERE c.id=$1 AND c.organization_id=$2 AND c.user_id=$3 AND t.created_at>now()-interval '30 days'

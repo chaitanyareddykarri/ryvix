@@ -1,3 +1,5 @@
+import {embeddingModel,embedRepositoryTexts,cosineScore} from '../../../ai/src/repository-embeddings';
+import {repositoryDependencies} from '../../../ai/src/repository-dependencies';
 import type {Pool,PoolClient} from 'pg';
 import {randomUUID,createHash} from 'node:crypto';
 import {ContextBuilder} from '../../../ai/src/context/context-builder';
@@ -8,7 +10,7 @@ const uuid=/^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
 export function indexablePath(path:unknown){
   return typeof path==='string'&&path.length<=512&&!path.startsWith('/')&&!path.includes('..')&&!path.includes('\\')&&
     !/(^|\/)(\.[^/]+|node_modules|vendor|dist|build|coverage|secrets?|credentials?|certs?)(\/|\.|$)/i.test(path)&&
-    /\.(md|tsx?|jsx?|py|go|rs|cs|css|html|json)$/i.test(path)&&!/(^|\/)(package-lock|composer\.lock|yarn\.lock|pnpm-lock)/i.test(path);
+    (/\.(md|tsx?|jsx?|py|go|rs|cs|java|php|rb|c|cc|cpp|h|hpp|css|html|json)$/i.test(path)||path==='go.mod')&&!/(^|\/)(package-lock|composer\.lock|yarn\.lock|pnpm-lock)/i.test(path);
 }
 export function sanitizeKnowledge(path:string,text:string){
   if(!indexablePath(path)||Buffer.byteLength(text)>32768||text.includes('\0'))throw new Error('File excluded from index');
@@ -86,7 +88,7 @@ export class RepositoryKnowledge {
       return {enabled};
     });
   }
-  async search(org:string,user:string,repo:string|null,question:string,expectedCommit?:string){
+  private async lexicalSearch(org:string,user:string,repo:string|null,question:string,expectedCommit?:string){
     if(repo!==null&&!uuid.test(repo))throw new ExperienceError('Valid repository required.');
     const stop=new Set(['the','and','this','that','what','with','from','about','please','same','have','does','could','would','should']);
     const terms=[...new Set(question.toLowerCase().match(/[a-z0-9]{3,}/g)||[])].filter(t=>!stop.has(t)).slice(-20);
@@ -101,6 +103,43 @@ export class RepositoryKnowledge {
       AND s.indexed_at>now()-interval '24 hours' AND ($5::text IS NULL OR s.commit_sha=$5)
       AND f.search_document@@websearch_to_tsquery('english',$4)
       ORDER BY ts_rank(f.search_document,websearch_to_tsquery('english',$4)) DESC,s.indexed_at DESC,f.path LIMIT 6`,[org,user,repo,terms.join(' OR '),expectedCommit||null])).rows;
+  }
+  private async snapshotRows(org:string,user:string,repo:string|null,expectedCommit?:string){
+    return (await this.pool.query(`SELECT f.path,f.content,f.embedding,f.embedding_model,s.repository_id,s.commit_sha,s.indexed_at,s.partial,r.full_name
+      FROM repository_knowledge_files f JOIN repository_knowledge_settings s ON s.repository_id=f.repository_id
+      JOIN repositories r ON r.id=s.repository_id JOIN projects p ON p.id=r.project_id
+      JOIN organization_members m ON m.organization_id=p.organization_id AND m.user_id=$2 AND m.role IN ('owner','admin','developer')
+      JOIN organization_members a ON a.organization_id=p.organization_id AND a.user_id=s.configured_by AND a.role IN ('owner','admin')
+      WHERE p.organization_id=$1 AND ($3::uuid IS NULL OR r.id=$3) AND s.enabled AND s.status='ready'
+      AND s.indexed_at>now()-interval '24 hours' AND ($4::text IS NULL OR s.commit_sha=$4)
+      ORDER BY s.indexed_at DESC,s.repository_id,f.path LIMIT 100`,[org,user,repo,expectedCommit||null])).rows;
+  }
+  async search(org:string,user:string,repo:string|null,question:string,expectedCommit?:string){
+    const lexical=await this.lexicalSearch(org,user,repo,question,expectedCommit);
+    const model=embeddingModel();if(!model)return lexical;
+    try{
+      const rows=await this.snapshotRows(org,user,repo,expectedCommit);
+      const candidates=rows.filter(r=>r.embedding_model===model&&Array.isArray(r.embedding));
+      if(!candidates.length)return lexical;
+      const [query]=await embedRepositoryTexts([question.slice(0,6000)],true);
+      const ranked=candidates.map(row=>({row,score:cosineScore(query,row.embedding)})).filter(r=>Number.isFinite(r.score)&&r.score>0)
+        .sort((a,b)=>b.score-a.score).slice(0,4).map(r=>({...r.row,retrieval_kind:'semantic snapshot match'}));
+      const selected=[...ranked];
+      if(!selected.length)return this.lexicalSearch(org,user,repo,question,expectedCommit);
+      for(const root of ranked){
+        const group=rows.filter(r=>r.repository_id===root.repository_id);
+        for(const edge of repositoryDependencies(group)){
+          const other=edge.source===root.path?edge.target:edge.target===root.path?edge.source:null;
+          const neighbor=group.find(r=>r.path===other);
+          if(neighbor&&!selected.some(r=>r.repository_id===neighbor.repository_id&&r.path===neighbor.path)&&selected.length<6)
+            selected.push({...neighbor,retrieval_kind:'static dependency neighbor (not runtime verified)'});
+        }
+      }
+      // Recheck scope and immutable snapshot identity after the external embedding call.
+      const current=await this.snapshotRows(org,user,repo,expectedCommit);
+      return selected.filter(r=>current.some(c=>c.repository_id===r.repository_id&&c.path===r.path&&c.commit_sha===r.commit_sha))
+        .map(({content,embedding,embedding_model,...row})=>({...row,excerpt:content.slice(0,2400)}));
+    }catch{return this.lexicalSearch(org,user,repo,question,expectedCommit);}
   }
   async indexOne(signal?:AbortSignal,onlyRepository?:string){
     if(onlyRepository&&!uuid.test(onlyRepository))throw new ExperienceError('Valid repository required.');
@@ -124,7 +163,12 @@ export class RepositoryKnowledge {
         WHERE e.project_id=$1 AND m.user_id=$2 AND m.role IN ('owner','admin') AND c.connector_type='github' AND c.status='active'
         ORDER BY c.id LIMIT 1`,[job.project_id,job.configured_by])).rows[0]?.decrypted_secret;
       if(!credential)throw new Error('Repository credential unavailable');
-      const snapshot=await this.reader(job,credential,signal);
+      const model=embeddingModel();
+      const missing=model?(await this.pool.query('SELECT count(*)::int AS n FROM repository_knowledge_files WHERE repository_id=$1 AND (embedding IS NULL OR embedding_model IS DISTINCT FROM $2)',[job.repository_id,model])).rows[0].n:0;
+      const snapshot=await this.reader(missing?{...job,commit_sha:null}:job,credential,signal);
+      let vectors:number[][]|null=null;
+      if(model&&snapshot.files.length)try{vectors=await embedRepositoryTexts(snapshot.files.map(f=>f.path+'\n'+sanitizeKnowledge(f.path,f.content)),false,signal);}catch{if(signal?.aborted)throw new Error('Index cancelled');}
+      const byPath=new Map(snapshot.files.map((file,i)=>[file.path,vectors?.[i]]));
       if(!/^[a-f0-9]{40,64}$/.test(snapshot.commit)||snapshot.files.length>100)throw new Error('Invalid knowledge snapshot');
       await this.transaction(async c=>{
         const valid=await c.query(`SELECT s.repository_id FROM repository_knowledge_settings s JOIN repositories r ON r.id=s.repository_id
@@ -138,7 +182,7 @@ export class RepositoryKnowledge {
         let bytes=0;
         if(!reuse){await c.query('DELETE FROM repository_knowledge_files WHERE repository_id=$1',[job.repository_id]);
           for(const file of snapshot.files){const content=sanitizeKnowledge(file.path,file.content);bytes+=Buffer.byteLength(content);
-            if(bytes>1048576)throw new Error('Index size limit');await c.query('INSERT INTO repository_knowledge_files(repository_id,path,content) VALUES($1,$2,$3)',[job.repository_id,file.path,content]);}}
+            if(bytes>1048576)throw new Error('Index size limit');await c.query('INSERT INTO repository_knowledge_files(repository_id,path,content,embedding_model,embedding) VALUES($1,$2,$3,$4,$5::jsonb)',[job.repository_id,file.path,content,byPath.get(file.path)?model:null,byPath.get(file.path)?JSON.stringify(byPath.get(file.path)):null]);}}
         await c.query(`UPDATE repository_knowledge_settings SET status='ready',indexed_at=now(),commit_sha=$2,
           file_count=CASE WHEN $3 THEN file_count ELSE $4 END,partial=CASE WHEN $3 THEN partial ELSE $5 END,claim_id=NULL,claim_expires_at=NULL WHERE repository_id=$1`,
           [job.repository_id,snapshot.commit,reuse,snapshot.files.length,snapshot.partial]);

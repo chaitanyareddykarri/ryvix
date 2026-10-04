@@ -23,7 +23,7 @@ export interface CodeSynthesisResult {
   keyBenefits: string[];
   suggestedCommitMessage: string;
   providerUsed: string;
-  tokensUsed: number;
+  tokensUsed: number|null;
 }
 
 export interface CodeDebugResult {
@@ -124,7 +124,7 @@ Output a structured JSON object with the following schema:
       ],
       suggestedCommitMessage: parsed?.suggestedCommitMessage || `feat: ${userInstruction.slice(0, 50)}`,
       providerUsed: resp.providerUsed,
-      tokensUsed: resp.promptTokens + resp.completionTokens,
+      tokensUsed: resp.promptTokens===null||resp.completionTokens===null?null:resp.promptTokens + resp.completionTokens,
     };
   }
 

@@ -1,3 +1,4 @@
+import {estimateUsageCost,type TokenUsage} from '../../../../ai/src/token-usage';
 import {ExperienceStore} from '../../../../backend/src/services/experience-store';
 import {RepositoryKnowledge} from '../../../../backend/src/services/repository-knowledge';
 import { NextResponse } from 'next/server';
@@ -62,7 +63,7 @@ export async function POST(request: Request) {
     }else {
       excerpts.push(...lessonSources(await experience.retrieve(organizationId,user.id,null,retrievalQuery)));
       const knowledge=await new RepositoryKnowledge(getDirectDbPool()).search(organizationId,user.id,null,retrievalQuery);
-      excerpts.push(...knowledge.map(row=>({id:`indexed:${row.full_name}:${row.commit_sha}:${row.path}`,kind:'indexed repository snapshot (not verified current branch)',
+      excerpts.push(...knowledge.map(row=>({id:`indexed:${row.full_name}:${row.commit_sha}:${row.path}`,kind:`${row.retrieval_kind||'indexed repository snapshot'} (not verified current branch)`,
         title:row.path,date:row.indexed_at,excerpt:ContextBuilder.sanitizeText(row.excerpt).slice(0,2000)})));
     }
     const ranked=await rerankSources(prompt,excerpts,signal);
@@ -71,6 +72,8 @@ export async function POST(request: Request) {
       : /code|component|implement|refactor|repository|preview/i.test(prompt) ? 'coding' : 'general';
     const started = Date.now();
     let modelInfo: { provider:string; model:string } | undefined;
+    let usage:TokenUsage|undefined;
+    const measuredUsage=()=>usage&&modelInfo?{...usage,costEstimate:estimateUsageCost(modelInfo.provider,modelInfo.model,usage)}:null;
     signal.throwIfAborted();
     const iterator = modelGateway.stream([
       { role: 'system', content: CHAT_SYSTEM_PROMPT },
@@ -80,7 +83,7 @@ export async function POST(request: Request) {
         observations: JSON.stringify(context).slice(0,24000),
         observationsTruncated: JSON.stringify(context).length>24000, sources: ranked.sources,retrievalMode:ranked.mode })) },
     ], { temperature: 0.2, maxTokens: 4096, signal,
-      onProvider:(provider,model)=>{ modelInfo={provider,model}; } });
+      onUsage:value=>{usage=value;},onProvider:(provider,model)=>{ modelInfo={provider,model}; } });
     const first = await iterator.next();
     if (first.done || !first.value) throw new Error('Empty model stream');
     let answer = first.value;
@@ -92,9 +95,9 @@ export async function POST(request: Request) {
       try {
         for await (const chunk of iterator) append(chunk);
         signal.throwIfAborted();
-        const turnId=await historyStore.finish(current.id,current.lease,organizationId,user.id,prompt,ContextBuilder.sanitizeText(answer),{latencyMs:Date.now()-started,provider:modelInfo?.provider,model:modelInfo?.model});
+        const turnId=await historyStore.finish(current.id,current.lease,organizationId,user.id,prompt,ContextBuilder.sanitizeText(answer),{latencyMs:Date.now()-started,provider:modelInfo?.provider,model:modelInfo?.model,usage:measuredUsage()});
         return NextResponse.json({ success: true, conversationId: current.id, turnId, response: answer,
-          sources: context, retrievedSources: excerpts, modelInfo, metrics: { totalDurationMs: Date.now()-started } },
+          usage:measuredUsage(),sources: context, retrievedSources: excerpts, modelInfo, metrics: { totalDurationMs: Date.now()-started } },
           { headers: { 'Cache-Control':'no-store' } });
       } finally { await iterator.return(undefined); }
     }
@@ -107,8 +110,8 @@ export async function POST(request: Request) {
         yield ['token',{ chunk: first.value }];
         for await (const chunk of iterator) { append(chunk); yield ['token',{ chunk }]; }
         signal.throwIfAborted();
-        const turnId=await historyStore.finish(current.id,current.lease,organizationId,user.id,prompt,ContextBuilder.sanitizeText(answer),{latencyMs:Date.now()-started,provider:modelInfo?.provider,model:modelInfo?.model});
-        yield ['done',{ turnId,conversationId:current.id,totalDurationMs:Date.now()-started,status:'success' }];
+        const turnId=await historyStore.finish(current.id,current.lease,organizationId,user.id,prompt,ContextBuilder.sanitizeText(answer),{latencyMs:Date.now()-started,provider:modelInfo?.provider,model:modelInfo?.model,usage:measuredUsage()});
+        yield ['done',{ turnId,conversationId:current.id,totalDurationMs:Date.now()-started,status:'success',usage:measuredUsage() }];
       } catch {
         yield ['error',{ error:'Response interrupted or could not be saved. Please retry.' }];
       } finally { abort.abort(); await iterator.return(undefined); await release(); }

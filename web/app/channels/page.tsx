@@ -17,19 +17,19 @@ export default function ChannelsPage(){
   }catch(e){setError(e instanceof Error?e.message:'Request failed');}finally{setBusy(false);}}
   const field={padding:8,background:'#111827',color:'#e5e7eb',border:'1px solid #475569',borderRadius:6};
   return <main style={{padding:32,maxWidth:1000,margin:'auto',color:'#e5e7eb'}}>
-    <Link href="/chat">Back to chat</Link> · <Link href="/channels/alerts">WhatsApp alert delivery</Link> · <Link href="/notifications">Email notifications</Link> · <Link href="/profile/whatsapp">My WhatsApp number</Link> · <Link href="/channels/assistant">WhatsApp assistant</Link><h1>Communication inbox</h1>
+    <Link href="/chat">Back to chat</Link> · <Link href="/channels/alerts">WhatsApp alert delivery</Link> · <Link href="/notifications">Email notifications</Link> · <Link href="/profile/whatsapp">My WhatsApp number</Link> · <Link href="/channels/assistant">WhatsApp assistant</Link> · <Link href="/channels/gmail">Gmail replies</Link><h1>Communication inbox</h1>
     <p>Review incoming messages before creating a coding task. Accepting a message does not approve a pull request or server operation.</p>
     {error&&<p role="alert">{error}</p>}
     <section><h2>Connect a channel</h2>
       <select aria-label="Environment" value={environment} onChange={e=>setEnvironment(e.target.value)} style={field}>
         <option value="">Select environment</option>{environments.map(e=><option key={e.id} value={e.id}>{e.project_name} / {e.name}</option>)}
-      </select>{environment&&<a href={`/api/channels/gmail?environmentId=${encodeURIComponent(environment)}`} style={{margin:16}}>Connect Gmail</a>}
+      </select>{environment&&<a href={`/api/channels/gmail?environmentId=${encodeURIComponent(environment)}`} style={{margin:16}}>Connect Gmail</a>}{environment&&<a href={`/api/channels/gmail?environmentId=${encodeURIComponent(environment)}&replies=1`}>Connect Gmail with reply permission</a>}
       <p>WhatsApp requires an administrator and a configured Meta app.</p>
       <input aria-label="WhatsApp phone number ID" placeholder="Phone number ID" value={phone} onChange={e=>setPhone(e.target.value)} style={field}/>
       <input aria-label="WhatsApp access token" type="password" autoComplete="off" placeholder="Access token" value={token} onChange={e=>setToken(e.target.value)} style={field}/>
       <button disabled={busy||!environment||!phone||!token} onClick={()=>void mutate('/api/channels/whatsapp',{environmentId:environment,phoneId:phone,token})}>Connect WhatsApp</button>
     </section>
-    <section><h2>Gmail connections</h2>{connections.filter(c=>c.type==='gmail').map(c=><p key={c.id}>{c.name} <button disabled={busy} onClick={()=>void mutate('/api/channels/gmail',{connectorId:c.id})}>Check new messages</button></p>)}</section>
+    <section><h2>Gmail connections</h2>{connections.filter(c=>c.type==='gmail').map(c=><p key={c.id}>{c.name} <button disabled={busy} onClick={()=>void mutate('/api/channels/gmail',{connectorId:c.id})}>Check new messages</button> <button disabled={busy} onClick={()=>void mutate('/api/channels/gmail',{connectorId:c.id,action:'watch'})}>Enable push updates</button></p>)}</section>
     <section><h2>Task proposals</h2>
       <select aria-label="Repository for accepted task" value={repository} onChange={e=>setRepository(e.target.value)} style={field}><option value="">Choose repository for acceptance</option>{repositories.map(r=><option key={r.id} value={r.id}>{r.full_name}</option>)}</select>
       {!messages.length&&<p>No messages available.</p>}
