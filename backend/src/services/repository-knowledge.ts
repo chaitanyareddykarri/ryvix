@@ -10,7 +10,7 @@ const uuid=/^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
 export function indexablePath(path:unknown){
   return typeof path==='string'&&path.length<=512&&!path.startsWith('/')&&!path.includes('..')&&!path.includes('\\')&&
     !/(^|\/)(\.[^/]+|node_modules|vendor|dist|build|coverage|secrets?|credentials?|certs?)(\/|\.|$)/i.test(path)&&
-    (/\.(md|tsx?|jsx?|py|go|rs|cs|java|php|rb|c|cc|cpp|h|hpp|css|html|json)$/i.test(path)||path==='go.mod')&&!/(^|\/)(package-lock|composer\.lock|yarn\.lock|pnpm-lock)/i.test(path);
+    (/\.(md|[cm]?tsx?|[cm]?jsx?|py|go|rs|cs|java|php|rb|c|cc|cpp|h|hpp|css|html|json)$/i.test(path)||path==='go.mod')&&!/(^|\/)(package-lock|composer\.lock|yarn\.lock|pnpm-lock)/i.test(path);
 }
 export function sanitizeKnowledge(path:string,text:string){
   if(!indexablePath(path)||Buffer.byteLength(text)>32768||text.includes('\0'))throw new Error('File excluded from index');

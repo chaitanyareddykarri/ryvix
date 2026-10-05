@@ -1,5 +1,12 @@
 # Current Task & Implementation State
 
+October 5 follow-up: [current evidence](../docs/verification/FOLLOWUP_2026_10_05.md).
+Server approval handoffs, JS/TS parser references, durable streaming attempts,
+Twilio receipts and optional PagerDuty observations implemented. Preserve dirty
+AI runtime files and next.config.mjs. Provider/model selection for paid fine-tuning,
+broader compiler graphs and invoice reconciliation remain pending.
+Applied schema: `20261005000003`; older checkpoints below are historical.
+
 Latest follow-up: [nine-item pending recheck](../docs/verification/PENDING_RECHECK_2026_10_04.md).
 Servers mobile layout fixed; viewport explicitly preserves framework defaults.
 Accuracy-gate and hardcoded-latency reports were stale; real reviewed quality remains unverified.

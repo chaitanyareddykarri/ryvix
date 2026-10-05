@@ -1,4 +1,5 @@
 import {estimateUsageCost,type TokenUsage} from '../../../../ai/src/token-usage';
+import {ModelUsage} from '../../../../backend/src/services/model-usage';
 import {ExperienceStore} from '../../../../backend/src/services/experience-store';
 import {RepositoryKnowledge} from '../../../../backend/src/services/repository-knowledge';
 import { NextResponse } from 'next/server';
@@ -83,6 +84,7 @@ export async function POST(request: Request) {
         observations: JSON.stringify(context).slice(0,24000),
         observationsTruncated: JSON.stringify(context).length>24000, sources: ranked.sources,retrievalMode:ranked.mode })) },
     ], { temperature: 0.2, maxTokens: 4096, signal,
+      onAttempt:attempt=>new ModelUsage(getDirectDbPool()).record({org:organizationId,user:user.id,channel:'web',source:current.id},attempt),
       onUsage:value=>{usage=value;},onProvider:(provider,model)=>{ modelInfo={provider,model}; } });
     const first = await iterator.next();
     if (first.done || !first.value) throw new Error('Empty model stream');

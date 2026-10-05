@@ -1,13 +1,18 @@
 # Ryvix implementation and deployment status
 
+October 5: [implementation follow-up](verification/FOLLOWUP_2026_10_05.md) adds
+server approval links, parsed JS/TS references, streaming attempt accounting and
+notification status handling. [Remaining work](PENDING_WORK.md) still includes
+code gaps as well as real-provider acceptance; not everything is complete.
+
 October 4 follow-up: [mobile layout and nine-item pending recheck](verification/PENDING_RECHECK_2026_10_04.md).
 Servers navigation/cards now fit small viewports. Classifier promotion gates and measured/null latency already existed.
 
 Active follow-up: [audit remediation queue](PENDING_WORK.md). The October 3 audit found
 legacy AI safety/evidence defects; earlier passing suites are not full live acceptance.
 
-Updated 2026-10-04. Current capability batch follows **6334c4d**; applied migrations through
-**20261004000002**. This index supersedes older pending lists. Dated verification
+Updated 2026-10-05. Current follow-up builds on **5e20f6b**; applied migrations through
+**20261005000003**. This index supersedes older pending lists. Dated verification
 reports retain their original results; no live certification is implied.
 
 Recent changes: reviewed experience/personal memory (1c23389), bounded repository

@@ -18,6 +18,7 @@ export async function testWebChatStreaming() {
     compilerOptions: { module: ts.ModuleKind.CommonJS },
   }).outputText, { exports, Response, ReadableStream, TextEncoder, Buffer, AbortController, AbortSignal, require(name: string) {
     if (name.endsWith('/token-usage')) return {estimateUsageCost};
+    if (name.endsWith('/model-usage')) return {ModelUsage:class {async record(){}}};
     if (name === 'next/server') return { NextResponse: { json: Response.json } };
     if (name === 'node:crypto') return { randomUUID };
     if (name === '@/utils/tenant-context') return { RequestError, requireTenant: async () => {

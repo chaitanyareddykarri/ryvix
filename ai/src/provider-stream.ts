@@ -3,7 +3,7 @@ import {streamUsage,type TokenUsage} from './token-usage';
 
 /** Incremental SSE decoder shared by compatible and Anthropic providers. */
 export async function* streamProvider(provider: ProviderDefinition, messages: LLMMessage[],
-  options: { maxTokens?: number; temperature?: number; signal?: AbortSignal;onUsage?:(usage:TokenUsage)=>void }) {
+  options: { maxTokens?: number; temperature?: number; signal?: AbortSignal;onUsage?:(usage:TokenUsage)=>void;onObservedUsage?:(usage:TokenUsage)=>void }) {
   const claude = provider.id === 'claude', hf = provider.id === 'huggingface';
   const url = claude ? 'https://api.anthropic.com/v1/messages' : hf
     ? `${provider.baseUrl}/${provider.model}` : `${provider.baseUrl}/chat/completions`;
@@ -44,6 +44,7 @@ export async function* streamProvider(provider: ProviderDefinition, messages: LL
         if (data === '[DONE]') { ended = true; break; }
         const event = JSON.parse(data);
         usage=streamUsage(event,claude,usage);
+        if(usage)options.onObservedUsage?.(usage);
         if (event.error || event.type === 'error') throw new Error('Provider stream failed');
         if (event.choices?.[0]?.finish_reason === 'length' || event.delta?.stop_reason === 'max_tokens')
           throw new Error('Provider answer reached its output limit');

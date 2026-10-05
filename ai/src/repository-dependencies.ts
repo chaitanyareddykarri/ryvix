@@ -1,4 +1,5 @@
 import {posix} from 'node:path';
+import {javascriptReferences} from './javascript-dependencies';
 export interface RepositorySource {path:string;content:string;}
 export interface DependencyEdge {source:string;target:string;kind:'static-reference';}
 /** Conservative text references, not compiler-resolved symbols or runtime edges. */
@@ -14,7 +15,7 @@ export function repositoryDependencies(files:RepositorySource[]):DependencyEdge[
   for(const file of files){
     const refs:string[]=[];
     const collect=(pattern:RegExp,transform:(s:string)=>string=s=>s)=>{for(const match of file.content.matchAll(pattern))refs.push(transform(match[1]));};
-    if(/\.[cm]?[jt]sx?$/.test(file.path))collect(/(?:from\s*|import\s*\(|require\s*\(|import\s*)['"](\.[^'"\n]+)['"]/g);
+    if(/\.[cm]?[jt]sx?$/.test(file.path))refs.push(...javascriptReferences(file,files));
     if(/\.py$/.test(file.path)){
       collect(/^\s*from\s+([.\w]+)\s+import/gm,s=>s.startsWith('.')?'.'+'/../'.repeat(Math.max(0,(s.match(/^\.+/)?.[0].length||1)-1))+'/'+s.replace(/^\.+/,'').replace(/\./g,'/'):'/'+s.replace(/\./g,'/'));
       collect(/^\s*import\s+([\w.]+)/gm,s=>'/'+s.replace(/\./g,'/'));
@@ -40,7 +41,7 @@ export function repositoryDependencies(files:RepositorySource[]):DependencyEdge[
     for(const reference of refs){
       const base=posix.normalize(reference.startsWith('/')?reference.slice(1):posix.join(posix.dirname(file.path),reference));
       if(base.startsWith('../')||base.includes('\\'))continue;
-      const candidates=[base,...['.ts','.tsx','.js','.jsx','.py','/__init__.py','.rs','/mod.rs','.rb','/index.ts','/index.tsx','/index.js'].map(ext=>base+ext)];
+      const candidates=[base,...(/\.[cm]?jsx?$/.test(base)?[base.replace(/\.[cm]?jsx?$/,'.ts'),base.replace(/\.[cm]?jsx?$/,'.tsx')]:[]),...['.ts','.tsx','.mts','.cts','.js','.jsx','.mjs','.cjs','.py','/__init__.py','.rs','/mod.rs','.rb','/index.ts','/index.tsx','/index.js'].map(ext=>base+ext)];
       for(const target of candidates)if(paths.has(target)){add(file.path,target);break;}
     }
   }

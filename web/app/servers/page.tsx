@@ -305,23 +305,22 @@ export default function ServersPage() {
                       ></span>
                       <span style={{ color: "#f3f4f6" }}>{svc.name}</span>
                       {svc.status === "failed" && (
-                        <button
-                          disabled
-                          title="Unavailable until authenticated command dispatch and persisted approval are implemented"
+                        <Link
+                          href={`/operations?server=${encodeURIComponent(server.id)}&service=${encodeURIComponent(svc.name)}`}
+                          title="Review a restart request; independent approval is required"
                           style={{
                             border: "none",
                             background: "rgba(239, 68, 68, 0.2)",
                             color: "#f87171",
                             padding: "0.15rem 0.4rem",
                             borderRadius: "4px",
-                            cursor: "not-allowed",
-                            opacity: 0.65,
+                            textDecoration: "none",
                             fontSize: "0.7rem",
                             fontWeight: 600,
                           }}
                         >
-                          Restart unavailable
-                        </button>
+                          Request restart
+                        </Link>
                       )}
                     </div>
                   ))}
@@ -330,17 +329,17 @@ export default function ServersPage() {
 
               {/* Action Buttons */}
               <div style={{ display: "flex", gap: "0.5rem", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "1rem" }}>
-                <button
-                  disabled
-                  title="Unavailable until authenticated command dispatch and persisted approval are implemented"
+                <Link
+                  href={`/operations?server=${encodeURIComponent(server.id)}`}
+                  title="Choose an allowed service and request independent approval"
                   className="btn-secondary"
-                  style={{ flex: 1, padding: "0.45rem 0.5rem", fontSize: "0.78rem", cursor: "not-allowed", opacity: 0.65 }}
+                  style={{ flex: 1, padding: "0.45rem 0.5rem", fontSize: "0.78rem", textDecoration: "none" }}
                 >
-                  Restart unavailable
-                </button>
-                <button
-                  disabled
-                  title="Unavailable until the persisted human approval workflow is implemented"
+                  Service approvals
+                </Link>
+                <Link
+                  href={`/recovery?server=${encodeURIComponent(server.id)}`}
+                  title="Review a cloud reboot request; independent approval is required"
                   style={{
                     flex: 1,
                     padding: "0.45rem 0.5rem",
@@ -349,13 +348,12 @@ export default function ServersPage() {
                     background: "rgba(239, 68, 68, 0.15)",
                     border: "1px solid rgba(239, 68, 68, 0.3)",
                     color: "#fca5a5",
-                    cursor: "not-allowed",
-                    opacity: 0.65,
+                    textDecoration: "none",
                     fontWeight: 600,
                   }}
                 >
-                  Reset unavailable
-                </button>
+                  Reboot approval
+                </Link>
               </div>
             </div>
           ))}

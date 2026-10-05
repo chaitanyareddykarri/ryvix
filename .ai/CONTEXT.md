@@ -1,5 +1,12 @@
 # Ryvix Current Project Context
 
+## Latest follow-up - 2026-10-05
+
+Applied schema: `20261005000003`. Server approval handoffs, JS/TS parser references,
+streaming attempt accounting, Twilio receipts and optional PagerDuty observations
+are implemented. See [evidence](../docs/verification/FOLLOWUP_2026_10_05.md) and
+[pending work](../docs/PENDING_WORK.md). Older checkpoints below are historical.
+
 ## Current capability checkpoint — 2026-10-04
 
 Applied schema: `20261004000002`. Gmail authenticated push/reviewed replies, bounded semantic and multi-language reference retrieval, provider-reported usage, Slack/PagerDuty/Twilio P1 dispatch, and external-training dataset preparation are implemented. See [current evidence](../docs/verification/CAPABILITIES_2026_10_04.md), [provider setup](../docs/infrastructure/CAPABILITY_PROVIDERS.md), and [remaining work](../docs/PENDING_WORK.md). Real delivery, deployed browser/worker acceptance, paid fine-tuning adapters and measured model quality remain pending. Older checkpoint sections below are historical.

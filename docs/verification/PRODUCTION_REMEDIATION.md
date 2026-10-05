@@ -3,8 +3,8 @@
 ## Historical report — current reference updated 2026-10-03
 
 The original findings, counts and pending lists below remain historical evidence.
-Current code is `d81b281`, schema `20261003000004`; see
-[project status](../PROJECT_STATUS.md) and [latest verification](WHATSAPP_ASSISTANT_2026_10_03.md).
+Current implementation and schema checkpoints are maintained in
+[project status](../PROJECT_STATUS.md) and [latest verification](FOLLOWUP_2026_10_05.md).
 Do not interpret older missing-feature lists as current or fixture passes as real
 provider/browser certification. No historical test result was changed or rerun
 by this documentation update.

@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import {parseEnv} from 'node:util';
-import {randomUUID} from 'node:crypto';
+import {randomUUID,createHmac} from 'node:crypto';
 import assert from 'node:assert/strict';
 import {Client,type Pool} from 'pg';
 import {ChannelAccounts} from '../backend/src/services/channel-accounts';
@@ -9,6 +9,8 @@ import {GmailReplies} from '../backend/src/services/gmail-replies';
 import {acceptGmailPush} from '../backend/src/services/gmail-push';
 import {IncidentNotifications} from '../backend/src/services/incident-notifications';
 import {ExternalTraining} from '../backend/src/services/external-training';
+import {ModelUsage} from '../backend/src/services/model-usage';
+import {twilioCallbackUrl} from '../services/src/communication/twilio-status';
 
 // All fixtures and optional schema preview are rolled back. Provider calls are intercepted.
 async function main(){
@@ -18,6 +20,7 @@ async function main(){
   const original=global.fetch;let phase='connect';
   const project=randomUUID(),environment=randomUUID(),users=[randomUUID(),randomUUID()];
   try{await c.connect();await c.query('BEGIN');await c.query("SET LOCAL statement_timeout='20s'");
+    if(process.argv.includes('--attempt-schema-preview'))for(const file of ['20261005000001_model_attempts.sql','20261005000002_twilio_receipts.sql','20261005000003_notification_observations.sql'])await c.query(fs.readFileSync('supabase/migrations/'+file,'utf8'));
     if(process.argv.includes('--schema-preview'))for(const name of ['20261003000005_response_usage.sql','20261003000006_repository_semantics.sql','20261003000007_gmail_push_replies.sql','20261004000001_incident_notifications.sql','20261004000002_external_training_examples.sql'])await c.query(fs.readFileSync('supabase/migrations/'+name,'utf8'));
     phase='fixtures';
     for(const user of users)await c.query("INSERT INTO auth.users(id,email,raw_user_meta_data) VALUES($1,$2,'{}')",[user,`rollback-${user}@example.test`]);
@@ -26,8 +29,17 @@ async function main(){
     await c.query("INSERT INTO organization_members(organization_id,user_id,role) VALUES($1,$2,'admin')",[org,users[1]]);
     await c.query("INSERT INTO projects(id,organization_id,name,slug) VALUES($1,$2,'Rollback fixture',$3)",[project,org,`fixture-${project}`]);
     await c.query("INSERT INTO environments(id,project_id,name,slug) VALUES($1,$2,'Rollback fixture','fixture')",[environment,project]);
-    const query=(sql:string,args?:unknown[])=>c.query(sql==='BEGIN'?'SAVEPOINT capability_store':sql==='COMMIT'?'RELEASE SAVEPOINT capability_store':sql==='ROLLBACK'?'ROLLBACK TO SAVEPOINT capability_store':sql.replace("SELECT * FROM incident_notification_outbox WHERE status='pending'",`SELECT * FROM incident_notification_outbox WHERE project_id='${project}' AND status='pending'`),args);
+    const query=(sql:string,args?:unknown[])=>c.query(sql==='BEGIN'?'SAVEPOINT capability_store':sql==='COMMIT'?'RELEASE SAVEPOINT capability_store':sql==='ROLLBACK'?'ROLLBACK TO SAVEPOINT capability_store':sql.replace("SELECT * FROM incident_notification_outbox WHERE status='pending'",`SELECT * FROM incident_notification_outbox WHERE project_id='${project}' AND status='pending'`).replace("SELECT * FROM incident_notification_outbox WHERE provider='pagerduty'",`SELECT * FROM incident_notification_outbox WHERE project_id='${project}' AND provider='pagerduty'`),args);
     const pool={query,connect:async()=>({query,release(){}})} as unknown as Pool;
+    phase='Durable model attempt scope and immutable completion';
+    const conversation=randomUUID();await c.query("INSERT INTO chat_conversations(id,organization_id,user_id,lease_id,lease_expires_at) VALUES($1,$2,$3,$4,now()+interval '3 minutes')",[conversation,org,users[0],randomUUID()]);
+    const usageStore=new ModelUsage(pool),usageScope={org,user:users[0],channel:'web' as const,source:conversation};
+    const attempt={id:randomUUID(),provider:'fixture',model:'fixture',status:'started' as const,latencyMs:0,usage:null};
+    await assert.rejects(usageStore.record({...usageScope,org:other,user:users[1]},attempt));
+    await assert.rejects(usageStore.record({...usageScope,channel:'whatsapp',source:randomUUID()},attempt),/unauthorized/);
+    await usageStore.record(usageScope,attempt);await usageStore.record(usageScope,{...attempt,status:'failed',latencyMs:50});
+    await usageStore.record(usageScope,{...attempt,status:'completed',latencyMs:51});
+    assert.equal((await usageStore.list(org,users[0]))[0].status,'failed');assert.equal((await usageStore.list(other,users[1])).length,0);
     phase='Gmail draft exact approval and replay';let sends=0;
     global.fetch=async input=>{const address=String(input);if(address==='https://oauth2.googleapis.com/token')return Response.json({access_token:'fixture'});
       if(address.endsWith('/messages/send')){sends++;return Response.json({id:'fixture-message'});}
@@ -61,6 +73,34 @@ async function main(){
     await c.query("INSERT INTO incidents(environment_id,title,incident_type,severity) VALUES($1,'Cancelled fixture','service_crash','P1_critical')",[environment]);
     await outbox.enqueue();process.env.RYVIX_INCIDENT_NOTIFICATION_TARGETS='[]';await outbox.dispatchOne();
     assert.equal(notifications,1);assert.ok((await outbox.list(org,users[0])).some(r=>r.status==='cancelled'));
+    phase='Signed Twilio identity, replay and receipt ordering';
+    process.env.RYVIX_PUBLIC_URL='https://fixture.example';process.env.RYVIX_TWILIO_STATUS_ENABLED='true';
+    const smsCredential={accountSid:'AC'+'a'.repeat(32),authToken:'fixture-sms-token',from:'+15555550124'};
+    const smsSecret=(await c.query('SELECT vault.create_secret($1,$2) AS id',[JSON.stringify(smsCredential),`sms-${project}`])).rows[0].id;
+    process.env.RYVIX_INCIDENT_NOTIFICATION_TARGETS=JSON.stringify([{id:randomUUID(),environmentId:environment,ownerId:users[0],vaultSecretRef:smsSecret,provider:'twilio',destination:'+15555550123',optedIn:true}]);
+    const sid='SM'+'b'.repeat(32),sms=new IncidentNotifications(pool,async()=>sid);await sms.enqueue();await sms.dispatchOne();
+    const smsJob=(await sms.list(org,users[0])).find(r=>r.provider==='twilio'&&r.status==='accepted');assert.ok(smsJob);
+    await c.query("UPDATE incident_notification_outbox SET status='sending',provider_message_id=NULL WHERE id=$1",[smsJob.id]);
+    const fields={MessageSid:sid,MessageStatus:'delivered',AccountSid:smsCredential.accountSid,To:'+15555550123',From:smsCredential.from};
+    const signature=(v:Record<string,string>)=>createHmac('sha1',smsCredential.authToken).update(twilioCallbackUrl(smsJob.id)+Object.keys(v).sort().map(k=>k+v[k]).join('')).digest('base64');
+    await assert.rejects(sms.twilioReceipt(smsJob.id,new URLSearchParams(fields).toString(),'invalid'));
+    await sms.twilioReceipt(smsJob.id,new URLSearchParams(fields).toString(),signature(fields));
+    await sms.twilioReceipt(smsJob.id,new URLSearchParams(fields).toString(),signature(fields));
+    const late={...fields,MessageStatus:'sent'};await sms.twilioReceipt(smsJob.id,new URLSearchParams(late).toString(),signature(late));
+    assert.equal((await c.query('SELECT status FROM incident_notification_outbox WHERE id=$1',[smsJob.id])).rows[0].status,'delivered');
+    assert.equal((await c.query('SELECT count(*)::int n FROM incident_notification_receipts WHERE notification_id=$1',[smsJob.id])).rows[0].n,2);
+    phase='PagerDuty observation does not imply delivery or recovery';
+    await c.query("UPDATE incident_notification_outbox SET status='cancelled' WHERE project_id=$1 AND status='pending'",[project]);
+    const pdSecret=(await c.query('SELECT vault.create_secret($1,$2) AS id',[JSON.stringify({routingKey:'a'.repeat(32),apiToken:'fixture',serviceId:'PABCDEF'}),`pd-${project}`])).rows[0].id;
+    process.env.RYVIX_INCIDENT_NOTIFICATION_TARGETS=JSON.stringify([{id:randomUUID(),environmentId:environment,ownerId:users[0],vaultSecretRef:pdSecret,provider:'pagerduty',destination:'integration',optedIn:true}]);
+    const pd=new IncidentNotifications(pool,async job=>job.id);await pd.enqueue();await pd.dispatchOne();
+    const pdJob=(await pd.list(org,users[0])).find(r=>r.provider==='pagerduty'&&r.status==='accepted');assert.ok(pdJob);
+    process.env.RYVIX_PAGERDUTY_STATUS_ENABLED='true';
+    global.fetch=async input=>{const address=new URL(String(input));assert.equal(address.origin,'https://api.pagerduty.com');assert.equal(address.searchParams.get('incident_key'),pdJob.id);
+      return Response.json({incidents:[{id:'PTEST01',incident_key:pdJob.id,service:{id:'PABCDEF'},status:'resolved'}]});};
+    await pd.observePagerDuty();
+    const observed=(await c.query('SELECT status,provider_observation FROM incident_notification_outbox WHERE id=$1',[pdJob.id])).rows[0];
+    assert.equal(observed.status,'accepted');assert.equal(observed.provider_observation.status,'resolved');
     phase='Independent external training review and dataset gates';const training=new ExternalTraining(pool);
     const input={question:'How do I investigate this reviewed fixture?',answer:'Inspect the relevant evidence and request approval before changes.',provenance:'Explicit rollback fixture, never real training evidence.',evidenceGroup:'fixture-group',partition:'train',externalTrainingConsent:true};
     const sample=await training.submit(org,users[0],project,input);

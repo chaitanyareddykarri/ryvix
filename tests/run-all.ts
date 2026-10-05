@@ -4,6 +4,7 @@ import {testCapabilityFoundations} from './capability-foundations.test';
 import {testGmailWorkflows} from './gmail-workflows.test';
 import {testIncidentTransports} from './incident-transports.test';
 import {testRepositorySemantics} from './repository-semantics.test';
+import {testModelAttempts} from './model-attempts.test';
 import {testExperienceLearning} from './experience-learning.test';
 import {testRepositoryKnowledge} from './repository-knowledge.test';
 import {testWhatsAppPhone} from './whatsapp-phone.test';
@@ -160,6 +161,7 @@ async function runAllTests() {
   testCases.push({name:'Gmail authenticated push and reviewed reply boundaries',fn:testGmailWorkflows});
   testCases.push({name:'Explicit P1 transport configuration and provider acknowledgments',fn:testIncidentTransports});
   testCases.push({name:'Scoped semantic retrieval and post-provider authorization',fn:testRepositorySemantics});
+  testCases.push({name:'Provider attempt failures, fallback usage and cancellation',fn:testModelAttempts});
   testCases.push({name:'Cloud target and WhatsApp outbound boundaries',fn:testRecoveryOutbound});
   testCases.push({name:'Email notification content and sender boundaries',fn:testEmailNotifications});
   for (const tc of testCases) {

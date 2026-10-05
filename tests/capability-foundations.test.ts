@@ -4,6 +4,13 @@ import {streamProvider} from '../ai/src/provider-stream';
 import {repositoryDependencies} from '../ai/src/repository-dependencies';
 
 export async function testCapabilityFoundations(){
+  const parsed=repositoryDependencies([
+    {path:'tsconfig.json',content:'{"compilerOptions":{"baseUrl":".","paths":{"@/*":["src/*"]}}}'},
+    {path:'src/main.ts',content:"// import './ignored';\nexport {x} from '@/feature'; const p=import('./lazy.js'); const q=import(variable);"},
+    {path:'src/ignored.ts',content:''},{path:'src/feature.ts',content:''},{path:'src/lazy.ts',content:''},
+  ]);
+  assert.deepEqual(parsed.map(e=>e.target).sort(),['src/feature.ts','src/lazy.ts']);
+  assert.doesNotThrow(()=>repositoryDependencies([{path:'tsconfig.json',content:'null'},{path:'a.ts',content:"import 'alias';"}]));
   const start=streamUsage({type:'message_start',message:{usage:{input_tokens:10,cache_read_input_tokens:4,cache_creation_input_tokens:2,output_tokens:1}}},true)!;
   const end=streamUsage({type:'message_delta',usage:{output_tokens:7}},true,start)!;
   assert.equal(end.promptTokens,16);assert.equal(end.completionTokens,7);

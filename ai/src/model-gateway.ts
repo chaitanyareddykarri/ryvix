@@ -3,6 +3,8 @@ import * as path from 'path';
 import { streamProvider } from './provider-stream';
 import type {TokenUsage} from './token-usage';
 import {tokenCount} from './token-usage';
+import {randomUUID} from 'node:crypto';
+import type {AttemptObserver,ModelAttempt} from './model-attempt';
 /**
  * Ryvix Multi-Provider LLM Gateway with Automatic Rate-Limit Failover
  * 
@@ -45,7 +47,7 @@ export class ModelGateway {
   private providers: ProviderDefinition[] = [];
 
   async *stream(messages: LLMMessage[], options: { maxTokens?: number; temperature?: number; signal?: AbortSignal;
-    onProvider?: (provider: string, model: string) => void;onUsage?:(usage:TokenUsage&{provider:string;model:string})=>void } = {}) {
+    onProvider?: (provider: string, model: string) => void;onUsage?:(usage:TokenUsage&{provider:string;model:string})=>void;onAttempt?:AttemptObserver } = {}) {
     const signal = AbortSignal.any([AbortSignal.timeout(120000), ...(options.signal ? [options.signal] : [])]);
     for (const provider of [...this.providers].sort((a,b) => a.priority-b.priority)) {
       if (process.env.RYVIX_CHAT_PROVIDER && provider.id !== process.env.RYVIX_CHAT_PROVIDER) continue;
@@ -54,20 +56,27 @@ export class ModelGateway {
       const apiKey = this.getApiKey(provider.id) || provider.apiKey;
       if (!apiKey && provider.id !== 'ollama') continue;
       let emitted = false;
+      const model = process.env[`${provider.id.toUpperCase()}_MODEL`] || provider.model;
+      const attempt:ModelAttempt={id:randomUUID(),provider:provider.id,model,status:'started',latencyMs:0,usage:null};
+      const started=Date.now();await options.onAttempt?.({...attempt});
+      let outcome:ModelAttempt['status']='cancelled';
       try {
-        const model = process.env[`${provider.id.toUpperCase()}_MODEL`] || provider.model;
         let usage:TokenUsage|undefined;
-        for await (const chunk of streamProvider({ ...provider, apiKey, model }, messages, { ...options, signal,onUsage:value=>{usage=value;} })) {
+        for await (const chunk of streamProvider({ ...provider, apiKey, model }, messages, { ...options, signal,onUsage:value=>{usage=value;},onObservedUsage:value=>{attempt.usage=value;} })) {
           if (!emitted) options.onProvider?.(provider.id,model);
           emitted = true;
           yield chunk;
         }
         if (!emitted) throw new Error('Empty provider response');
         if(usage)options.onUsage?.({...usage,provider:provider.id,model});
+        outcome='completed';
         return;
       } catch (error) {
+        outcome=signal.aborted?'cancelled':'failed';
         if (emitted || signal.aborted) throw new Error('Model stream interrupted. Please retry.');
         if (error instanceof Error && error.message.includes('429')) provider.isRateLimitedUntil = Date.now()+60000;
+      } finally {
+        await options.onAttempt?.({...attempt,status:outcome,latencyMs:Math.min(300000,Math.max(0,Date.now()-started))});
       }
     }
     throw new Error('No streaming AI provider is available. Configure a provider and retry.');

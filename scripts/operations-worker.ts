@@ -16,6 +16,7 @@ async function main(){
     if(process.env.RYVIX_WHATSAPP_ALERTS_ENABLED==='true')try{await alerts.expireClaims();await alerts.reconcileReceipts();await alerts.enqueue();await alerts.dispatchOne();}catch{console.error('WhatsApp iteration incomplete; review configuration and outbox.');}
     if(process.env.RYVIX_EMAIL_NOTIFICATIONS_ENABLED==='true')try{await email.expireClaims();await email.enqueue();await email.dispatchOne();}catch{console.error('Email notification iteration incomplete; review configuration and outbox.');}
     if(process.env.RYVIX_INCIDENT_NOTIFICATIONS_ENABLED==='true')try{await notifications.expireClaims();await notifications.enqueue();await notifications.dispatchOne();}catch{console.error('Incident notifications incomplete; review configuration and outbox.');}
+    if(process.env.RYVIX_PAGERDUTY_STATUS_ENABLED==='true')try{await notifications.observePagerDuty();}catch{console.error('PagerDuty observation unavailable; previous evidence retained.');}
     if(process.argv.includes('--once'))break;
     if(!stopped)await new Promise(resolve=>setTimeout(resolve,5000));
   }while(!stopped);}finally{await pool.end();}

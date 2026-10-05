@@ -1,5 +1,6 @@
 import {randomUUID,createHash} from 'node:crypto';
 import type {Pool,PoolClient} from 'pg';
+import {ModelUsage} from './model-usage';
 import {ChannelError} from './channel-inbox';
 import {routeWhatsApp} from '../../../ai/src/whatsapp-router';
 import {sendWhatsAppReply} from '../../../services/src/communication/whatsapp-replies';
@@ -93,7 +94,7 @@ export class WhatsAppAssistant {
         // Repository retrieval is narrowed to the connected project's explicit repository set.
         const allowed=new Set(ctx.repositories.map(r=>r.id));
         const lessons=['owner','admin','developer'].includes(s.role)?await new ExperienceStore(this.pool).retrieve(s.organization_id,s.user_id,s.project_id,message.question):[];
-        result=await this.route({question:message.question,history:ctx.history,context:{...ctx,history:undefined,lessons,sources:sources.filter(r=>allowed.has(r.repository_id)),asOf:new Date().toISOString()}});
+        result=await this.route({question:message.question,history:ctx.history,context:{...ctx,history:undefined,lessons,sources:sources.filter(r=>allowed.has(r.repository_id)),asOf:new Date().toISOString()}},attempt=>new ModelUsage(this.pool).record({org:s.organization_id,user:s.user_id,channel:'whatsapp',source:message.id},attempt));
       }
       await this.tx(async c=>{const current=await this.scope(c,s.id);
         if(current.claim!==claim||new Date(current.claim_until).getTime()<Date.now())throw new Error('Expired assistant claim');

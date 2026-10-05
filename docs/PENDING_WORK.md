@@ -1,4 +1,8 @@
-# Pending work after the October 4 capability batch
+# Pending work after the October 5 implementation follow-up
+
+New implementation: approval-page server controls, parsed JS/TS references and local
+aliases, per-attempt streaming usage, signed Twilio status callbacks and read-only
+PagerDuty observations. See [follow-up evidence](verification/FOLLOWUP_2026_10_05.md).
 
 This is the active remediation queue. The [audit](verification/WORKSPACE_AUDIT_2026_10_03.md)
 preserves the original findings; [project status](PROJECT_STATUS.md) describes implemented workflows.
@@ -31,12 +35,12 @@ Existing dirty AI runtime files must remain outside source commits.
 | --- | --- | --- |
 | Gmail | Authenticated push, deduplication, worker renewal, reviewed reply UI and single-use approval | Google OAuth/send grant, Pub/Sub identity/topic/subscription, real mailbox and browser verification |
 | Semantic/graph retrieval | Bounded opt-in embeddings and static dependency neighbors with permission/commit rechecks | Embedding provider/model configuration, representative retrieval evaluation; whole-repository compiler graph remains outside implemented scope |
-| Languages | Common JS/TS, Python, Rust, Go, C/C++, Ruby, Java, C#, PHP reference forms | Full parsers, aliases/dynamic loading and arbitrary-language guarantees are not implemented |
-| Tokens/cost | Provider-reported successful-response usage and configured-rate estimates | Live provider verification, account-wide billing/invoice reconciliation and failed-attempt accounting |
+| Languages | JS/TS syntax parsing, literal imports and bounded local config aliases; common reference forms in other listed languages | Other language parsers, inherited configs, runtime dynamic resolution and whole-repository compiler graphs |
+| Tokens/cost | Durable web/WhatsApp/Gmail streaming attempts including failure/fallback/cancellation; reported counts and configured-rate estimates | Non-stream/embedding attempt coverage, live provider verification, account-wide billing/invoice reconciliation; missing counts remain unknown |
 | External LLM training | Separate consented examples, independent review, partition checks and JSONL export API/UI | Provider/model choice, real reviewed dataset, provider job adapter/approval, evaluation and promotion/rollback |
-| Slack/PagerDuty/SMS | Vault-backed durable P1 adapters and acceptance history; Twilio selected provisionally for SMS | Accounts, recipient consent, live delivery; provider delivery receipts beyond acceptance |
+| Slack/PagerDuty/SMS | Durable adapters; signed Twilio status receipts; optional exact-match PagerDuty incident observations | Accounts, consent, public callbacks and real delivery; Slack acceptance is not a read receipt; grouped PagerDuty incidents may not match |
 
-Migration checkpoint: `20261004000002`. [Batch evidence](verification/CAPABILITIES_2026_10_04.md)
+Migration checkpoint: `20261005000003`. [Latest evidence](verification/FOLLOWUP_2026_10_05.md)
 and [configuration](infrastructure/CAPABILITY_PROVIDERS.md). No real messages or paid jobs were submitted.
 
 Items 1–3: [changes and verification](verification/AUDIT_REMEDIATION_2026_10_03.md).

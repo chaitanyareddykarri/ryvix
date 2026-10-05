@@ -1,8 +1,9 @@
 'use client';
-import {useCallback,useEffect,useState} from 'react';
+import {useCallback,useEffect,useState,useRef} from 'react';
 import Link from 'next/link';
 type Operation={id:string;hostname:string;service:string;status:string;requested_by:string;expires_at:string;result?:{status:string;serviceState:string}};
 export default function OperationsPage(){
+  const selectionLoaded=useRef(false);
   const [operations,setOperations]=useState<Operation[]>([]),[servers,setServers]=useState<Array<{id:string;hostname:string}>>([]);
   const [services,setServices]=useState<string[]>([]),[server,setServer]=useState(''),[service,setService]=useState('');
   const [user,setUser]=useState(''),[configured,setConfigured]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
@@ -11,6 +12,12 @@ export default function OperationsPage(){
     const [commands,hosts]=await Promise.all([read('/api/servers/commands'),read('/api/servers')]);
     if(signal?.aborted)return;
     setOperations(commands.commands);setServices(commands.services);setUser(commands.userId);setConfigured(commands.configured);setServers(hosts.servers);
+    if(!selectionLoaded.current){const params=new URLSearchParams(window.location.search);
+      const selected=params.get('server'),unit=params.get('service');
+      if(hosts.servers.some((s:{id:string})=>s.id===selected))setServer(selected!);
+      if(commands.services.includes(unit))setService(unit!);
+      selectionLoaded.current=true;
+    }
   },[]);
   useEffect(()=>{const abort=new AbortController();const update=()=>void refresh(abort.signal).catch(e=>{if(!abort.signal.aborted)setError(e.message);});update();const timer=setInterval(update,10000);return()=>{abort.abort();clearInterval(timer);};},[refresh]);
   async function mutate(body:unknown){setBusy(true);setError('');try{

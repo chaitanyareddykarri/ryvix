@@ -1,7 +1,14 @@
 import assert from 'node:assert/strict';
 import {incidentTargets} from '../backend/src/services/incident-notifications';
 import {sendIncidentNotification} from '../services/src/communication/incident-transports';
+import {verifyTwilioStatus} from '../services/src/communication/twilio-status';
+import {createHmac} from 'node:crypto';
 export async function testIncidentTransports(){
+  const fields={MessageSid:'SM'+'a'.repeat(32),MessageStatus:'delivered',To:'+15555550123'},url='https://fixture.example/callback?notification=fixture';
+  const signature=createHmac('sha1','fixture').update(url+Object.entries(fields).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>k+v).join('')).digest('base64');
+  assert.equal(verifyTwilioStatus(url,new URLSearchParams(fields).toString(),signature,'fixture').MessageStatus,'delivered');
+  assert.throws(()=>verifyTwilioStatus(url+'x',new URLSearchParams(fields).toString(),signature,'fixture'));
+  assert.throws(()=>verifyTwilioStatus(url,new URLSearchParams(fields).toString()+'&To=attacker',signature,'fixture'));
   const id='11111111-1111-4111-8111-111111111111';
   const target={id,environmentId:id,ownerId:id,vaultSecretRef:id,provider:'slack',destination:'C123456789',optedIn:true};
   assert.equal(incidentTargets(JSON.stringify([target])).length,1);

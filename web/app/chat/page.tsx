@@ -401,6 +401,7 @@ export default function WebChatPage() {
           <div style={{ display: "flex", gap: "0.5rem" }}>
             <Link href="/channels">Inbox</Link>
             <Link href="/learning">Learning</Link>
+            <Link href="/usage">AI usage</Link>
             <Link href="/experience">Memory and feedback</Link>
             <Link href="/knowledge">Repository knowledge</Link>
             <Link href="/operations">Server approvals</Link>

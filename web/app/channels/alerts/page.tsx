@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
-type Alert={id:string;incident_id:string;status:string;created_at:string;provider?:string;provider_message_id?:string};
+type Alert={id:string;incident_id:string;status:string;created_at:string;provider?:string;provider_message_id?:string;provider_observation?:{incidentId:string;status:string;observedAt:string}};
 export default function AlertHistory(){
   const [alerts,setAlerts]=useState<Alert[]>([]),[error,setError]=useState('');
   useEffect(()=>{const abort=new AbortController();const load=async()=>{try{
@@ -10,8 +10,8 @@ export default function AlertHistory(){
   }catch(e){if(!abort.signal.aborted)setError(e instanceof Error?e.message:'Alerts unavailable');}};
     void load();const timer=setInterval(()=>void load(),10000);return()=>{abort.abort();clearInterval(timer);};},[]);
   return <main style={{maxWidth:960,margin:'auto',padding:32}}><Link href="/channels">Channel inbox</Link><h1>P1 alert delivery</h1>
-    <p>Accepted means the provider accepted the request. WhatsApp delivered/read states require signed receipts. Other transports currently report acceptance only. Unknown sends require investigation before sending again.</p>
+    <p>Accepted means the provider accepted the request. WhatsApp and enabled Twilio delivery states require verified receipts. PagerDuty observations describe its incident state, not notification delivery or server recovery. Slack acceptance does not prove a human read the message.</p>
     {error&&<p role="alert">{error}</p>}{!alerts.length&&!error&&<p>No alerts recorded.</p>}
-    {alerts.map(a=><article key={a.id} style={{border:'1px solid #64748b',padding:16,marginTop:12}}><p>{a.provider}: incident {a.incident_id}</p><p>{a.status} · {new Date(a.created_at).toLocaleString()}</p>{a.provider_message_id&&<p>Provider reference: {a.provider_message_id}</p>}</article>)}
+    {alerts.map(a=><article key={a.id} style={{border:'1px solid #64748b',padding:16,marginTop:12}}><p>{a.provider}: incident {a.incident_id}</p><p>{a.status} · {new Date(a.created_at).toLocaleString()}</p>{a.provider_message_id&&<p>Provider reference: {a.provider_message_id}</p>}{a.provider_observation&&<p>PagerDuty incident {a.provider_observation.incidentId}: {a.provider_observation.status}, observed {new Date(a.provider_observation.observedAt).toLocaleString()}</p>}</article>)}
   </main>;
 }

@@ -1,4 +1,4 @@
-# Provider setup for the October 4 capability batch
+# Provider setup through the October 5 follow-up
 
 Application OTP, security alerts and deployment mail continue to use your Gmail
 SMTP configuration. Resend is not required. Existing external LLM credentials can
@@ -49,7 +49,8 @@ This is bounded semantic matching plus local static dependency neighbors, not an
 unbounded vector database or compiler-resolved whole-repository graph.
 
 Static reference extraction covers common JS/TS, Python, Rust, Go, C/C++, Ruby,
-Java, C# and PHP forms. Aliases, generated code, dynamic loading and some namespace
+Java, C# and PHP forms. JS/TS now uses syntax parsing and local supplied config
+aliases; inherited configs, generated code, computed dynamic loading and some namespace
 references remain unresolved. Coding context stays within 24 files / 160 KB and
 considers at most 2,000 candidate paths for dependency expansion.
 
@@ -60,8 +61,12 @@ when present. Missing or interrupted usage remains unknown. Completion paths als
 no longer invent counts. Optional `RYVIX_MODEL_RATES_JSON` maps exact `provider:model`
 keys to versioned currency and per-million rates; cache rates must be supplied when
 cache usage is reported. Monetary results are **configured-rate estimates**.
-Provider invoices, failed/fallback attempt costs and account-wide billing are not
-reconciled by this implementation. No fixed pricing or free-tier promise is made.
+Streaming attempts in web chat, WhatsApp and Gmail drafting now persist starts and
+completion/failure/cancellation independently, including fallbacks. `/usage` displays
+the current user's last 100 attempts. Partial provider counts are explicitly partial;
+a start without completion is an unknown outcome. Non-stream/embedding attempt
+coverage, provider invoices and account-wide billing remain incomplete.
+No fixed pricing or free-tier promise is made.
 
 ## Optional P1 transports
 
@@ -81,7 +86,19 @@ credentials in this list. This is trusted deployment configuration, not user inp
 The queue deduplicates incident/target pairs, rechecks the target fingerprint,
 membership and active P1 incident, and limits each target to three claims/minute.
 Changed/removed targets cancel queued notifications. Provider acceptance appears in
-`/channels/alerts`; delivery/read receipts for these three transports are not implemented.
+`/channels/alerts`. Twilio status callbacks can be enabled with
+`RYVIX_TWILIO_STATUS_ENABLED=true` and the exact public HTTPS origin in
+`RYVIX_PUBLIC_URL`. The sender sets `/api/webhooks/twilio?notification=<uuid>` as
+StatusCallback. Signatures bind that URL and form fields; identity, deduplication and
+monotonic status checks protect updates. Retain the original target/Vault token for
+the seven-day receipt window. Provider-delivered is not proof a person read an SMS.
+
+Optional `RYVIX_PAGERDUTY_STATUS_ENABLED=true` enables read-only observation in the
+operations worker. Replace the plain routing key in Vault with JSON containing
+`routingKey`, a least-privilege read `apiToken`, and `serviceId`. Exact incident-key
+and service matches are checked at most every 15 minutes per notification for seven
+days. Grouped incidents without that exact key remain unobserved. This is separate
+from delivery and Ryvix recovery verification. Slack remains API acceptance only.
 SMTP and WhatsApp retain their separate existing workers/receipt behavior.
 
 ## External LLM training preparation

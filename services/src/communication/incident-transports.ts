@@ -1,3 +1,4 @@
+import {twilioCallbackUrl} from './twilio-status';
 export type IncidentTransport='slack'|'pagerduty'|'twilio';
 export type IncidentMessage={id:string;incident:string;destination:string;provider:IncidentTransport;secret:string};
 
@@ -10,16 +11,17 @@ export async function sendIncidentNotification(job:IncidentMessage):Promise<stri
     url='https://slack.com/api/chat.postMessage';headers={Authorization:`Bearer ${job.secret}`,'Content-Type':'application/json'};
     body=JSON.stringify({channel:job.destination,text,mrkdwn:false,unfurl_links:false,unfurl_media:false});
   }else if(job.provider==='pagerduty'){
-    if(!/^[a-zA-Z0-9]{32}$/.test(job.secret))throw new Error('Invalid PagerDuty integration');
+    const routingKey=job.secret.startsWith('{')?JSON.parse(job.secret).routingKey:job.secret;
+    if(!/^[a-zA-Z0-9]{32}$/.test(routingKey))throw new Error('Invalid PagerDuty integration');
     url='https://events.pagerduty.com/v2/enqueue';headers={'Content-Type':'application/json'};
-    body=JSON.stringify({routing_key:job.secret,event_action:'trigger',dedup_key:job.id,payload:{summary:text,source:'Ryvix',severity:'critical'}});
+    body=JSON.stringify({routing_key:routingKey,event_action:'trigger',dedup_key:job.id,payload:{summary:text,source:'Ryvix',severity:'critical'}});
   }else if(job.provider==='twilio'){
     const credential=JSON.parse(job.secret);
     if(!/^AC[a-f0-9]{32}$/i.test(credential.accountSid)||typeof credential.authToken!=='string'||!credential.authToken||credential.authToken.length>256||
       !/^\+[1-9]\d{6,14}$/.test(credential.from)||!/^\+[1-9]\d{6,14}$/.test(job.destination))throw new Error('Invalid SMS configuration');
     url=`https://api.twilio.com/2010-04-01/Accounts/${credential.accountSid}/Messages.json`;
     headers={Authorization:`Basic ${Buffer.from(`${credential.accountSid}:${credential.authToken}`).toString('base64')}`,'Content-Type':'application/x-www-form-urlencoded'};
-    body=new URLSearchParams({From:credential.from,To:job.destination,Body:text}).toString();
+    body=new URLSearchParams({From:credential.from,To:job.destination,Body:text,...(process.env.RYVIX_TWILIO_STATUS_ENABLED==='true'?{StatusCallback:twilioCallbackUrl(job.id)}:{})}).toString();
   }else throw new Error('Unsupported transport');
   const response=await fetch(url,{method:'POST',headers,body,redirect:'error',signal:AbortSignal.timeout(10000)});
   if(!response.ok||!response.body){await response.body?.cancel();throw new Error('Provider did not acknowledge notification');}
