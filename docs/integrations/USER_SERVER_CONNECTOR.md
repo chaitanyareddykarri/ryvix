@@ -1,21 +1,21 @@
 # User Server Connector Specification
 
-## Implementation checkpoint — 2026-10-03
+## October 7 implementation update
 
-Code checkpoint: `d81b281`; applied migrations through `20261003000004`.
-Implemented: reviewed experience/personal memory, bounded repository indexing,
-Gmail SMTP email, WhatsApp OTP identity, opt-in AI replies/history/quotas, confirmed
-coding requests, task notifications and authenticated approval handoffs. Releases
-and server operations retain their existing web authorization and approval checks.
-Recorded verification: 79 project suites plus 15 Node checks, typecheck/lint/build
-and 125 database boundary checks passed. Provider delivery, deployed workers/browser
-acceptance and representative model accuracy remain unverified.
+Server enrollment now offers explicit project/environment creation without
+GitHub for owner/admin/developer members. Setup is tenant-scoped, audited and
+rate-limited. Enrollment remains separate; fresh signed telemetry is needed to
+report connection. Fleet handles unknown/unreachable states and reconnects.
+Hosted concurrency and actual agent installation remain acceptance work.
 
-See [project status](../PROJECT_STATUS.md), [assistant setup](../infrastructure/WHATSAPP_ASSISTANT.md) and
-[recorded verification](../verification/WHATSAPP_ASSISTANT_2026_10_03.md). This documentation update did not rerun those
-code checks. Detailed designs below may include planned capabilities; the status
-index distinguishes implemented behavior from future work.
+## Implementation status - October 7, 2026
 
+Hosted migrations are applied through `20261007000001`; no numbered migrations
+remain pending at the latest rollout. See [project status](../PROJECT_STATUS.md)
+for completed UI, authentication, team, repository and fleet work and recorded
+verification. The [pending queue](../PENDING_WORK.md) separates unfinished code,
+deployment configuration and live acceptance. Design details below describe
+scope, not production certification.
 
 ## 1. System Overview
 

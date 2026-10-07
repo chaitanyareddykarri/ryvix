@@ -3,6 +3,7 @@ import type { Pool, PoolClient } from 'pg';
 import type { WorkspaceSession } from '@ryvix/database';
 import type { ChangedFile } from '../../../services/src/workspace/task-artifacts';
 import {ExperienceStore} from './experience-store';
+import {ModelUsage} from './model-usage';
 
 export interface RepositoryJob {
   task_id: string; repository_id: string; project_id: string; organization_id: string;
@@ -11,6 +12,9 @@ export interface RepositoryJob {
 
 export class RepositoryJobStore {
   constructor(private readonly pool: Pool, private readonly hostId?: string) {}
+  async modelAttempt(job:RepositoryJob,workerId:string,event:import('../../../ai/src/model-attempt').ModelAttempt){
+    await new ModelUsage(this.pool).record({org:job.organization_id,user:job.created_by,channel:'coding',source:job.task_id,claim:workerId},event);
+  }
   async learningContext(job:RepositoryJob){
     const store=new ExperienceStore(this.pool);
     const lessons=await store.retrieve(job.organization_id,job.created_by,job.project_id,job.user_prompt);

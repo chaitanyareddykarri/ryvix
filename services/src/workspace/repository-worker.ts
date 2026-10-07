@@ -10,12 +10,14 @@ export async function runRepositoryJob(store: RepositoryJobStore, workerId: stri
   let sessionId: string | undefined;
   let lostLease = false;
   let heartbeatBusy = false;
+  const cancellation=new AbortController();
   const heartbeat = setInterval(async () => {
     if (heartbeatBusy) return;
     heartbeatBusy = true;
     try { if (!await store.heartbeat(job.task_id,workerId)) lostLease = true; }
     catch { lostLease = true; }
     finally { heartbeatBusy = false; }
+    if(lostLease)cancellation.abort();
     if (lostLease && sessionId) await dockerWorkspaceManager.terminateSession(sessionId).catch(() => {});
   }, 10000);
   try {
@@ -23,6 +25,7 @@ export async function runRepositoryJob(store: RepositoryJobStore, workerId: stri
     const lessons=await store.learningContext(job);
     const result = await executeRepositoryTask({ taskId: job.task_id,projectId: job.project_id,
       fullName: job.full_name,branch: job.default_branch,prompt: job.user_prompt,githubToken,lessons,
+      signal:cancellation.signal,onAttempt:event=>store.modelAttempt(job,workerId,event),
       onSession: async session => {
         sessionId = session.id;
         if (lostLease) throw new Error('Worker lease lost');

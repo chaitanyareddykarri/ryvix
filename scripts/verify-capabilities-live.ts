@@ -23,6 +23,10 @@ async function main(){
     if(process.argv.includes('--attempt-schema-preview'))for(const file of ['20261005000001_model_attempts.sql','20261005000002_twilio_receipts.sql','20261005000003_notification_observations.sql'])await c.query(fs.readFileSync('supabase/migrations/'+file,'utf8'));
     if(process.argv.includes('--schema-preview'))for(const name of ['20261003000005_response_usage.sql','20261003000006_repository_semantics.sql','20261003000007_gmail_push_replies.sql','20261004000001_incident_notifications.sql','20261004000002_external_training_examples.sql'])await c.query(fs.readFileSync('supabase/migrations/'+name,'utf8'));
     phase='fixtures';
+    if(process.argv.includes('--nonstream-schema-preview')){
+      await c.query("SET LOCAL lock_timeout='3s'");
+      await c.query(fs.readFileSync('supabase/migrations/20261005000004_nonstream_model_attempts.sql','utf8'));
+    }
     for(const user of users)await c.query("INSERT INTO auth.users(id,email,raw_user_meta_data) VALUES($1,$2,'{}')",[user,`rollback-${user}@example.test`]);
     const org=(await c.query('SELECT organization_id FROM profiles WHERE id=$1',[users[0]])).rows[0].organization_id;
     const other=(await c.query('SELECT organization_id FROM profiles WHERE id=$1',[users[1]])).rows[0].organization_id;
@@ -40,6 +44,42 @@ async function main(){
     await usageStore.record(usageScope,attempt);await usageStore.record(usageScope,{...attempt,status:'failed',latencyMs:50});
     await usageStore.record(usageScope,{...attempt,status:'completed',latencyMs:51});
     assert.equal((await usageStore.list(org,users[0]))[0].status,'failed');assert.equal((await usageStore.list(other,users[1])).length,0);
+    if(process.argv.includes('--nonstream-schema-preview')){
+      phase='Nonstream attempt tenant, claim, revocation and finalization';
+      const repo=randomUUID(),task=randomUUID(),claim=randomUUID();
+      await c.query("INSERT INTO repositories(id,project_id,github_repo_id,full_name,clone_url) VALUES($1,$2,1,'fixture/rollback','https://example.test/fixture.git')",[repo,project]);
+      await c.query("INSERT INTO tasks(id,project_id,created_by,task_type,status,user_prompt) VALUES($1,$2,$3,'coding','executing','Rollback fixture')",[task,project,users[0]]);
+      await c.query("INSERT INTO repository_jobs(task_id,repository_id,status,worker_id,lease_expires_at) VALUES($1,$2,'running',$3,now()+interval '3 minutes')",[task,repo,claim]);
+      await c.query("INSERT INTO repository_knowledge_settings(repository_id,enabled,configured_by,status,claim_id,claim_expires_at,indexed_at) VALUES($1,true,$2,'indexing',$3,now()+interval '3 minutes',now())",[repo,users[0],claim]);
+      for(const channel of ['coding','embedding_index','embedding_query'] as const){
+        if(channel==='embedding_query')await c.query("UPDATE repository_knowledge_settings SET status='ready' WHERE repository_id=$1",[repo]);
+        const scope={org,user:users[0],channel,source:channel==='coding'?task:repo,claim};
+        const next={...attempt,id:randomUUID()};
+        await assert.rejects(usageStore.record({...scope,org:other},next),/unauthorized/);
+        if(channel==='embedding_query'){
+          // A second current admin may legitimately query the shared repository.
+          await usageStore.record({...scope,user:users[1]},next);
+          await usageStore.record({...scope,user:users[1]},{...next,status:'completed'});
+        }else await assert.rejects(usageStore.record({...scope,user:users[1]},next),/unauthorized/);
+        if(channel!=='embedding_query')await assert.rejects(usageStore.record({...scope,claim:randomUUID()},next),/unauthorized/);
+        // Use a fresh ID because an authorized shared-repository query can start.
+        const started={...next,id:randomUUID()};await usageStore.record(scope,started);
+        await c.query("UPDATE organization_members SET role='viewer' WHERE organization_id=$1 AND user_id=$2",[org,users[0]]);
+        await assert.rejects(usageStore.record(scope,{...next,id:randomUUID()}),/unauthorized/);
+        await usageStore.record(scope,{...started,status:'cancelled'});
+        await usageStore.record(scope,{...started,status:'completed'});
+        assert.equal((await c.query('SELECT status FROM model_usage_attempts WHERE id=$1',[started.id])).rows[0].status,'cancelled');
+        await c.query("UPDATE organization_members SET role='owner' WHERE organization_id=$1 AND user_id=$2",[org,users[0]]);
+        if(channel==='coding'){
+          await c.query("UPDATE repository_jobs SET lease_expires_at=now()-interval '1 second' WHERE task_id=$1",[task]);
+        }else{
+          await c.query("UPDATE repository_knowledge_settings SET claim_expires_at=now()-interval '1 second',indexed_at=now()-interval '25 hours' WHERE repository_id=$1",[repo]);
+        }
+        await assert.rejects(usageStore.record(scope,{...next,id:randomUUID()}),/unauthorized/);
+        if(channel==='embedding_index')await c.query('UPDATE repository_knowledge_settings SET indexed_at=now() WHERE repository_id=$1',[repo]);
+      }
+      console.log('PASS nonstream attempts: tenant scope, exact claims, expired claims/index, revoked roles and immutable finalization (rollback only).');
+    }
     phase='Gmail draft exact approval and replay';let sends=0;
     global.fetch=async input=>{const address=String(input);if(address==='https://oauth2.googleapis.com/token')return Response.json({access_token:'fixture'});
       if(address.endsWith('/messages/send')){sends++;return Response.json({id:'fixture-message'});}

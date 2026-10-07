@@ -6,7 +6,8 @@ legacy AI safety/evidence defects; earlier passing suites are not full live acce
 Ryvix combines repository coding tasks, isolated previews, tenant-scoped chat,
 server telemetry and approved operations in an npm monorepo.
 
-Code checkpoint: **d81b281 (2026-10-03)**. Applied schema: **20261003000004**.
+Updated **2026-10-07**. Applied schema: **20261007000001**, with no pending migrations.
+The current checkout includes uncommitted implementation work; this is not a deployed release.
 See [project status](docs/PROJECT_STATUS.md) for implementation, evidence and
 remaining live acceptance. Provider delivery and model quality are not certified.
 
@@ -22,7 +23,7 @@ remaining live acceptance. Provider delivery and model quality are not certified
 - Channels: Gmail read-only polling creates reviewed task proposals. WhatsApp has
   OTP phone linking, opt-in AI chat, private history, quotas, confirmed coding
   requests, task updates and P1 alerts. Release/server approval links open the
-  authenticated web workflow. Gmail push and replies remain future work.
+  authenticated web workflow. Authenticated Gmail push and reviewed replies are implemented; live acceptance remains pending.
 - Chat and learning: persisted conversations, bounded authorized retrieval and
   provider streaming; separately reviewed tenant training examples and gated
   checkpoint promotion. Runtime memory is not evidence of trained model quality.
@@ -52,14 +53,16 @@ Supabase database; do not create a local database container or reset production.
 npm run dev
 npm run typecheck
 npm run lint
-npm test
+npm run test:offline
+npm run test:browser
 npm run build
 ```
 
 Back up existing `ai/data` before tests and restore runtime data afterward;
 tests can modify tracked memory/weights. Do not include generated data in commits.
-The `test:e2e` alias runs the project test runner; its name does not establish
-real browser/provider end-to-end certification.
+The offline wrapper runs `npm test`, blocks external network and restores AI
+runtime data. `test:e2e` aliases Playwright browser fixtures; this does not
+establish authenticated deployed or real-provider end-to-end certification.
 
 Configured worker entry points are `npm run worker:workspaces`,
 `npm run worker:operations`, `npm run worker:experience` and `npm run worker:whatsapp`. Production host, images, allowlists and secrets must

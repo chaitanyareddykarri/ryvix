@@ -175,9 +175,9 @@ export async function testServerModulesAndAccess(): Promise<void> {
     { host: '198.51.100.22', port: 22, user: 'deploy' }
   );
   assert.equal(diag3.errorCode, 'SUDO_PRIVILEGE_MISSING');
-  assert.ok(diag3.recommendedUserAction.includes('NOPASSWD:ALL'));
-  assert.ok(diag3.recommendedUserAction.includes('/etc/sudoers.d/ryvix-automation'));
-  console.log('  ✓ AI correctly diagnosed sudoers restriction and generated NOPASSWD command.');
+  assert.ok(!diag3.recommendedUserAction.includes('NOPASSWD:ALL'));
+  assert.ok(diag3.recommendedUserAction.includes('specific approved commands'));
+  console.log('  ✓ Sudo diagnosis recommends narrow administrator-approved permissions.');
 
   // Diagnostic 4: Cloud API Token Unauthorized
   const diag4 = ServerAccessManager.diagnoseAccessError(

@@ -21,6 +21,16 @@ interface ActiveTask {
   title: string;
   steps: PlanStep[];
   previewUrl?: string;
+  verification: Array<{command:string;success:boolean;exitCode:number}>;
+  hasDiff: boolean;
+  pullRequestUrl?: string;
+}
+
+function recordedTask(task:any):ActiveTask {
+  return {id:task.id,prompt:task.user_prompt,title:task.summary||'Repository task',status:task.status,
+    steps:task.plans?.find((p:any)=>p.id===task.active_plan_id)?.steps||[],
+    previewUrl:task.workspace?.previewUrl,verification:Array.isArray(task.result?.verification)?task.result.verification:[],
+    hasDiff:Array.isArray(task.result?.files)&&task.result.files.length>0,pullRequestUrl:task.pullRequest?.url};
 }
 
 export default function TasksPage() {
@@ -44,8 +54,7 @@ export default function TasksPage() {
     void fetch('/api/tasks',{signal:abort.signal,cache:'no-store'}).then(async response=>{
       const data=await response.json();if(!response.ok)throw new Error(data.error||'Task unavailable.');
       const task=data.tasks?.find((t:any)=>t.id===id);if(!task)throw new Error('Linked task is unavailable to this account.');
-      setActiveTask({id:task.id,prompt:task.user_prompt,title:task.summary||'Repository task',status:task.status,
-        steps:task.plans?.find((p:any)=>p.id===task.active_plan_id)?.steps||[]});
+      setActiveTask(recordedTask(task));setPrCreated(task.pullRequest?.url||null);
     }).catch(error=>{if(!abort.signal.aborted)setErrorMessage(error.message);});
     return()=>abort.abort();
   },[]);
@@ -76,9 +85,7 @@ export default function TasksPage() {
         if (!response.ok) throw new Error(data.error || 'Task status unavailable.');
         const task = data.tasks?.find((item: any) => item.id === activeTaskId);
         if (task) {
-          setActiveTask({ id: task.id, prompt: task.user_prompt, title: task.summary || 'Repository task',
-            status: task.status, steps: task.plans?.find((plan: any) => plan.id === task.active_plan_id)?.steps || [],
-            previewUrl: task.workspace?.previewUrl });
+          setActiveTask(recordedTask(task));setPrCreated(task.pullRequest?.url||null);
           if (task.status === 'failed') setErrorMessage(task.error_details || 'Task failed.');
         }
       } catch (error) { if (!controller.signal.aborted) setErrorMessage(error instanceof Error ? error.message : 'Task status unavailable.'); }
@@ -115,6 +122,7 @@ export default function TasksPage() {
         title: data.task.title,
         steps: data.steps,
         previewUrl: data.workspace?.previewUrl,
+        verification:[],hasDiff:false,
       });
       setPrompt("");
     } catch (err: unknown) {
@@ -125,7 +133,7 @@ export default function TasksPage() {
   }
 
   async function handleApproveAndShip() {
-    if (!activeTask || loading) return;
+    if (!activeTask || loading || activeTask.status!=='awaiting_approval' || !activeTask.hasDiff) return;
     setLoading(true);
     setErrorMessage("");
     try {
@@ -224,7 +232,7 @@ export default function TasksPage() {
 
         {/* Active Task & Verification Pipeline */}
         {activeTask && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "1.5rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))", gap: "1.5rem", minWidth:0 }}>
             {/* Left: AI Reasoning & Plan Steps */}
             <div className="glass-panel" style={{ padding: "1.75rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
@@ -266,13 +274,13 @@ export default function TasksPage() {
 
               <div style={{ background: "rgba(0,0,0,0.45)", borderRadius: "8px", padding: "1rem", marginBottom: "1.25rem", fontFamily: "var(--font-mono)", fontSize: "0.84rem" }}>
                 <div style={{ color: "#9ca3af", marginBottom: "0.4rem" }}>
-                  Docker Sandbox: <span style={{ color: "#34d399" }}>RUNNING (Isolated non-root)</span>
+                  Workspace: <span>{activeTask.previewUrl?'Preview session available':'No active preview session recorded'}</span>
                 </div>
                 <div style={{ color: "#9ca3af", marginBottom: "0.4rem" }}>
-                  Stack Runtime: <span style={{ color: "#93c5fd" }}>Node.js 22 / Next.js</span>
+                  Verification: <span>{activeTask.verification.length?`${activeTask.verification.length} recorded checks`:'No verification results recorded'}</span>
                 </div>
                 <div style={{ color: "#9ca3af", marginBottom: "0.4rem" }}>
-                  Unit &amp; Build Tests: <span style={{ color: "#34d399" }}>PASSED (0 errors)</span>
+                  {activeTask.verification.map((check,index)=><p key={index} style={{overflowWrap:'anywhere'}}>{check.command}: {check.success&&check.exitCode===0?'Passed':'Failed'} (exit {check.exitCode})</p>)}
                 </div>
                 {activeTask.previewUrl && (
                   <div style={{ color: "#9ca3af", marginTop: "0.5rem" }}>
@@ -282,14 +290,15 @@ export default function TasksPage() {
               </div>
 
               {/* Approval Gate */}
-              {activeTask.status !== "completed" && !prCreated ? (
+              {!prCreated ? (
                 <div>
                   <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "1rem", lineHeight: 1.45 }}>
-                    The AI has generated the code modifications and verified compilation in the isolated sandbox. Review the plan above and authorize release to GitHub.
+                    {activeTask.status==='awaiting_approval'&&activeTask.hasDiff?'Review the recorded changes and verification before approving a pull request.':'No pull request is recorded. Approval becomes available when the worker has prepared changes for review.'}
                   </p>
                   <button
                     type="button"
                     onClick={handleApproveAndShip}
+                    disabled={loading||activeTask.status!=='awaiting_approval'||!activeTask.hasDiff}
                     className="btn-primary"
                     style={{ background: "linear-gradient(135deg, #10b981 0%, #06b6d4 100%)" }}
                   >
@@ -299,7 +308,7 @@ export default function TasksPage() {
               ) : (
                 <div style={{ background: "rgba(16, 185, 129, 0.12)", border: "1px solid rgba(16, 185, 129, 0.35)", padding: "1rem", borderRadius: "8px" }}>
                   <div style={{ color: "#34d399", fontWeight: 600, fontSize: "0.92rem", marginBottom: "0.35rem" }}>
-                    ✓ Task Completed &amp; GitHub PR Opened!
+                    GitHub pull request recorded
                   </div>
                   <p style={{ fontSize: "0.82rem", color: "#cbd5e1" }}>
                     The PR is open. Review its checks, then approve the release to start your existing deployment pipeline.

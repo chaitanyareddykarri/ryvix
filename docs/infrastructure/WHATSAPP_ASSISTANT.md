@@ -1,5 +1,16 @@
 # WhatsApp assistant implementation
 
+## Contact onboarding (2026-10-06)
+
+The dashboard prompts on each visit until a valid profile number is saved. Later
+or Escape dismisses the current prompt; Phone / WhatsApp beside the profile opens
+management. `/api/profile/contact` saves the caller's unverified contact through
+the authenticated RLS client, without requiring a business connector or sending.
+OTP controls are available in the popup after saving and on `/profile/whatsapp`.
+Verification, assistant opt-in and alert consent remain separate. Changing the
+profile contact does not automatically change or remove verified connector links.
+See [local evidence and remaining acceptance](../verification/PHONE_ONBOARDING_2026_10_06.md).
+
 ## Phase 1: phone identity (2026-10-03)
 
 Implemented `/profile/whatsapp`, linked from `/channels`, and authenticated

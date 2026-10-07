@@ -7,10 +7,7 @@ import { issueEnrollment } from "@/utils/device-ingestion";
 import { DeviceError } from "../../../../backend/src/services/device-protocol";
 import { agentReleaseConfiguration } from "../../../../backend/src/services/agent-installer";
 import { NextResponse } from "next/server";
-import {
-  ServerAccessManager,
-  ServerClassifier,
-} from "@ryvix/services";
+import {POST as serverTool} from './tools/route';
 
 export async function GET() {
   try {
@@ -85,35 +82,21 @@ export async function POST(req: Request) {
     }
     // Action E: Real Ed25519 SSH Keypair Generation
     if (action === "generate_ssh_keypair") {
-      const keypair = ServerAccessManager.generateSshKeypair(
-        params?.label || "ryvix-automation"
-      );
-      return NextResponse.json({
-        success: true,
-        keypair,
-      });
+      const response=await serverTool(new Request(req.url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'generate_key',label:params?.label||'ryvix-automation'})}));
+      const result=await response.json();
+      return NextResponse.json(response.ok?{success:true,keypair:result}:{success:false,...result},{status:response.status,headers:{'Cache-Control':'no-store'}});
     }
 
     // Action F: Real AI Connection Error Diagnosis
     if (action === "diagnose_access_error") {
-      const diagnosis = ServerAccessManager.diagnoseAccessError(
-        params?.accessType || "SSH_CREDENTIAL",
-        params?.errorOutput || "",
-        params?.context
-      );
-      return NextResponse.json({
-        success: true,
-        diagnosis,
-      });
+      const response=await serverTool(new Request(req.url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'diagnose',accessType:params?.accessType||'SSH_CREDENTIAL',errorOutput:params?.errorOutput})}));
+      return NextResponse.json({success:response.ok,...await response.json()},{status:response.status,headers:{'Cache-Control':'no-store'}});
     }
 
     // Action G: Real Server Archetype Classification
     if (action === "inspect_server_archetype_modules") {
-      const features = ServerClassifier.classify(params || {});
-      return NextResponse.json({
-        success: true,
-        features,
-      });
+      const response=await serverTool(new Request(req.url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'classify',serverId:serverId||params?.serverId})}));
+      return NextResponse.json({success:response.ok,...await response.json()},{status:response.status,headers:{'Cache-Control':'no-store'}});
     }
 
     if (action === "create_server") {

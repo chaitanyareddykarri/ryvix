@@ -1,5 +1,10 @@
 # Gate 6: Final Migration Readiness & Compatibility Report
 
+> Historical checkpoint: later implementation and applied-migration status are
+> recorded in [current status](../PROJECT_STATUS.md), [pending work](../PENDING_WORK.md)
+> and the [October 7 rollout](MIGRATIONS_2026_10_07.md). Original findings and test
+> results below describe this report's checkpoint, not the current pending queue.
+
 ## Historical report — current reference updated 2026-10-03
 
 The original findings, counts and pending lists below remain historical evidence.

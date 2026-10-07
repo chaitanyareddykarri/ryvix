@@ -1,5 +1,12 @@
 # WhatsApp integration contract
 
+## October 7 implementation update
+
+Dashboard phone onboarding and profile controls match the application styling.
+A number can be saved without a Meta connector. Saved profile contact is not a
+verified WhatsApp identity; OTP send/verify/unlink are explicit actions. Reminders
+recur on visits until a number is saved. Meta delivery remains unverified.
+
 Implemented at d81b281 with migrations through 20261003000004. See the
 [complete setup and limits](../infrastructure/WHATSAPP_ASSISTANT.md) and
 [recorded checks](../verification/WHATSAPP_ASSISTANT_2026_10_03.md).

@@ -1,19 +1,23 @@
 import type {Pool} from 'pg';
 import type {ModelAttempt} from '../../../ai/src/model-attempt';
 import {estimateUsageCost,tokenCount} from '../../../ai/src/token-usage';
-type Scope={org:string;user:string;channel:'web'|'whatsapp'|'gmail';source:string};
+type Scope={org:string;user:string;channel:'web'|'whatsapp'|'gmail'|'coding'|'embedding_query'|'embedding_index';source:string;claim?:string};
 export class ModelUsage{
  constructor(private readonly pool:Pool){}
  async record(scope:Scope,event:ModelAttempt){
   if(!/^[a-f0-9-]{36}$/i.test(event.id)||!event.provider||event.provider.length>100||!event.model||event.model.length>200||!Number.isInteger(event.latencyMs)||event.latencyMs<0||event.latencyMs>300000)throw new Error('Invalid model usage event');
   if(event.status==='started'){
+   if(['coding','embedding_index'].includes(scope.channel)&&!scope.claim)throw new Error('Model usage requires an active worker claim');
    const queries={
+    coding:`SELECT t.id FROM tasks t JOIN projects p ON p.id=t.project_id JOIN repository_jobs j ON j.task_id=t.id JOIN organization_members m ON m.organization_id=p.organization_id AND m.user_id=t.created_by WHERE t.id=$1 AND p.organization_id=$2 AND t.created_by=$3 AND m.role IN ('owner','admin','developer') AND t.status IN ('planning','executing','verifying') AND j.status='running' AND j.lease_expires_at>now() AND j.worker_id::text=$8`,
+    embedding_query:`SELECT r.id FROM repositories r JOIN projects p ON p.id=r.project_id JOIN repository_knowledge_settings s ON s.repository_id=r.id JOIN organization_members m ON m.organization_id=p.organization_id AND m.user_id=$3 JOIN organization_members a ON a.organization_id=p.organization_id AND a.user_id=s.configured_by AND a.role IN ('owner','admin') WHERE r.id=$1 AND p.organization_id=$2 AND m.role IN ('owner','admin','developer') AND s.enabled AND s.status='ready' AND s.indexed_at>now()-interval '24 hours'`,
+    embedding_index:`SELECT r.id FROM repositories r JOIN projects p ON p.id=r.project_id JOIN repository_knowledge_settings s ON s.repository_id=r.id JOIN organization_members m ON m.organization_id=p.organization_id AND m.user_id=s.configured_by WHERE r.id=$1 AND p.organization_id=$2 AND s.configured_by=$3 AND m.role IN ('owner','admin') AND s.enabled AND s.status='indexing' AND s.claim_expires_at>now() AND s.claim_id::text=$8`,
     web:`SELECT c.id FROM chat_conversations c JOIN organization_members m ON m.organization_id=c.organization_id AND m.user_id=c.user_id WHERE c.id=$1 AND c.organization_id=$2 AND c.user_id=$3 AND c.lease_expires_at>now()`,
     whatsapp:`SELECT x.id FROM whatsapp_assistant_messages x JOIN whatsapp_assistant_sessions s ON s.id=x.session_id JOIN whatsapp_phone_links l ON l.connector_id=s.connector_id AND l.user_id=s.user_id JOIN connectors co ON co.id=s.connector_id JOIN channel_accounts a ON a.connector_id=co.id JOIN environments e ON e.id=co.environment_id JOIN projects p ON p.id=e.project_id AND p.organization_id=l.organization_id JOIN organization_members m ON m.organization_id=p.organization_id AND m.user_id=s.user_id AND m.role IN ('owner','admin','developer') JOIN organization_members owner ON owner.organization_id=p.organization_id AND owner.user_id=a.owner_id AND owner.role IN ('owner','admin') WHERE x.id=$1 AND p.organization_id=$2 AND s.user_id=$3 AND s.enabled AND s.claim_until>now() AND x.status='processing' AND co.status='active' AND co.connector_type='whatsapp'`,
     gmail:`SELECT i.id FROM channel_inbox i JOIN channel_accounts a ON a.connector_id=i.connector_id JOIN connectors c ON c.id=a.connector_id JOIN environments e ON e.id=c.environment_id JOIN projects p ON p.id=e.project_id JOIN organization_members m ON m.organization_id=p.organization_id AND m.user_id=a.owner_id WHERE i.id=$1 AND p.organization_id=$2 AND a.owner_id=$3 AND m.role IN ('owner','admin') AND c.status='active' AND c.connector_type='gmail' AND a.gmail_send_enabled`
    };
    const row=await this.pool.query(`INSERT INTO model_usage_attempts(id,organization_id,user_id,channel,source_id,provider,model,status)
-    SELECT $4,$2,$3,$5,allowed.id,$6,$7,'started' FROM (${queries[scope.channel]}) allowed RETURNING id`,[scope.source,scope.org,scope.user,event.id,scope.channel,event.provider,event.model]);
+    SELECT $4,$2,$3,$5,allowed.id,$6,$7,'started' FROM (${queries[scope.channel]}) allowed RETURNING id`,[scope.source,scope.org,scope.user,event.id,scope.channel,event.provider,event.model,...(['coding','embedding_index'].includes(scope.channel)?[scope.claim]:[])]);
    if(!row.rows.length)throw new Error('Model usage source unauthorized');return;
   }
   if(!['completed','failed','cancelled'].includes(event.status))throw new Error('Invalid model outcome');

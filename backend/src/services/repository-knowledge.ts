@@ -5,6 +5,7 @@ import {randomUUID,createHash} from 'node:crypto';
 import {ContextBuilder} from '../../../ai/src/context/context-builder';
 import {sanitizeLearningEvent} from '../../../ai/src/learning-event';
 import {ExperienceError} from './experience-store';
+import {ModelUsage} from './model-usage';
 
 const uuid=/^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
 export function indexablePath(path:unknown){
@@ -21,7 +22,7 @@ export function sanitizeKnowledge(path:string,text:string){
   return ContextBuilder.sanitizeText(text).replace(/(?:sk-|ghp_)[a-zA-Z0-9_-]{20,}/g,'[REDACTED_SECRET]');
 }
 type Snapshot={commit:string;files:Array<{path:string;content:string}>;partial:boolean};
-type Job={repository_id:string;project_id:string;full_name:string;default_branch:string;claim_id:string;configured_by:string;commit_sha:string|null;file_count:number};
+type Job={repository_id:string;project_id:string;organization_id:string;full_name:string;default_branch:string;claim_id:string;configured_by:string;commit_sha:string|null;file_count:number};
 export type KnowledgeReader=(job:Job,token:string,signal?:AbortSignal)=>Promise<Snapshot>;
 
 export const readKnowledgeSnapshot:KnowledgeReader=async(job,token,signal)=>{
@@ -121,7 +122,8 @@ export class RepositoryKnowledge {
       const rows=await this.snapshotRows(org,user,repo,expectedCommit);
       const candidates=rows.filter(r=>r.embedding_model===model&&Array.isArray(r.embedding));
       if(!candidates.length)return lexical;
-      const [query]=await embedRepositoryTexts([question.slice(0,6000)],true);
+      const [query]=await embedRepositoryTexts([question.slice(0,6000)],true,undefined,
+        event=>new ModelUsage(this.pool).record({org,user,channel:'embedding_query',source:candidates[0].repository_id},event));
       const ranked=candidates.map(row=>({row,score:cosineScore(query,row.embedding)})).filter(r=>Number.isFinite(r.score)&&r.score>0)
         .sort((a,b)=>b.score-a.score).slice(0,4).map(r=>({...r.row,retrieval_kind:'semantic snapshot match'}));
       const selected=[...ranked];
@@ -144,7 +146,7 @@ export class RepositoryKnowledge {
   async indexOne(signal?:AbortSignal,onlyRepository?:string){
     if(onlyRepository&&!uuid.test(onlyRepository))throw new ExperienceError('Valid repository required.');
     const job=await this.transaction(async c=>{
-      const job=(await c.query(`SELECT s.*,r.project_id,r.full_name,r.default_branch FROM repository_knowledge_settings s
+      const job=(await c.query(`SELECT s.*,r.project_id,p.organization_id,r.full_name,r.default_branch FROM repository_knowledge_settings s
         JOIN repositories r ON r.id=s.repository_id JOIN projects p ON p.id=r.project_id
         JOIN organization_members m ON m.organization_id=p.organization_id AND m.user_id=s.configured_by AND m.role IN ('owner','admin')
         WHERE s.enabled AND ($1::uuid IS NULL OR s.repository_id=$1) AND (s.claim_expires_at IS NULL OR s.claim_expires_at<now())
@@ -167,7 +169,8 @@ export class RepositoryKnowledge {
       const missing=model?(await this.pool.query('SELECT count(*)::int AS n FROM repository_knowledge_files WHERE repository_id=$1 AND (embedding IS NULL OR embedding_model IS DISTINCT FROM $2)',[job.repository_id,model])).rows[0].n:0;
       const snapshot=await this.reader(missing?{...job,commit_sha:null}:job,credential,signal);
       let vectors:number[][]|null=null;
-      if(model&&snapshot.files.length)try{vectors=await embedRepositoryTexts(snapshot.files.map(f=>f.path+'\n'+sanitizeKnowledge(f.path,f.content)),false,signal);}catch{if(signal?.aborted)throw new Error('Index cancelled');}
+      if(model&&snapshot.files.length)try{vectors=await embedRepositoryTexts(snapshot.files.map(f=>f.path+'\n'+sanitizeKnowledge(f.path,f.content)),false,signal,
+        event=>new ModelUsage(this.pool).record({org:job.organization_id,user:job.configured_by,channel:'embedding_index',source:job.repository_id,claim:job.claim_id},event));}catch{if(signal?.aborted)throw new Error('Index cancelled');}
       const byPath=new Map(snapshot.files.map((file,i)=>[file.path,vectors?.[i]]));
       if(!/^[a-f0-9]{40,64}$/.test(snapshot.commit)||snapshot.files.length>100)throw new Error('Invalid knowledge snapshot');
       await this.transaction(async c=>{

@@ -20,6 +20,20 @@ try {
   const pending = fs.readdirSync('supabase/migrations').filter(file => /^\d+_.*\.sql$/.test(file))
     .filter(file => !applied.has(file.split('_')[0]));
   check('Every numbered migration is recorded', pending.length === 0);
+  const invitations = await client.query(`SELECT
+    NOT has_table_privilege('anon','public.organization_invitations','SELECT,INSERT,UPDATE,DELETE') AS anon_denied,
+    NOT has_table_privilege('authenticated','public.organization_invitations','SELECT,INSERT,UPDATE,DELETE') AS authenticated_denied,
+    has_table_privilege('service_role','public.organization_invitations','SELECT') AND
+    has_table_privilege('service_role','public.organization_invitations','INSERT') AND
+    has_table_privilege('service_role','public.organization_invitations','UPDATE') AND
+    has_table_privilege('service_role','public.organization_invitations','DELETE') AS backend_access`);
+  for (const [name, passed] of Object.entries(invitations.rows[0])) check(`Team invitations: ${name}`, passed);
+  const liveUrl = await client.query(`SELECT
+    EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='repositories'
+      AND column_name='live_url' AND data_type='text' AND is_nullable='YES') AS column_ready,
+    EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='public.repositories'::regclass
+      AND conname='repositories_live_url_format' AND contype='c' AND convalidated) AS constraint_validated`);
+  for (const [name, passed] of Object.entries(liveUrl.rows[0])) check(`Repository website URL: ${name}`, passed);
   const rls = await client.query(`SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
     WHERE n.nspname='public' AND c.relkind IN ('r','p') AND NOT c.relrowsecurity`);
   check('RLS enabled on every public table', rls.rows.length === 0);

@@ -67,7 +67,8 @@ export async function POST(request: Request) {
       excerpts.push(...knowledge.map(row=>({id:`indexed:${row.full_name}:${row.commit_sha}:${row.path}`,kind:`${row.retrieval_kind||'indexed repository snapshot'} (not verified current branch)`,
         title:row.path,date:row.indexed_at,excerpt:ContextBuilder.sanitizeText(row.excerpt).slice(0,2000)})));
     }
-    const ranked=await rerankSources(prompt,excerpts,signal);
+    const ranked=await rerankSources(prompt,excerpts,signal,
+      attempt=>new ModelUsage(getDirectDbPool()).record({org:organizationId,user:user.id,channel:'web',source:current.id},attempt));
     const intent = /deploy|release|commit|workflow/i.test(prompt) ? 'deployment'
       : /server|health|cpu|memory|disk|incident|security|latency/i.test(prompt) ? 'diagnostics'
       : /code|component|implement|refactor|repository|preview/i.test(prompt) ? 'coding' : 'general';

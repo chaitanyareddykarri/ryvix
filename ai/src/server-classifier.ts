@@ -2,7 +2,7 @@
  * Ryvix Server Archetype & Deep Module Classifier
  * 
  * Inspects host ports, processes, active systemd units, filesystem paths, and logs
- * to classify server roles and active internal modules with 100% deterministic accuracy.
+ * to suggest server roles and internal modules using deterministic heuristics.
  * Tailors security policies, diagnostic commands, and remediation capabilities to the host.
  */
 

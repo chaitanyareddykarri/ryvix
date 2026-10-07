@@ -1,10 +1,20 @@
 # Ryvix Authentication & Multi-Tenant Authorization Architecture
 
+## October 7 implementation update
+
+Google login is implemented alongside manual email/password and OTP flows.
+Both login tabs use `prompt=select_account`; `/auth/callback` exchanges PKCE
+codes, verifies the user and checks existing profile/current membership.
+`/auth/error` handles cancellation and missing workspace state. The existing
+new-user trigger provisions workspaces; the callback does not grant roles.
+Google activation and live identity/session acceptance remain pending.
+See [Google setup](../integrations/GOOGLE_LOGIN.md).
+
 ## 1. Executive Summary
 
 Ryvix enforces a deterministic, defense-in-depth authentication and authorization architecture. Authentication is managed securely via **Supabase Auth (GoTrue)** with `@supabase/ssr` cookie persistence, while authorization and tenant isolation are enforced at the database kernel level through **PostgreSQL Row Level Security (RLS)**.
 
-All legacy email-confirmation links, magic links, clickable confirmation URLs, and URL callback code exchanges have been removed. Ryvix implements dedicated, secure authentication flows:
+Manual authentication uses dedicated email OTP flows. Google OAuth additionally uses a PKCE callback code exchange. The manual flows are:
 1. **Flow A — New Account Creation (Sign Up)**: Full Name, Email, Password -> 6-digit numeric Email OTP -> Verification -> Database Trigger Provisioning -> Direct Dashboard Redirect.
 2. **Flow B — Returning User Sign In**: Email + Password -> Direct `signInWithPassword()` -> Secure SSR Session Cookies -> Dashboard.
 3. **Flow C — Forgot Password / Recovery**: Email -> 6-digit Recovery Code -> New Password -> Return to Sign In.
@@ -24,7 +34,7 @@ All legacy email-confirmation links, magic links, clickable confirmation URLs, a
        │
        │  3. Pre-checks duplicate email in auth.users
        │  4. Generates genuine cryptographically random 6-digit OTP
-       │  5. Dispatches branded transactional email via Resend API
+       │  5. Dispatches branded transactional email via configured application SMTP
        │  6. Sets AES-256-GCM encrypted challenge cookie (ryvix_signup_challenge, 10 min TTL)
        ▼
 [ Dedicated 6-Digit Email OTP Screen ]

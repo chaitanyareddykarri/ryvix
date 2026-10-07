@@ -8,7 +8,9 @@ Implemented communication paths: Gmail read-only polling into reviewed proposals
 Meta signed inbox, OTP identity, opt-in AI assistant and durable template/reply
 delivery; Gmail SMTP account security and approved-deployment notifications.
 WhatsApp coding requires an expiring exact proposal confirmation. Release/server
-approvals remain authenticated web handoffs. Gmail push/replies are unimplemented.
+approvals remain authenticated web handoffs. Authenticated Gmail push and reviewed
+replies are implemented; live provider acceptance remains pending. Google account
+login is a separate PKCE flow and does not grant Gmail inbox access.
 GitHub execution resolves project-scoped Vault credentials. Signed deployment
 events correlate the approved merge SHA. The contracts below include future scope.
 

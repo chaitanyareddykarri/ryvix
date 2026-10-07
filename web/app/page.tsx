@@ -42,7 +42,7 @@ export default async function LandingPage() {
       />
 
       {/* TOP NAVIGATION BAR */}
-      <header
+      <header className="landing-header"
         style={{
           position: "sticky",
           top: 0,
@@ -109,7 +109,7 @@ export default async function LandingPage() {
               alignItems: "center",
               gap: "2rem",
             }}
-            className="hidden md:flex"
+            className="landing-navigation"
           >
             <a
               href="#features"
@@ -209,7 +209,7 @@ export default async function LandingPage() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
             gap: "3rem",
             alignItems: "center",
           }}
@@ -284,7 +284,7 @@ export default async function LandingPage() {
                     href="/servers"
                     className="btn-glass"
                   >
-                    Manage Servers Fleet
+                    Manage Server Fleet
                   </Link>
                 </>
               ) : (
@@ -635,7 +635,7 @@ export default async function LandingPage() {
           <div>
             &copy; 2026 RYVIX Platform. Autonomous Software &amp; Infrastructure Operations.
           </div>
-          <div style={{ display: "flex", gap: "1.5rem" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "1.5rem" }}>
             <Link href="/login" style={{ color: "var(--text-secondary)", textDecoration: "none" }}>
               Sign In
             </Link>

@@ -1,5 +1,104 @@
 # Current Task & Implementation State
 
+## Publication handoff - October 7, 2026
+
+User authorized synchronizing source to `main` and `Testing_branch`. Fresh checks
+passed: 97 application suites, 25 Node tests, 186 browser fixtures, typecheck, lint,
+production build and secret scan. Approval/preview evidence claims corrected;
+sharp updated. Five unpatched development dependency findings and missing
+production/provider configuration remain open. Runtime data stays local. See
+[pre-publish evidence](../docs/verification/PREPUBLISH_2026_10_07.md) and
+[branch workflow](../docs/BRANCH_WORKFLOW.md). Older no-push notes are historical.
+
+## Current handoff - October 7, 2026
+
+The requested UI/backend closures and matching phone/fleet styling are implemented.
+Server-only environment creation is implemented using existing tables. Google
+login code is ready for provider configuration after deployment. Hosted schema is
+applied through `20261007000001`; the CLI reports no pending migrations and
+database boundary checks pass. See [current status](../docs/PROJECT_STATUS.md),
+[pending queue](../docs/PENDING_WORK.md) and
+[migration evidence](../docs/verification/MIGRATIONS_2026_10_07.md).
+No commit/push or real-provider activation was performed.
+
+## Historical session log
+
+The dated notes below preserve the sequence of work. Their pending lists and
+counts describe their checkpoints; use the current handoff above for next work.
+
+
+## Hosted migrations applied - October 7, 2026
+
+Applied team invitations (20261006000001) and repository website URLs
+(20261007000001) through the Supabase CLI. Post-apply dry run reports no pending
+migrations; all database boundary checks passed, including invitation privileges
+and the validated website URL constraint. Earlier unapplied notes below are
+superseded. Deployed user-flow, server-only concurrency and real-provider
+acceptance remain pending. [Rollout evidence](../docs/verification/MIGRATIONS_2026_10_07.md).
+
+Continuation: [server-only setup](../docs/verification/SERVER_ONLY_SETUP_2026_10_07.md)
+now closes the fleet environment-creation gap. Explicit UI creates tenant-scoped,
+audited setup using existing tables, then permits separate enrollment. 97 offline
+application suites pass. Hosted SQL and real agent acceptance remain pending.
+
+Latest: [UI consistency and fleet audit](../docs/verification/UI_CONSISTENCY_FLEET_2026_10_07.md).
+Phone/operational UI now matches dashboard styling. Fleet navigation, stream
+recovery/races, filters and empty states fixed. The server-only environment gap
+found in that audit is closed by the continuation above. Real-provider activation
+remains deferred.
+
+Google activation is deferred to the real-provider phase after deployment, per
+user instruction. Use a domain with HTTPS pointing to the public server IP;
+do not register a raw IP as a Google OAuth web origin. Provider checklist:
+[Google login](../docs/infrastructure/CAPABILITY_PROVIDERS.md).
+
+Latest Google login: [implementation and checks](../docs/verification/GOOGLE_LOGIN_2026_10_07.md).
+Google chooser UI, PKCE callback, verified workspace check, error/retry page and
+middleware cookie preservation are implemented. Manual login remains available.
+95 offline application suites and six new browser tests pass. Google/Supabase
+configuration and live acceptance remain; [setup](../docs/integrations/GOOGLE_LOGIN.md).
+
+Latest October 7 Part 2: [dashboard audit and repairs](../docs/verification/DASHBOARD_PART2_2026_10_07.md).
+Replaced rejected diagnosis action, removed stale deployment progression/promises,
+added persisted repository URLs and restored dashboard chat history. Offline suite:
+93 application checks. URL migration `20261007000001` is unapplied alongside team
+migration `20261006000001`; provider/deployed acceptance remains pending.
+
+Latest October 7: [UI gap closures](../docs/verification/UI_GAP_CLOSURES_2026_10_07.md).
+All eight requested areas now have local implementations, including server tools,
+repository inspection, team lifecycle and read-only API-key authentication.
+92 application suites, 24 Node tests, build/typecheck and browser fixtures pass.
+Team migration `20261006000001` remains unapplied; deployed/database/provider
+acceptance is pending. No real providers were used in this phase.
+
+Historical October 6: user requested verification of eight UI/backend gap claims and
+implementation. [Audit and first repairs](../docs/verification/UI_BACKEND_AUDIT_2026_10_06.md)
+record stale claims and genuine gaps. Dashboard navigation, shared operational
+layouts, deployment observations and audited key revocation are implemented.
+Server tools require SSH serialization/diagnostic fixes before UI exposure; team
+management needs backend lifecycle work, not just controls. Remain provider-free.
+
+Active October 6: user stopped general remediation and requested WhatsApp phone
+onboarding. Preserve existing changes. [Local checkpoint](../docs/verification/LOCAL_CHECKPOINT_2026_10_06.md)
+records completed fixes and suspended work. Save an unverified profile contact
+independently of business connectors; remind on dashboard until supplied; preserve
+explicit OTP verification and separate assistant/alert consent. No real providers.
+Implemented and locally tested: contact API, recurring dashboard prompt, direct
+management link and shared OTP controls. [Phase evidence](../docs/verification/PHONE_ONBOARDING_2026_10_06.md).
+
+Latest October 6: [migration and completion evidence](../docs/verification/ROLLOUT_2026_10_06.md).
+Migration `20261005000004` applied; 137 database checks pass. Chat reranking is
+accounted, production unscoped model calls fail closed, source-map-js updated.
+Real local Docker and Go checks pass. Deployment/provider inputs, reviewed data,
+external training integration, broader compiler graphs/invoices and five development
+dependency findings remain open. The earlier unapplied-migration note below is superseded.
+
+October 6 continuation: [verification and remaining work](../docs/verification/CONTINUATION_2026_10_06.md).
+Coding/embedding usage accounting reviewed; cancellation and ledger-failure tests
+added. Offline tests and browser component harness verified. Migration
+`20261005000004` remains unapplied; live database parity fails until rollout.
+Preserve existing AI runtime data and Next.js development origins.
+
 October 5 follow-up: [current evidence](../docs/verification/FOLLOWUP_2026_10_05.md).
 Server approval handoffs, JS/TS parser references, durable streaming attempts,
 Twilio receipts and optional PagerDuty observations implemented. Preserve dirty
@@ -11,7 +110,7 @@ Latest follow-up: [nine-item pending recheck](../docs/verification/PENDING_RECHE
 Servers mobile layout fixed; viewport explicitly preserves framework defaults.
 Accuracy-gate and hardcoded-latency reports were stale; real reviewed quality remains unverified.
 
-## Current capability checkpoint — 2026-10-04
+## Historical capability checkpoint — 2026-10-04
 
 Applied schema: `20261004000002`. Gmail authenticated push/reviewed replies, bounded semantic and multi-language reference retrieval, provider-reported usage, Slack/PagerDuty/Twilio P1 dispatch, and external-training dataset preparation are implemented. See [current evidence](../docs/verification/CAPABILITIES_2026_10_04.md), [provider setup](../docs/infrastructure/CAPABILITY_PROVIDERS.md), and [remaining work](../docs/PENDING_WORK.md). Real delivery, deployed browser/worker acceptance, paid fine-tuning adapters and measured model quality remain pending. Older checkpoint sections below are historical.
 

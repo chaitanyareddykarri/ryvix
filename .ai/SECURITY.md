@@ -1,26 +1,26 @@
 # Ryvix Security Architecture & Operational Invariants
 
-## Current capability checkpoint — 2026-10-04
+## Current checkpoint - October 7, 2026
+
+Hosted migrations through `20261007000001` are applied. Team invitation browser
+access is denied; backend CRUD, public-table RLS and repository URL constraints
+passed verification. See [current status](../docs/PROJECT_STATUS.md) and
+[pending work](../docs/PENDING_WORK.md) for UI/authentication/fleet changes and
+remaining deployment/provider acceptance.
+
+## Historical capability checkpoint — 2026-10-04
 
 Applied schema: `20261004000002`. Gmail authenticated push/reviewed replies, bounded semantic and multi-language reference retrieval, provider-reported usage, Slack/PagerDuty/Twilio P1 dispatch, and external-training dataset preparation are implemented. See [current evidence](../docs/verification/CAPABILITIES_2026_10_04.md), [provider setup](../docs/infrastructure/CAPABILITY_PROVIDERS.md), and [remaining work](../docs/PENDING_WORK.md). Real delivery, deployed browser/worker acceptance, paid fine-tuning adapters and measured model quality remain pending. Older checkpoint sections below are historical.
 
 
-## Implementation checkpoint — 2026-10-03
+## Implementation status - October 7, 2026
 
-Code checkpoint: `d81b281`; applied migrations through `20261003000004`.
-Implemented: reviewed experience/personal memory, bounded repository indexing,
-Gmail SMTP email, WhatsApp OTP identity, opt-in AI replies/history/quotas, confirmed
-coding requests, task notifications and authenticated approval handoffs. Releases
-and server operations retain their existing web authorization and approval checks.
-Recorded verification: 79 project suites plus 15 Node checks, typecheck/lint/build
-and 125 database boundary checks passed. Provider delivery, deployed workers/browser
-acceptance and representative model accuracy remain unverified.
-
-See [project status](../docs/PROJECT_STATUS.md), [assistant setup](../docs/infrastructure/WHATSAPP_ASSISTANT.md) and
-[recorded verification](../docs/verification/WHATSAPP_ASSISTANT_2026_10_03.md). This documentation update did not rerun those
-code checks. Detailed designs below may include planned capabilities; the status
-index distinguishes implemented behavior from future work.
-
+Hosted migrations are applied through `20261007000001`; no numbered migrations
+remain pending at the latest rollout. See [project status](../docs/PROJECT_STATUS.md)
+for completed UI, authentication, team, repository and fleet work and recorded
+verification. The [pending queue](../docs/PENDING_WORK.md) separates unfinished code,
+deployment configuration and live acceptance. Design details below describe
+scope, not production certification.
 
 ## 1. Zero-Trust AI Credential & Database Isolation
 

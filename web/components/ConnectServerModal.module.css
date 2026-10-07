@@ -17,4 +17,6 @@
 .panel .error { padding: 12px; border: 1px solid #6f343c; border-radius: 8px; color: #ffc0c4; background: #371c2480; }
 .panel .status { border-top: 1px solid #293443; padding-top: 14px; }
 .panel .success { color: #70dea1; }
+.setup { padding:16px; margin:16px 0; border:1px solid #293443; border-radius:12px; background:#080c11; }
+.panel input[type='checkbox'] { display:inline-block; width:18px; height:18px; min-height:18px; margin:0 8px 0 0; vertical-align:middle; accent-color:#8975f2; }
 @media (max-width: 480px) { .panel { padding: 20px; } }

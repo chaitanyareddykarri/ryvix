@@ -11,6 +11,21 @@ export async function testCapabilityFoundations(){
   ]);
   assert.deepEqual(parsed.map(e=>e.target).sort(),['src/feature.ts','src/lazy.ts']);
   assert.doesNotThrow(()=>repositoryDependencies([{path:'tsconfig.json',content:'null'},{path:'a.ts',content:"import 'alias';"}]));
+  const inherited=[
+    {path:'config/base.json',content:'{"compilerOptions":{"baseUrl":"..","paths":{"@/*":["src/*"]}}}'},
+    {path:'app/tsconfig.json',content:'{"extends":"../config/base.json"}'},
+    {path:'app/main.ts',content:"import '@/feature';"},
+    {path:'src/feature.ts',content:''},
+  ];
+  assert.deepEqual(repositoryDependencies(inherited).map(e=>e.target),['src/feature.ts']);
+  inherited[0].content='{"compilerOptions":{"paths":{"@/*":["../src/*"]}}}';
+  assert.deepEqual(repositoryDependencies(inherited).map(e=>e.target),['src/feature.ts']);
+  inherited[1].content='{"extends":"../config/base.json","compilerOptions":{"paths":{"@/*":["./local/*"]}}}';
+  assert.deepEqual(repositoryDependencies(inherited),[]);
+  inherited[1].content='{"extends":"../config/missing.json"}';
+  assert.deepEqual(repositoryDependencies(inherited),[]);
+  inherited[1].content='{"extends":"./tsconfig.json"}';
+  assert.deepEqual(repositoryDependencies(inherited),[]);
   const start=streamUsage({type:'message_start',message:{usage:{input_tokens:10,cache_read_input_tokens:4,cache_creation_input_tokens:2,output_tokens:1}}},true)!;
   const end=streamUsage({type:'message_delta',usage:{output_tokens:7}},true,start)!;
   assert.equal(end.promptTokens,16);assert.equal(end.completionTokens,7);

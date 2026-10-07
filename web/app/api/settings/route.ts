@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const { user, organizationId } = await requireTenant();
+    const { user, organizationId, role } = await requireTenant();
 
     let orgId: string | null = organizationId;
     let userFullName: string = "Account Owner";
@@ -102,6 +102,7 @@ export async function GET() {
       success: true,
       organization: org,
       apiKeys: keyRes || [],
+      currentRole: role,
       members: finalMembers,
     });
   } catch (err: unknown) {

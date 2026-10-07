@@ -1,5 +1,13 @@
 # Ryvix provider and deployment plan
 
+## October 7 implementation update
+
+All numbered database migrations through `20261007000001` are applied. Next
+rollout work is deployment and authenticated workflow acceptance. Google login
+activation remains deferred until deployment; use the
+[Google setup guide](../integrations/GOOGLE_LOGIN.md). Phone contact saving and
+server-only environment creation do not require Meta or GitHub credentials.
+
 October 4 update: [current capability setup and limits](CAPABILITY_PROVIDERS.md). Gmail push/reviewed replies, additional P1 transports, measured response usage, bounded semantic retrieval and separate external-training dataset preparation now have implementations. Prior descriptions of these features as wholly absent are superseded; provider verification and actual external training remain pending.
 
 

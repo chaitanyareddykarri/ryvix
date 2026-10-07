@@ -1,21 +1,13 @@
 # Repository worker deployment
 
-## Implementation checkpoint — 2026-10-03
+## Implementation status - October 7, 2026
 
-Code checkpoint: `d81b281`; applied migrations through `20261003000004`.
-Implemented: reviewed experience/personal memory, bounded repository indexing,
-Gmail SMTP email, WhatsApp OTP identity, opt-in AI replies/history/quotas, confirmed
-coding requests, task notifications and authenticated approval handoffs. Releases
-and server operations retain their existing web authorization and approval checks.
-Recorded verification: 79 project suites plus 15 Node checks, typecheck/lint/build
-and 125 database boundary checks passed. Provider delivery, deployed workers/browser
-acceptance and representative model accuracy remain unverified.
-
-See [project status](../PROJECT_STATUS.md), [assistant setup](WHATSAPP_ASSISTANT.md) and
-[recorded verification](../verification/WHATSAPP_ASSISTANT_2026_10_03.md). This documentation update did not rerun those
-code checks. Detailed designs below may include planned capabilities; the status
-index distinguishes implemented behavior from future work.
-
+Hosted migrations are applied through `20261007000001`; no numbered migrations
+remain pending at the latest rollout. See [project status](../PROJECT_STATUS.md)
+for completed UI, authentication, team, repository and fleet work and recorded
+verification. The [pending queue](../PENDING_WORK.md) separates unfinished code,
+deployment configuration and live acceptance. Design details below describe
+scope, not production certification.
 
 ## Continuation: worker ownership (2026-10-02)
 
@@ -103,7 +95,7 @@ Run the web/API plus separate coding, operations, experience and WhatsApp proces
 Use npm run worker:experience for opted-in collection/repository indexing and
 npm run worker:whatsapp for assistant processing; the assistant requires
 RYVIX_WHATSAPP_ASSISTANT_ENABLED=true. These do not replace the coding or
-operations workers. Apply migrations through 20261003000004 first.
+operations workers. Verify the numbered migration ledger before deployment; the current applied checkpoint is 20261007000001.
 See [assistant setup](WHATSAPP_ASSISTANT.md) and [experience setup](EXPERIENCE_AND_MEMORY.md).
 
 ## Scheduled Gmail continuation

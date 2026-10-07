@@ -5,6 +5,7 @@ import type {TokenUsage} from './token-usage';
 import {tokenCount} from './token-usage';
 import {randomUUID} from 'node:crypto';
 import type {AttemptObserver,ModelAttempt} from './model-attempt';
+import {requireAttemptObserver} from './model-attempt';
 /**
  * Ryvix Multi-Provider LLM Gateway with Automatic Rate-Limit Failover
  * 
@@ -48,6 +49,7 @@ export class ModelGateway {
 
   async *stream(messages: LLMMessage[], options: { maxTokens?: number; temperature?: number; signal?: AbortSignal;
     onProvider?: (provider: string, model: string) => void;onUsage?:(usage:TokenUsage&{provider:string;model:string})=>void;onAttempt?:AttemptObserver } = {}) {
+    requireAttemptObserver(options.onAttempt);
     const signal = AbortSignal.any([AbortSignal.timeout(120000), ...(options.signal ? [options.signal] : [])]);
     for (const provider of [...this.providers].sort((a,b) => a.priority-b.priority)) {
       if (process.env.RYVIX_CHAT_PROVIDER && provider.id !== process.env.RYVIX_CHAT_PROVIDER) continue;
@@ -61,6 +63,7 @@ export class ModelGateway {
       const started=Date.now();await options.onAttempt?.({...attempt});
       let outcome:ModelAttempt['status']='cancelled';
       try {
+        signal.throwIfAborted();
         let usage:TokenUsage|undefined;
         for await (const chunk of streamProvider({ ...provider, apiKey, model }, messages, { ...options, signal,onUsage:value=>{usage=value;},onObservedUsage:value=>{attempt.usage=value;} })) {
           if (!emitted) options.onProvider?.(provider.id,model);
@@ -244,10 +247,14 @@ export class ModelGateway {
       temperature?: number;
       maxTokens?: number;
       requireProvider?: boolean;
+      signal?: AbortSignal;
+      onAttempt?: AttemptObserver;
       mockProviderFailures?: Record<string, number>; // For automated failover tests
     }
   ): Promise<LLMCompletionResult> {
+    requireAttemptObserver(options?.onAttempt);
     const startTime = Date.now();
+    const signal = AbortSignal.any([AbortSignal.timeout(120000), ...(options?.signal ? [options.signal] : [])]);
     const failedProviders: string[] = [];
     const now = Date.now();
 
@@ -255,6 +262,7 @@ export class ModelGateway {
     const sorted = [...this.providers].sort((a, b) => a.priority - b.priority);
 
     for (const provider of sorted) {
+      signal.throwIfAborted();
       const activeKey = this.getApiKey(provider.id) || provider.apiKey;
       provider.apiKey = activeKey;
       // Check if provider is temporarily cooled down due to prior 429
@@ -279,8 +287,14 @@ export class ModelGateway {
 
       // If provider has an API key configured (or is local Ollama)
       if (provider.apiKey || provider.id === 'ollama') {
+        const attempt: ModelAttempt = {id:randomUUID(),provider:provider.id,model:provider.model,status:'started',latencyMs:0,usage:null};
+        const attemptStart=Date.now();
+        await options?.onAttempt?.({...attempt});
         try {
-          const res = await this.callProvider(provider, messages, options);
+          signal.throwIfAborted();
+          const res = await this.callProvider(provider, messages, {...options,signal});
+          attempt.status='completed';
+          attempt.usage={promptTokens:res.promptTokens,completionTokens:res.completionTokens,cachedInputTokens:null,cacheWriteTokens:null};
           const latencyMs = Date.now() - startTime;
           return {
             content: res.content,
@@ -293,6 +307,8 @@ export class ModelGateway {
             failedProviders,
           };
         } catch (err: any) {
+          attempt.status=signal.aborted?'cancelled':'failed';
+          if(signal.aborted)throw new Error('Model request cancelled');
           const errMsg = err.message || '';
           if (errMsg.includes('429') || errMsg.includes('rate limit')) {
             provider.isRateLimitedUntil = now + 60000;
@@ -302,6 +318,8 @@ export class ModelGateway {
           }
           // Continue to next provider in failover chain!
           continue;
+        } finally {
+          await options?.onAttempt?.({...attempt,latencyMs:Math.min(300000,Math.max(0,Date.now()-attemptStart))});
         }
       } else {
         // No API key provided for this provider, skip to next
@@ -315,7 +333,7 @@ export class ModelGateway {
     // If all external API providers are exhausted or no keys are set,
     // the local reasoning engine synthesizes a high-quality response deterministically.
     const latencyMs = Date.now() - startTime;
-    if (options?.requireProvider) throw new Error('No AI provider is available. Configure a provider and retry.');
+    if (options?.requireProvider || process.env.NODE_ENV==='production') throw new Error('No AI provider is available. Configure a provider and retry.');
     const userMsg = messages.find((m) => m.role === 'user')?.content || 'Autonomous Task';
     const localContent = this.generateLocalReasoning(userMsg);
 
@@ -339,7 +357,7 @@ export class ModelGateway {
     provider: ProviderDefinition,
     modelName: string,
     messages: LLMMessage[],
-    options?: { temperature?: number; maxTokens?: number }
+    options?: { temperature?: number; maxTokens?: number; signal?:AbortSignal }
   ): Promise<{ content: string; promptTokens: number|null; completionTokens: number|null }> {
     const url = `${provider.baseUrl}/chat/completions`;
     const headers: Record<string, string> = {
@@ -358,6 +376,8 @@ export class ModelGateway {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
+      signal: options?.signal,
+      redirect: 'error',
     });
 
     if (res.status === 429) {
@@ -381,7 +401,7 @@ export class ModelGateway {
   private async callProvider(
     provider: ProviderDefinition,
     messages: LLMMessage[],
-    options?: { temperature?: number; maxTokens?: number }
+    options?: { temperature?: number; maxTokens?: number; signal?:AbortSignal }
   ): Promise<{ content: string; promptTokens: number|null; completionTokens: number|null }> {
     // A. Native Anthropic Claude API
     if (provider.id === 'claude') {
@@ -402,6 +422,8 @@ export class ModelGateway {
           'anthropic-version': '2023-06-01',
         },
         body: JSON.stringify(claudePayload),
+        signal: options?.signal,
+        redirect: 'error',
       });
 
       if (res.status === 429) {
@@ -450,6 +472,8 @@ export class ModelGateway {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
+      signal: options?.signal,
+      redirect: 'error',
     });
 
     if (res.status === 429) {

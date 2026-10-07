@@ -79,7 +79,7 @@ export default function ObservabilityPage() {
   });
 
   return (
-    <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "2.5rem 1.5rem", color: "#f8fafc" }}>
+    <main style={{ maxWidth: "1280px", margin: "0 auto", padding: "2.5rem 1.5rem", color: "#f8fafc" }}>
       {/* Header */}
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
         <div>
@@ -269,13 +269,13 @@ export default function ObservabilityPage() {
           background: "rgba(15, 23, 42, 0.6)",
           border: "1px solid rgba(255, 255, 255, 0.1)",
           borderRadius: "12px",
-          overflow: "hidden",
+          overflowX: "auto",
         }}
       >
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "140px 100px 90px 1fr 180px",
+            gridTemplateColumns: "140px 100px 90px 1fr 180px", minWidth: "720px",
             padding: "0.75rem 1rem",
             background: "rgba(0, 0, 0, 0.4)",
             fontSize: "0.75rem",
@@ -312,7 +312,7 @@ export default function ObservabilityPage() {
                 key={log.id}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "140px 100px 90px 1fr 180px",
+                  gridTemplateColumns: "140px 100px 90px 1fr 180px", minWidth: "720px",
                   padding: "0.65rem 1rem",
                   borderBottom: "1px solid rgba(255, 255, 255, 0.04)",
                   fontSize: "0.8rem",
@@ -359,6 +359,6 @@ export default function ObservabilityPage() {
           })
         )}
       </div>
-    </div>
+    </main>
   );
 }

@@ -55,18 +55,29 @@ export class ServerAccessManager {
   /**
    * Generates a secure Ed25519 SSH keypair for agentless access.
    */
-  static generateSshKeypair(label = 'ryvix-automation'): { publicKey: string; privateKey: string } {
+  static generateSshKeypair(label = 'ryvix-automation'): { publicKey: string; privateKey: string; opensshPrivateKey:string } {
+    if(!/^[A-Za-z0-9_.@-]{1,80}$/.test(label))throw new Error('Use a key label of 1–80 letters, numbers, dots, hyphens or underscores.');
     const { publicKey, privateKey } = crypto.generateKeyPairSync('ed25519', {
       publicKeyEncoding: { type: 'spki', format: 'pem' },
       privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
     });
 
-    const publicBase64 = Buffer.from(publicKey).toString('base64');
-    const formattedPublicKey = `ssh-ed25519 ${publicBase64.slice(0, 68)} ${label}`;
+    const jwk=crypto.createPrivateKey(privateKey).export({format:'jwk'});
+    const rawPublic=Buffer.from(jwk.x!,'base64url'),seed=Buffer.from(jwk.d!,'base64url');
+    const uint=(value:number)=>{const b=Buffer.alloc(4);b.writeUInt32BE(value);return b;};
+    const field=(value:Buffer|string)=>{const b=Buffer.isBuffer(value)?value:Buffer.from(value);return Buffer.concat([uint(b.length),b]);};
+    const publicBlob=Buffer.concat([field('ssh-ed25519'),field(rawPublic)]);
+    const check=crypto.randomBytes(4);
+    let secret=Buffer.concat([check,check,field('ssh-ed25519'),field(rawPublic),field(Buffer.concat([seed,rawPublic])),field(label)]);
+    const padding=8-secret.length%8;secret=Buffer.concat([secret,Buffer.from(Array.from({length:padding},(_,i)=>i+1))]);
+    const encoded=Buffer.concat([Buffer.from('openssh-key-v1\0'),field('none'),field('none'),field(''),uint(1),field(publicBlob),field(secret)]).toString('base64');
+    const opensshPrivateKey=`-----BEGIN OPENSSH PRIVATE KEY-----\n${encoded.match(/.{1,70}/g)!.join('\n')}\n-----END OPENSSH PRIVATE KEY-----\n`;
+    const formattedPublicKey = `ssh-ed25519 ${publicBlob.toString('base64')} ${label}`;
 
     return {
       publicKey: formattedPublicKey,
       privateKey,
+      opensshPrivateKey,
     };
   }
 
@@ -153,7 +164,7 @@ export class ServerAccessManager {
         accessType: 'SSH_CREDENTIAL',
         errorCode: 'SUDO_PRIVILEGE_MISSING',
         diagnosticMessage: `User '${user}' connected via SSH, but automated commands cannot execute because 'sudo' requires an interactive password.`,
-        recommendedUserAction: `Add passwordless sudo permissions for '${user}' by running on server: echo "${user} ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/ryvix-automation && sudo chmod 440 /etc/sudoers.d/ryvix-automation`,
+        recommendedUserAction: 'Ask an administrator to grant only the specific approved commands required for this operation. Use the enrolled agent and approval workflow where possible; do not grant unrestricted passwordless sudo.',
         autoRemediationCapable: false,
         alternativeAccessSuggested: 'AGENT_ENROLLMENT',
       };

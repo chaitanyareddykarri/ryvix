@@ -8,6 +8,9 @@ import MovingBlocks3D from "@/components/MovingBlocks3D";
 import ConnectRepositoryModal from "@/components/ConnectRepositoryModal";
 import ConnectServerModal from "@/components/ConnectServerModal";
 import ConnectionsPanel from "@/components/ConnectionsPanel";
+import PhoneOnboarding from "@/components/PhoneOnboarding";
+import WorkspaceNavigation from "@/components/WorkspaceNavigation";
+import DeploymentOverview from "@/components/DeploymentOverview";
 
 // =========================================================================
 // 1. LUCIDE-STYLE VECTOR ICONS (Zero external dependencies, pixel-perfect)
@@ -391,14 +394,6 @@ function getProjectLiveUrl(repo: any): string | null {
     return repo.metadata.url.trim();
   }
 
-  // 3. Inspect existing project localStorage associations
-  if (typeof window !== "undefined" && repoKey) {
-    const saved = localStorage.getItem(`ryvix_repo_live_url_${repoKey}`);
-    if (saved && saved.trim()) return saved.trim();
-    const legacySaved = localStorage.getItem(`ryvix_project_url_${repoKey}`);
-    if (legacySaved && legacySaved.trim()) return legacySaved.trim();
-  }
-
   return null;
 }
 
@@ -466,10 +461,9 @@ export default function DashboardPage() {
   // AI Prompt & Workspace State
   const [promptText, setPromptText] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [statusMessage, setStatusMessage] = useState<string>("AI READY");
-  const [previewState, setPreviewState] = useState<"none" | "analyzing" | "preview_ready" | "deploying" | "deployed">("none");
+  const [statusMessage, setStatusMessage] = useState<string>("Awaiting request");
+  const [previewState, setPreviewState] = useState<"none" | "analyzing" | "preview_ready">("none");
   const [analyzingStep, setAnalyzingStep] = useState<number>(0);
-  const [deploymentStep, setDeploymentStep] = useState<number>(0);
   const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
   const [monitoringAdvanced, setMonitoringAdvanced] = useState<boolean>(false);
   const [securityAdvanced, setSecurityAdvanced] = useState<boolean>(false);
@@ -495,6 +489,21 @@ export default function DashboardPage() {
   const [chatInput, setChatInput] = useState<string>("");
   const [isChatStreaming, setIsChatStreaming] = useState<boolean>(false);
   const chatConversationRef = useRef<string | undefined>(undefined);
+  const [chatHistoryLoading,setChatHistoryLoading]=useState(true);
+  const [chatHistoryError,setChatHistoryError]=useState<string|null>(null);
+  useEffect(()=>{
+    let cancelled=false;
+    (async()=>{try{
+      const list=await fetch("/api/chat/conversations",{cache:"no-store"});const data=await list.json();
+      if(!list.ok)throw new Error(data.error || "Conversation history unavailable.");
+      const id=data.conversations?.[0]?.id;
+      if(id){const response=await fetch(`/api/chat/conversations?id=${encodeURIComponent(id)}`,{cache:"no-store"});const history=await response.json();
+        if(!response.ok)throw new Error(history.error || "Conversation history unavailable.");
+        if(!cancelled){chatConversationRef.current=id;setChatMessages(history.turns.flatMap((turn:any)=>[{role:"user" as const,content:turn.question},{role:"assistant" as const,content:turn.answer || "No saved answer available."}]));}}
+    }catch(error){if(!cancelled)setChatHistoryError(error instanceof Error?error.message:"Conversation history unavailable.");}
+    finally{if(!cancelled)setChatHistoryLoading(false);}})();
+    return()=>{cancelled=true;};
+  },[]);
   const chatAbortRef = useRef<AbortController | null>(null);
   useEffect(() => () => chatAbortRef.current?.abort(), []);
 
@@ -506,8 +515,6 @@ export default function DashboardPage() {
   const [incidentsList, setIncidentsList] = useState<any[]>([]);
   const [isProbing, setIsProbing] = useState<boolean>(false);
   const [probeResult, setProbeResult] = useState<string | null>(null);
-  const [neuralDiagResult, setNeuralDiagResult] = useState<any | null>(null);
-  const [isDiagnosingNeural, setIsDiagnosingNeural] = useState<boolean>(false);
 
   // Dynamic Workspace & Sandbox State
   const [workspaceSessions, setWorkspaceSessions] = useState<any[]>([]);
@@ -596,17 +603,6 @@ export default function DashboardPage() {
             const enrolledData = await enrolledResp.json();
             if (Array.isArray(enrolledData.repositories)) {
               enrolledList = enrolledData.repositories;
-            }
-          }
-
-          // Fallback to local storage cache of selected repos if needed
-          if (enrolledList.length === 0 && typeof window !== "undefined") {
-            const cached = localStorage.getItem("ryvix_connected_repos");
-            if (cached) {
-              try {
-                const parsed = JSON.parse(cached);
-                if (Array.isArray(parsed) && parsed.length > 0) enrolledList = parsed;
-              } catch {}
             }
           }
 
@@ -848,65 +844,35 @@ export default function DashboardPage() {
     }
   }
 
-  function handleSaveLiveUrl(urlToSave?: string) {
-    const raw = (urlToSave !== undefined ? urlToSave : liveUrlInput).trim();
-    if (!raw) return;
-    let formatted = raw;
-    if (!/^https?:\/\//i.test(formatted)) {
-      formatted = `https://${formatted}`;
-    }
-    setCustomLiveUrl(formatted);
-    const repoKey = activeRepo?.full_name || selectedWebsite;
-    if (repoKey && typeof window !== "undefined") {
-      localStorage.setItem(`ryvix_repo_live_url_${repoKey}`, formatted);
-    }
-    if (activeRepo) {
-      const updatedRepo = { ...activeRepo, live_url: formatted, liveUrl: formatted };
-      setActiveRepo(updatedRepo);
-      setConnectedRepos((prev) => {
-        const updated = prev.map((r) =>
-          (r.full_name || r.name) === (activeRepo.full_name || activeRepo.name)
-            ? { ...r, live_url: formatted, liveUrl: formatted }
-            : r
-        );
-        if (typeof window !== "undefined") {
-          try {
-            localStorage.setItem("ryvix_connected_repos", JSON.stringify(updated));
-          } catch {}
-        }
-        return updated;
-      });
-      showProjectSelectedToast(updatedRepo);
-    }
-    setShowLiveUrlModal(false);
+  const [liveUrlError, setLiveUrlError] = useState<string | null>(null);
+  const [liveUrlSaving, setLiveUrlSaving] = useState(false);
+  const liveUrlRequest = useRef(0);
+  useEffect(() => {
+    const requestId=++liveUrlRequest.current;
+    let cancelled = false;
+    setCustomLiveUrl(null); setLiveUrlInput(""); setLiveUrlError(null);
+    if (activeRepo?.id) fetch(`/api/github/repositories/live-url?repositoryId=${encodeURIComponent(activeRepo.id)}`, {cache:"no-store"})
+      .then(async response => {const data=await response.json(); if(!response.ok) throw new Error(data.error || "Website URL unavailable."); return data;})
+      .then(data => {if(!cancelled && requestId===liveUrlRequest.current){setCustomLiveUrl(data.liveUrl);setLiveUrlInput(data.liveUrl || "");}})
+      .catch(error => {if(!cancelled && requestId===liveUrlRequest.current)setLiveUrlError(error.message);});
+    return () => {cancelled=true;};
+  }, [activeRepo?.id]);
+
+  async function handleSaveLiveUrl(urlToSave?: string) {
+    if(liveUrlSaving)return;
+    const requestId=++liveUrlRequest.current;
+    const raw=(urlToSave ?? liveUrlInput).trim();
+    const formatted=raw ? (/^https?:\/\//i.test(raw) ? raw : `https://${raw}`) : null;
+    setLiveUrlSaving(true);setLiveUrlError(null);
+    try {
+      const response=await fetch("/api/github/repositories/live-url",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({repositoryId:activeRepo?.id,liveUrl:formatted})});
+      const data=await response.json();if(!response.ok)throw new Error(data.error || "Website URL could not be saved.");
+      if(requestId===liveUrlRequest.current){setCustomLiveUrl(data.liveUrl);setLiveUrlInput(data.liveUrl || "");setShowLiveUrlModal(false);}
+    }catch(error){if(requestId===liveUrlRequest.current)setLiveUrlError(error instanceof Error?error.message:"Website URL could not be saved.");}
+    finally{setLiveUrlSaving(false);}
   }
 
-  function handleSkipLiveUrl() {
-    setCustomLiveUrl(null);
-    const repoKey = activeRepo?.full_name || selectedWebsite;
-    if (repoKey && typeof window !== "undefined") {
-      localStorage.removeItem(`ryvix_repo_live_url_${repoKey}`);
-    }
-    if (activeRepo) {
-      const updatedRepo = { ...activeRepo, live_url: null, liveUrl: null };
-      setActiveRepo(updatedRepo);
-      setConnectedRepos((prev) => {
-        const updated = prev.map((r) =>
-          (r.full_name || r.name) === (activeRepo.full_name || activeRepo.name)
-            ? { ...r, live_url: null, liveUrl: null }
-            : r
-        );
-        if (typeof window !== "undefined") {
-          try {
-            localStorage.setItem("ryvix_connected_repos", JSON.stringify(updated));
-          } catch {}
-        }
-        return updated;
-      });
-      showProjectSelectedToast(updatedRepo);
-    }
-    setShowLiveUrlModal(false);
-  }
+  function handleSkipLiveUrl() { setShowLiveUrlModal(false); }
 
   function handleOpenLiveUrlModal() {
     setLiveUrlInput(customLiveUrl || "");
@@ -915,6 +881,7 @@ export default function DashboardPage() {
 
   // Live Interactive AI Chat Streaming with Real SSE
   async function handleSendChatMessage(textToSend?: string) {
+    if(chatHistoryLoading || chatHistoryError)return;
     const message = textToSend || chatInput;
     if (!message.trim() || isChatStreaming) return;
 
@@ -1070,26 +1037,6 @@ export default function DashboardPage() {
     }
   }
 
-  // Neural Threat Diagnosis
-  async function handleRunNeuralDiagnosis() {
-    setIsDiagnosingNeural(true);
-    try {
-      const res = await fetch("/api/servers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "diagnose_threat_neural" }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.diagnosis) throw new Error(data.error || "Diagnosis unavailable.");
-      setNeuralDiagResult(data.diagnosis);
-    } catch (error) {
-      setNeuralDiagResult(null);
-      setDeployError(error instanceof Error ? error.message : "Diagnosis unavailable.");
-    } finally {
-      setIsDiagnosingNeural(false);
-    }
-  }
-
   // Launch Ephemeral Docker Sandbox
   async function handleLaunchSandbox() {
     window.location.assign('/tasks');
@@ -1118,6 +1065,7 @@ export default function DashboardPage() {
   }
 
   async function handleGenerateApiKey() {
+    setIsSavingSettings(true);setSettingsSaveMsg(null);
     try {
       const res = await fetch("/api/settings", {
         method: "POST",
@@ -1125,6 +1073,7 @@ export default function DashboardPage() {
         body: JSON.stringify({ action: "generate_key", keyName: "Developer Key" }),
       });
       const data = await res.json();
+      if(!res.ok||!data.success)throw new Error(data.error||'Key generation unavailable.');
       if (data.rawKey) {
         setNewKeyGenerated(data.rawKey);
         if (data.key) {
@@ -1135,8 +1084,20 @@ export default function DashboardPage() {
         }
       }
     } catch (e) {
-      console.error(e);
-    }
+      setSettingsSaveMsg(e instanceof Error?e.message:'Key generation unavailable.');
+    } finally {setIsSavingSettings(false);}
+  }
+
+  async function handleRevokeApiKey(keyId:string,name:string){
+    if(isSavingSettings||!window.confirm(`Revoke ${name}? This cannot be undone.`))return;
+    setIsSavingSettings(true);setSettingsSaveMsg(null);
+    try{
+      const response=await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'revoke_key',keyId})});
+      const data=await response.json();if(!response.ok||!data.success)throw new Error(data.error||'Key revocation unavailable.');
+      setSettingsData((previous:any)=>({...previous,apiKeys:previous.apiKeys.filter((key:any)=>key.id!==keyId)}));
+      setNewKeyGenerated(null);setSettingsSaveMsg('API key revoked.');
+    }catch(error){setSettingsSaveMsg(error instanceof Error?error.message:'Key revocation unavailable.');}
+    finally{setIsSavingSettings(false);}
   }
 
   // Mouse tilt on hero card
@@ -1389,7 +1350,7 @@ export default function DashboardPage() {
       {/* ========================================================================= */}
       {/* TOP BAR                                                                   */}
       {/* ========================================================================= */}
-      <header
+      <header className="dashboard-topbar"
         style={{
           position: "sticky",
           top: 0,
@@ -1401,7 +1362,7 @@ export default function DashboardPage() {
           padding: "0.65rem 1.5rem",
         }}
       >
-        <div style={{ maxWidth: "1680px", margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
+        <div className="dashboard-topbar-inner" style={{ maxWidth: "1680px", margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
           {/* Left: Brand + Breadcrumb */}
           <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
             <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "0.6rem" }}>
@@ -1657,6 +1618,8 @@ export default function DashboardPage() {
             </button>
 
             {/* Profile Dropdown */}
+            <WorkspaceNavigation />
+            <PhoneOnboarding />
             <div style={{ display: "flex", alignItems: "center", gap: "0.55rem", padding: "0.3rem 0.65rem", borderRadius: "8px", background: "#0D1218", border: "1px solid #1D2732" }}>
               <div style={{ width: "22px", height: "22px", borderRadius: "50%", background: "linear-gradient(135deg, #7C6CFF, #A78BFA)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 700, color: "#ffffff" }}>
                 {userEmail.charAt(0).toUpperCase()}
@@ -1798,6 +1761,7 @@ export default function DashboardPage() {
         {/* ========================================================================= */}
         <main className="dashboard-main-content" style={{ flex: 1, padding: "2rem", overflowY: "auto", minHeight: "calc(100vh - 60px)" }}>
           {/* 1. OVERVIEW (DEFAULT USER-FIRST FLAGSHIP PAGE) */}
+          {liveUrlError && <div role="alert" style={{color:"#EF4444",padding:"1rem"}}>{liveUrlError}</div>}
           {deployError && <div role="alert" style={{ color: "#EF4444", padding: "1rem" }}>{deployError}</div>}
           {activeTab === "overview" && (
             <div style={{ maxWidth: "980px", margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: "1rem" }}>
@@ -1830,7 +1794,7 @@ export default function DashboardPage() {
                   {customLiveUrl || "URL not configured"}
                 </span>
                 <span style={{ fontSize: "0.68rem", padding: "0.1rem 0.35rem", borderRadius: "4px", background: "rgba(124, 108, 255, 0.15)", color: "#A78BFA", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)" }}>
-                  GitHub Synced
+                  {githubConnected ? 'GitHub connected' : 'GitHub not connected'}
                 </span>
               </div>
 
@@ -1999,8 +1963,8 @@ export default function DashboardPage() {
                       {activeRepo?.full_name || selectedWebsite}
                     </h3>
                   </div>
-                  <span style={{ padding: "0.2rem 0.6rem", borderRadius: "9999px", background: previewState === "deploying" ? "rgba(66, 217, 255, 0.1)" : "rgba(69, 212, 131, 0.1)", border: `1px solid ${previewState === "deploying" ? "rgba(66, 217, 255, 0.3)" : "rgba(69, 212, 131, 0.3)"}`, color: previewState === "deploying" ? "#42D9FF" : "#45D483", fontSize: "0.72rem", fontWeight: 600 }}>
-                    ● {previewState === "deploying" ? "DEPLOYING" : "LIVE"}
+                  <span style={{ padding: "0.2rem 0.6rem", borderRadius: "9999px", background: "rgba(69, 212, 131, 0.1)", border: `1px solid ${"rgba(69, 212, 131, 0.3)"}`, color: "#45D483", fontSize: "0.72rem", fontWeight: 600 }}>
+                    ● Health not verified
                   </span>
                 </div>
 
@@ -2077,17 +2041,17 @@ export default function DashboardPage() {
                   <div>
                     <h4 style={{ fontSize: "1.05rem", fontWeight: 700, color: "#F5F7FA" }}>Current Work</h4>
                     <p style={{ fontSize: "0.82rem", color: isProcessing ? "#42D9FF" : "#A5AFBC", marginTop: "2px" }}>
-                      {isProcessing ? "AI is processing your modification request..." : activeTask ? `Active Task: ${activeTask.summary || activeTask.user_prompt || activeTask.prompt}` : "Autonomous pipeline ready for execution"}
+                      {isProcessing ? "AI is processing your modification request..." : activeTask ? `Active Task: ${activeTask.summary || activeTask.user_prompt || activeTask.prompt}` : "No task started"}
                     </p>
                   </div>
                   <span style={{ fontSize: "0.72rem", padding: "0.2rem 0.6rem", borderRadius: "9999px", background: isProcessing ? "rgba(66, 217, 255, 0.12)" : previewState === "preview_ready" ? "rgba(245, 158, 11, 0.12)" : "rgba(69, 212, 131, 0.12)", border: `1px solid ${isProcessing ? "rgba(66, 217, 255, 0.3)" : previewState === "preview_ready" ? "rgba(245, 158, 11, 0.3)" : "rgba(69, 212, 131, 0.3)"}`, color: isProcessing ? "#42D9FF" : previewState === "preview_ready" ? "#F59E0B" : "#45D483", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)" }}>
-                    {isProcessing ? "In Progress" : previewState === "preview_ready" ? "Preview Ready" : previewState === "deploying" ? "Deploying" : "Ready"}
+                    {isProcessing ? "In Progress" : previewState === "preview_ready" ? "Preview Ready" : activeTask ? activeTask.status : "Not started"}
                   </span>
                 </div>
 
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative", padding: "0.5rem 0" }}>
                   {["Analyzing", "Planning", "Coding", "Testing", "Preview", "Review", "Deploy"].map((step, idx) => {
-                    const stepStage = isProcessing ? analyzingStep : previewState === "preview_ready" ? 4 : previewState === "deploying" ? 5 + (deploymentStep >= 2 ? 1 : 0) : previewState === "deployed" ? 6 : 4;
+                    const stepStage = isProcessing ? analyzingStep : previewState === "preview_ready" ? 4 : activeTask?.status === "awaiting_approval" ? 4 : -1;
                     const isDone = idx <= stepStage;
                     const isCurrent = idx === stepStage;
                     return (
@@ -2271,7 +2235,7 @@ export default function DashboardPage() {
                       key={chip.id}
                       type="button"
                       onClick={() => handleSendChatMessage(chip.text)}
-                      disabled={isChatStreaming}
+                      disabled={isChatStreaming || chatHistoryLoading || !!chatHistoryError}
                       style={{
                         padding: "0.25rem 0.6rem",
                         borderRadius: "9999px",
@@ -2288,6 +2252,9 @@ export default function DashboardPage() {
                   ))}
                 </div>
 
+                <a href="/chat">View and switch saved conversations</a>
+                {chatHistoryLoading && <p role="status">Loading saved conversation?</p>}
+                {chatHistoryError && <p role="alert">{chatHistoryError} <a href="/chat">Open chat to retry</a></p>}
                 {/* Interactive Chat Input Form */}
                 <form
                   onSubmit={(e) => {
@@ -2301,12 +2268,12 @@ export default function DashboardPage() {
                     placeholder="Ask Ryvix AGI to modify code, analyze logs, or optimize latency..."
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
-                    disabled={isChatStreaming}
+                    disabled={isChatStreaming || chatHistoryLoading || !!chatHistoryError}
                     style={{ flex: 1, padding: "0.65rem 0.85rem", borderRadius: "8px", background: "#0D1218", border: "1px solid #1D2732", color: "#F5F7FA", fontSize: "0.85rem", outline: "none" }}
                   />
                   <button
                     type="submit"
-                    disabled={isChatStreaming || !chatInput.trim()}
+                    disabled={isChatStreaming || chatHistoryLoading || !!chatHistoryError || !chatInput.trim()}
                     style={{
                       padding: "0.65rem 1.25rem",
                       borderRadius: "8px",
@@ -2972,18 +2939,11 @@ export default function DashboardPage() {
                 <input
                   type="text"
                   placeholder="e.g. https://myecommerce.com"
-                  value={customLiveUrl || ""}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setCustomLiveUrl(val);
-                    const repoKey = activeRepo?.full_name || selectedWebsite;
-                    if (repoKey && typeof window !== "undefined") {
-                      if (val) localStorage.setItem(`ryvix_repo_live_url_${repoKey}`, val);
-                      else localStorage.removeItem(`ryvix_repo_live_url_${repoKey}`);
-                    }
-                  }}
+                  value={liveUrlInput}
+                  onChange={(e) => setLiveUrlInput(e.target.value)}
                   style={{ flex: 1, padding: "0.45rem 0.75rem", borderRadius: "6px", background: "#121922", border: "1px solid #1D2732", color: "#F5F7FA", fontSize: "0.82rem", outline: "none", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)" }}
                 />
+                <button disabled={liveUrlSaving} onClick={() => handleSaveLiveUrl()}>Save URL</button>
                 <button
                   onClick={() => setIsShowingAfter(!isShowingAfter)}
                   style={{
@@ -3007,7 +2967,7 @@ export default function DashboardPage() {
                   orgName={orgName}
                   repoName={activeRepo?.full_name || selectedWebsite || "Production Website"}
                   branch={activeRepo?.default_branch || "main"}
-                  commitSha={activeTask?.id ? activeTask.id.slice(0, 7) : "a82f19c"}
+                  commitSha={activeTask?.pullRequest?.commitSha || "Not recorded"}
                   activeLiveUrl={customLiveUrl || ""}
                   activePreviewUrl={activePreviewUrlState || ""}
                   comparisonMode={comparisonMode}
@@ -3373,10 +3333,7 @@ export default function DashboardPage() {
 
                     {/* Section 30: DEPLOYMENTS */}
           {activeTab === "deployments" && (
-            <div style={{ padding: "2rem" }}>
-              <h2>Deployments</h2>
-              <p>Deployment records unavailable. Task completion does not confirm deployment.</p>
-            </div>
+            <DeploymentOverview />
           )}
 
           {/* Section 32: MONITORING */}
@@ -3583,13 +3540,12 @@ export default function DashboardPage() {
                     Security &amp; Threat Defense
                   </div>
                   <h2 style={{ fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)", fontSize: "1.9rem", fontWeight: 700, color: "#F5F7FA" }}>
-                    NEURAL THREAT SHIELD
+                    RECORDED SECURITY EVENTS
                   </h2>
                 </div>
 
                 <button
-                  onClick={handleRunNeuralDiagnosis}
-                  disabled={isDiagnosingNeural}
+                  onClick={() => router.push("/chat")}
                   style={{
                     padding: "0.55rem 1.15rem",
                     borderRadius: "8px",
@@ -3598,28 +3554,12 @@ export default function DashboardPage() {
                     color: "#ffffff",
                     fontSize: "0.82rem",
                     fontWeight: 700,
-                    cursor: isDiagnosingNeural ? "default" : "pointer",
+                    cursor: "pointer",
                   }}
                 >
-                  {isDiagnosingNeural ? "Executing Forward Pass..." : "⚡ Run Neural Threat Diagnosis"}
+                  Inspect evidence in chat
                 </button>
               </div>
-
-              {neuralDiagResult && (
-                <div style={{ padding: "1.25rem 1.5rem", borderRadius: "12px", background: "rgba(124, 108, 255, 0.12)", border: "1px solid rgba(124, 108, 255, 0.3)", marginBottom: "1.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#F5F7FA" }}>
-                      Neural Forward Pass Completed (<span style={{ color: "#45D483" }}>{neuralDiagResult.forwardPassLatencyMs ?? "Not available"}ms</span>)
-                    </span>
-                    <span style={{ fontSize: "0.72rem", padding: "0.2rem 0.6rem", borderRadius: "9999px", background: "rgba(239, 68, 68, 0.15)", color: "#EF4444", fontWeight: 700 }}>
-                      BLOCKED IP: {neuralDiagResult.clusterIpBlocked || "Not available"}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: "0.8rem", color: "#A5AFBC" }}>
-                    Diagnosed Threat: <strong style={{ color: "#42D9FF" }}>{neuralDiagResult.threatType}</strong> (Confidence: {(neuralDiagResult.confidence * 100).toFixed(1)}%) • Action: {neuralDiagResult.actionTaken}
-                  </div>
-                </div>
-              )}
 
               {/* Security Events List */}
               <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
@@ -3766,8 +3706,10 @@ export default function DashboardPage() {
               <div style={{ padding: "1.5rem", borderRadius: "12px", background: "#0D1218", border: "1px solid #1D2732", marginBottom: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <h4 style={{ fontSize: "1rem", fontWeight: 700, color: "#F5F7FA" }}>Active API Access Keys</h4>
+                  <p>Read server inventory with <code>GET /api/v1/servers</code> and <code>Authorization: Bearer YOUR_KEY</code>. New keys have read scope; team, release and server mutations require signed-in approval workflows.</p>
                   <button
                     onClick={handleGenerateApiKey}
+                    disabled={isSavingSettings||!['owner','admin'].includes(settingsData?.currentRole)}
                     style={{ padding: "0.45rem 0.95rem", borderRadius: "6px", background: "#121922", border: "1px solid #1D2732", color: "#42D9FF", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}
                   >
                     + Generate New Key
@@ -3785,6 +3727,7 @@ export default function DashboardPage() {
                       <span style={{ fontSize: "0.72rem", padding: "0.15rem 0.45rem", borderRadius: "9999px", background: "rgba(69, 212, 131, 0.1)", color: "#45D483" }}>
                         ACTIVE
                       </span>
+                      {['owner','admin'].includes(settingsData?.currentRole)&&<button disabled={isSavingSettings} onClick={()=>void handleRevokeApiKey(k.id,k.name)}>Revoke {k.name}</button>}
                     </div>
                   ))}
                 </div>
@@ -3793,6 +3736,7 @@ export default function DashboardPage() {
               {/* Organization Team Members */}
               <div style={{ padding: "1.5rem", borderRadius: "12px", background: "#0D1218", border: "1px solid #1D2732", display: "flex", flexDirection: "column", gap: "1rem" }}>
                 <h4 style={{ fontSize: "1rem", fontWeight: 700, color: "#F5F7FA" }}>Team Members</h4>
+                <Link href="/team">Invite members, manage roles and organizations</Link>
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                   {(settingsData?.members || []).map((m: any) => (
                     <div key={m.id} style={{ padding: "0.65rem 0.85rem", borderRadius: "8px", background: "#121922", border: "1px solid #1D2732", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -3821,69 +3765,25 @@ export default function DashboardPage() {
             <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
               <IconSparkles size={22} color="#7C6CFF" />
               <h3 style={{ fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)", fontSize: "1.25rem", fontWeight: 700, color: "#F5F7FA" }}>
-                Ready to update your website?
+                Create a pull request?
               </h3>
             </div>
             <p style={{ fontSize: "0.86rem", color: "#A5AFBC", lineHeight: 1.5 }}>
-              Your live website at <span style={{ color: "#42D9FF" }}>{activeLiveUrl}</span> will be updated with the changes you have reviewed in the preview.
+              The reviewed task changes will be submitted as a GitHub pull request. Merge approval, customer CI/CD and runtime verification are separate steps.
             </p>
             <div style={{ padding: "1rem", borderRadius: "8px", background: "#121922", border: "1px solid #1D2732", display: "flex", flexDirection: "column", gap: "0.4rem", fontSize: "0.8rem", color: "#F5F7FA" }}>
-              <div>✓ 4 files will be updated on branch <span style={{ color: "#A78BFA" }}>main</span></div>
-              <div>✓ Automated build and regression tests will execute</div>
-              <div>✓ Instant edge deployment with zero downtime</div>
+              <div>Submit the selected task&apos;s recorded changes for review.</div>
+              <div>Build and regression checks depend on the repository&apos;s configured CI.</div>
+              <div>Deployment and runtime verification follow the repository&apos;s release workflow.</div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginTop: "0.5rem" }}>
               <button onClick={() => setShowApprovalModal(false)} style={{ flex: 1, padding: "0.65rem", borderRadius: "8px", background: "transparent", border: "1px solid #1D2732", color: "#A5AFBC", fontSize: "0.85rem", cursor: "pointer" }}>
                 Go Back
               </button>
               <button onClick={handleApproveDeployment} style={{ flex: 1, padding: "0.65rem", borderRadius: "8px", background: "linear-gradient(135deg, #45D483 0%, #10b981 100%)", border: "none", color: "#05070A", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}>
-                Approve &amp; Update
+                Create Pull Request
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {(previewState === "deploying" || previewState === "deployed") && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(5, 7, 10, 0.92)", backdropFilter: "blur(16px)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "1.5rem" }}>
-          <div style={{ width: "100%", maxWidth: "520px", background: "#0D1218", border: "1px solid #2A3542", borderRadius: "16px", padding: "2.2rem", boxShadow: "0 25px 50px rgba(0, 0, 0, 0.9)", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-            {previewState === "deploying" ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-                <h3 style={{ fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)", fontSize: "1.25rem", fontWeight: 700, color: "#F5F7FA" }}>
-                  UPDATING YOUR WEBSITE...
-                </h3>
-                <div style={{ padding: "1.25rem", borderRadius: "10px", background: "#121922", border: "1px solid #1D2732", display: "flex", flexDirection: "column", gap: "0.6rem", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", fontSize: "0.8rem" }}>
-                  <div style={{ color: deploymentStep >= 1 ? "#45D483" : "#66717F" }}>{deploymentStep >= 1 ? "✓" : "●"} Changes approved</div>
-                  <div style={{ color: deploymentStep >= 2 ? "#45D483" : "#66717F" }}>{deploymentStep >= 2 ? "✓" : "○"} Build completed</div>
-                  <div style={{ color: deploymentStep >= 3 ? "#45D483" : "#66717F" }}>{deploymentStep >= 3 ? "✓" : "○"} Deployment completed</div>
-                  <div style={{ color: deploymentStep >= 4 ? "#45D483" : "#66717F" }}>{deploymentStep >= 4 ? "✓" : "○"} Website verified</div>
-                </div>
-              </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", textAlign: "center", alignItems: "center" }}>
-                <div style={{ width: "56px", height: "56px", borderRadius: "50%", background: "rgba(69, 212, 131, 0.15)", color: "#45D483", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <IconCheck size={28} color="#45D483" />
-                </div>
-                <div>
-                  <h3 style={{ fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)", fontSize: "1.7rem", fontWeight: 800, color: "#F5F7FA", marginBottom: "0.4rem" }}>
-                    Your website is live.
-                  </h3>
-                  <p style={{ fontSize: "0.88rem", color: "#A5AFBC" }}>All approved changes have been synchronized to your live website.</p>
-                </div>
-                <div style={{ width: "100%", padding: "0.85rem 1rem", borderRadius: "8px", background: "#121922", border: "1px solid #1D2732", display: "flex", justifyContent: "space-between", alignItems: "center", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", fontSize: "0.85rem" }}>
-                  <span style={{ color: "#45D483" }}>{activeLiveUrl}</span>
-                  <a href={activeLiveUrl} target="_blank" rel="noopener noreferrer" style={{ color: "#42D9FF", textDecoration: "none", fontSize: "0.82rem" }}>Open Website ↗</a>
-                </div>
-                <div style={{ display: "flex", gap: "0.75rem", width: "100%" }}>
-                  <a href={activeLiveUrl} target="_blank" rel="noopener noreferrer" style={{ flex: 1, padding: "0.75rem", borderRadius: "8px", background: "linear-gradient(135deg, #45D483 0%, #10b981 100%)", color: "#05070A", fontSize: "0.88rem", fontWeight: 700, textAlign: "center", textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    Open Website ↗
-                  </a>
-                  <button onClick={() => { setPreviewState("none"); setPromptText(""); setActiveTab("overview"); }} style={{ flex: 1, padding: "0.75rem", borderRadius: "8px", background: "#121922", border: "1px solid #1D2732", color: "#F5F7FA", fontSize: "0.88rem", fontWeight: 600, cursor: "pointer" }}>
-                    Continue Editing
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}
@@ -3982,6 +3882,8 @@ export default function DashboardPage() {
 
       {/* Setup Live URL Modal (Prompt 3 & 4) */}
       <SetupLiveUrlModal
+        error={liveUrlError}
+        saving={liveUrlSaving}
         isOpen={showLiveUrlModal}
         onClose={() => setShowLiveUrlModal(false)}
         repoName={activeRepo?.full_name || selectedWebsite || "Selected Repository"}
@@ -4065,7 +3967,7 @@ function PreviewStudioFrame({
   orgName = "Workspace",
   repoName = "Production Website",
   branch = "main",
-  commitSha = "a82f19c",
+  commitSha = "Not recorded",
   activeLiveUrl,
   activePreviewUrl,
   comparisonMode,
@@ -4113,7 +4015,7 @@ function PreviewStudioFrame({
   activeTask?: any;
 }) {
   const hasPreview = Boolean(activePreviewUrl || activeLiveUrl);
-  const hasPendingChanges = previewState === "preview_ready" || previewState === "deploying" || previewState === "deployed";
+  const hasPendingChanges = previewState === "preview_ready";
   return (
     <>
       <div style={{ padding: "0.65rem 1rem", background: "#080C11", borderBottom: "1px solid #1D2732", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
@@ -4246,20 +4148,16 @@ function PreviewStudioFrame({
           <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.85rem", marginTop: "0.25rem", fontSize: "0.78rem", color: "#F5F7FA" }}>
             {taskSteps && taskSteps.length > 0 ? (
               taskSteps.slice(0, 4).map((s: any, idx: number) => (
-                <span key={s.id || idx} style={{ color: "#45D483" }}>✓ {s.title}</span>
+                <span key={s.id || idx}>{s.title} ({s.status || "Status not recorded"})</span>
               ))
             ) : (
-              <>
-                <span style={{ color: "#45D483" }}>✓ Real repository AST analysis</span>
-                <span style={{ color: "#45D483" }}>✓ Codebase patch applied</span>
-                <span style={{ color: "#45D483" }}>✓ Ephemeral sandbox build ready</span>
-              </>
+              <span>Task verification details have not been recorded.</span>
             )}
           </div>
           <div style={{ fontSize: "0.72rem", color: "#A5AFBC", marginTop: "0.2rem" }}>
             <span style={{ color: "#42D9FF", fontWeight: 600 }}>
-              {activeTask?.files ? `${activeTask.files.length} files changed` : "Repository source updated"}
-            </span> · <span>Branch: {branch}</span> · <span style={{ color: "#A78BFA" }}>Commit: {commitSha}</span> · <span style={{ color: "#66717F" }}>Live site remains untouched until approved.</span>
+              {Array.isArray(activeTask?.result?.files) ? `${activeTask.result.files.length} files recorded` : "Changed file count not recorded"}
+            </span> · <span>Branch: {branch}</span> · <span style={{ color: "#A78BFA" }}>Commit: {commitSha}</span> · <span style={{ color: "#66717F" }}>A pull request does not deploy the live site.</span>
           </div>
         </div>
 
@@ -4268,7 +4166,7 @@ function PreviewStudioFrame({
             Reject Changes
           </button>
           <button onClick={onApprove} style={{ padding: "0.6rem 1.35rem", borderRadius: "8px", background: "linear-gradient(135deg, #45D483 0%, #10b981 100%)", border: "none", color: "#05070A", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer", boxShadow: "0 0 18px rgba(69, 212, 131, 0.4)" }}>
-            Approve &amp; Update Website &rarr;
+            Create Pull Request &rarr;
           </button>
         </div>
       </div>
@@ -4533,6 +4431,8 @@ function RealPreviewWebsiteFrame({
 }
 
 function SetupLiveUrlModal({
+  error,
+  saving,
   isOpen,
   onClose,
   repoName,
@@ -4540,6 +4440,8 @@ function SetupLiveUrlModal({
   onSave,
   onSkip,
 }: {
+  error: string | null;
+  saving: boolean;
   isOpen: boolean;
   onClose: () => void;
   repoName: string;
@@ -4638,6 +4540,8 @@ function SetupLiveUrlModal({
           </div>
         </div>
 
+        {error && <p role="alert" style={{color:"#EF4444"}}>{error}</p>}
+        {saving && <p role="status">Saving website URL…</p>}
         {/* Input Field */}
         <div>
           <label
@@ -4701,6 +4605,7 @@ function SetupLiveUrlModal({
           </button>
           <button
             type="button"
+            disabled={saving}
             onClick={() => onSave(val)}
             style={{
               flex: 1.4,

@@ -1,4 +1,4 @@
-# Dependencies
+~# Dependencies
 node_modules/
 .pnp
 .pnp.js
@@ -67,3 +67,5 @@ supabase/.temp/
 scratch/
 tmp/
 web/ai/
+# Isolated Next.js validation output
+web/.next-validation/

@@ -1,5 +1,86 @@
 # Ryvix Current Project Context
 
+## Publication handoff - October 7, 2026
+
+User authorized synchronizing source to `main` and `Testing_branch`. Fresh checks
+passed: 97 application suites, 25 Node tests, 186 browser fixtures, typecheck, lint,
+production build and secret scan. Approval/preview evidence claims corrected;
+sharp updated. Five unpatched development dependency findings and missing
+production/provider configuration remain open. Runtime data stays local. See
+[pre-publish evidence](../docs/verification/PREPUBLISH_2026_10_07.md) and
+[branch workflow](../docs/BRANCH_WORKFLOW.md). Older no-push notes are historical.
+
+## Current handoff - October 7, 2026
+
+The requested UI/backend closures and matching phone/fleet styling are implemented.
+Server-only environment creation is implemented using existing tables. Google
+login code is ready for provider configuration after deployment. Hosted schema is
+applied through `20261007000001`; the CLI reports no pending migrations and
+database boundary checks pass. See [current status](../docs/PROJECT_STATUS.md),
+[pending queue](../docs/PENDING_WORK.md) and
+[migration evidence](../docs/verification/MIGRATIONS_2026_10_07.md).
+No commit/push or real-provider activation was performed.
+
+## Historical session log
+
+The dated notes below preserve the sequence of work. Their pending lists and
+counts describe their checkpoints; use the current handoff above for next work.
+
+
+## Hosted migrations applied - October 7, 2026
+
+Applied team invitations (20261006000001) and repository website URLs
+(20261007000001) through the Supabase CLI. Post-apply dry run reports no pending
+migrations; all database boundary checks passed, including invitation privileges
+and the validated website URL constraint. Earlier unapplied notes below are
+superseded. Deployed user-flow, server-only concurrency and real-provider
+acceptance remain pending. [Rollout evidence](../docs/verification/MIGRATIONS_2026_10_07.md).
+
+Latest UI/fleet review: [evidence](../docs/verification/UI_CONSISTENCY_FLEET_2026_10_07.md).
+Session-added UI uses dashboard styling. Fleet errors/reconnection/filters now
+behave honestly and Dashboard points to `/dashboard`; brand points to `/`.
+The follow-up now implements server-only environment creation inside enrollment,
+using current tenant authorization, existing tables and atomic audit. See
+[continuation](../docs/verification/SERVER_ONLY_SETUP_2026_10_07.md).
+
+Google login is implemented locally alongside email/password authentication.
+The callback checks existing profile/membership and uses the configured production
+origin. [Verification](../docs/verification/GOOGLE_LOGIN_2026_10_07.md) and
+[provider activation steps](../docs/integrations/GOOGLE_LOGIN.md). Google credentials,
+Supabase provider enablement and real identity/session acceptance remain pending.
+
+Latest Part 2: [dashboard evidence and persistence fixes](../docs/verification/DASHBOARD_PART2_2026_10_07.md).
+Chat restores saved turns; website URL saving uses a scoped audited API; rejected
+diagnosis action and unsupported deployment promises are removed. New URL migration
+`20261007000001` remains unapplied, as does team migration `20261006000001`.
+
+Latest October 7: [completed local UI gap implementations](../docs/verification/UI_GAP_CLOSURES_2026_10_07.md).
+Server tools, team lifecycle, repository inspection and read-only API-key
+authentication now supplement the earlier navigation/phone/deployment repairs.
+Team migration `20261006000001` is unapplied. Provider-free checks passed;
+actual SQL rollout, deployed authenticated flows and real delivery remain pending.
+
+Historical work: [UI/backend audit and first repair phase](../docs/verification/UI_BACKEND_AUDIT_2026_10_06.md).
+Operational destinations are now exposed through dashboard navigation and shared
+layouts; deployment observations and audited key revocation are connected.
+Server tools, team lifecycle and public API-key authentication remain explicit gaps.
+
+## Active phone onboarding checkpoint - 2026-10-06
+
+General remediation stopped at the user's request; its completed and pending work
+is recorded in [local checkpoint](../docs/verification/LOCAL_CHECKPOINT_2026_10_06.md).
+Personal profile phone saving, dashboard reminders until supplied, management link
+and shared OTP UI are implemented locally. Saving is independent of Meta and never
+grants verified identity or consent. See [phone evidence](../docs/verification/PHONE_ONBOARDING_2026_10_06.md).
+
+## Latest follow-up - 2026-10-06
+
+Applied schema: `20261005000004`; all 137 database boundary checks passed.
+Coding, repository embeddings and chat reranking record scoped provider attempts.
+Production unaccounted model calls fail closed. See
+[completion evidence](../docs/verification/ROLLOUT_2026_10_06.md) for actual checks
+and remaining deployment, provider, dependency and reviewed-data requirements.
+
 ## Latest follow-up - 2026-10-05
 
 Applied schema: `20261005000003`. Server approval handoffs, JS/TS parser references,
@@ -7,7 +88,7 @@ streaming attempt accounting, Twilio receipts and optional PagerDuty observation
 are implemented. See [evidence](../docs/verification/FOLLOWUP_2026_10_05.md) and
 [pending work](../docs/PENDING_WORK.md). Older checkpoints below are historical.
 
-## Current capability checkpoint — 2026-10-04
+## Historical capability checkpoint — 2026-10-04
 
 Applied schema: `20261004000002`. Gmail authenticated push/reviewed replies, bounded semantic and multi-language reference retrieval, provider-reported usage, Slack/PagerDuty/Twilio P1 dispatch, and external-training dataset preparation are implemented. See [current evidence](../docs/verification/CAPABILITIES_2026_10_04.md), [provider setup](../docs/infrastructure/CAPABILITY_PROVIDERS.md), and [remaining work](../docs/PENDING_WORK.md). Real delivery, deployed browser/worker acceptance, paid fine-tuning adapters and measured model quality remain pending. Older checkpoint sections below are historical.
 

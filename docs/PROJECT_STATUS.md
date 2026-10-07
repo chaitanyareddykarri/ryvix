@@ -1,23 +1,35 @@
-# Ryvix implementation and deployment status
+# Ryvix project status
 
-October 5: [implementation follow-up](verification/FOLLOWUP_2026_10_05.md) adds
-server approval links, parsed JS/TS references, streaming attempt accounting and
-notification status handling. [Remaining work](PENDING_WORK.md) still includes
-code gaps as well as real-provider acceptance; not everything is complete.
+Latest [pre-publish cross-check](verification/PREPUBLISH_2026_10_07.md) corrects
+remaining approval/preview evidence labels and updates vulnerable sharp. Five
+unpatched development-chain audit findings and missing runtime/provider settings
+remain open. See the [main/testing workflow](BRANCH_WORKFLOW.md).
 
-October 4 follow-up: [mobile layout and nine-item pending recheck](verification/PENDING_RECHECK_2026_10_04.md).
-Servers navigation/cards now fit small viewports. Classifier promotion gates and measured/null latency already existed.
+Updated October 7, 2026. This is the current implementation index; dated reports
+retain checkpoint-specific results. Local working changes are not a published
+release. Hosted migrations are applied through `20261007000001`, with no pending
+numbered files. See [remaining work](PENDING_WORK.md).
 
-Active follow-up: [audit remediation queue](PENDING_WORK.md). The October 3 audit found
-legacy AI safety/evidence defects; earlier passing suites are not full live acceptance.
+## Latest completed work
 
-Updated 2026-10-05. Current follow-up builds on **5e20f6b**; applied migrations through
-**20261005000003**. This index supersedes older pending lists. Dated verification
-reports retain their original results; no live certification is implied.
-
-Recent changes: reviewed experience/personal memory (1c23389), bounded repository
-indexing (5d3a3d5), Gmail SMTP and WhatsApp OTP (4d1369a), then the WhatsApp assistant
-(d81b281). [Assistant evidence](verification/WHATSAPP_ASSISTANT_2026_10_03.md).
+- Phone saving without Meta, recurring dashboard reminder until a number is saved,
+  direct profile access and explicit WhatsApp OTP verification controls. Saving
+  a number does not verify WhatsApp possession or opt in to messaging.
+- Dashboard styling across new operational/profile UI, responsive phone/fleet
+  layouts, operational navigation, recorded deployments and API-key revocation.
+- Team invitation/role/removal flows, bounded repository stack inspection,
+  server utilities/classification and scoped read-only API-key server access.
+- Dashboard saved-chat restoration and persisted repository website URL; removed
+  rejected threat diagnosis controls and unsupported deployment progress claims.
+- Google sign-in/sign-up button alongside manual login, account chooser request,
+  PKCE callback, workspace validation and authentication error recovery. Provider
+  activation remains deferred until deployment.
+- RYVIX brand opens home; Manage Server Fleet opens /servers; Dashboard returns
+  to /dashboard. Fleet handles unknown/stale/error states and stream races.
+- Server enrollment can explicitly create a tenant-scoped project/environment
+  without GitHub. Enrollment and approved operations remain separate actions.
+- Team invitations and repository URL migrations applied to hosted Supabase;
+  browser restrictions, service access, RLS and URL constraint verified.
 
 ## Implemented changes
 
@@ -53,30 +65,17 @@ success/failure email. A preview, PR or merge alone never creates success mail.
 The selected target controls tracking; it does not restrict environments triggered
 by the customer's pipeline. Reachability does not prove the executing commit.
 
-## Schema and verification evidence
+## Verification evidence
 
-The existing Supabase project has migrations applied through
-`20261004000002_external_training_examples.sql`. October 1 migrations cover
-settings/chat budgets, reviewed learning, inbox, worker hosts and signed commands.
-October 2 migrations add runtime observations, cloud recovery/WhatsApp outbox,
-and release/email records. October 3 adds experience, repository knowledge, phone identity and assistant records. Rollout used verified TLS, without resets or seeds.
+Recorded in [server-only setup](verification/SERVER_ONLY_SETUP_2026_10_07.md):
+97 application suites and 24 Node tests passed through the offline wrapper;
+typecheck and isolated production build passed. Seven final UI/fleet browser
+cases passed; eight phone onboarding cases passed in the preceding run. These
+are local fixtures, not live Google/Meta or physical-phone acceptance.
 
-Latest results: [October 4 capability checkpoint](verification/CAPABILITIES_2026_10_04.md).
-The following older code-batch results were recorded in the
-[assistant checkpoint](verification/WHATSAPP_ASSISTANT_2026_10_03.md):
-
-- `npm test`: 79 project suites, zero failed, plus 15 Node checks.
-- Typecheck, lint and production build passed; 125 read-only database checks passed.
-- Release/email and recovery fixtures exercised real SQL transactions with
-  injected external providers and rolled back their data. No real reboot,
-  notification send or customer PR merge occurred in these checks.
-- Windows Application Control blocked the Go dispatcher test executable; other
-  packages passed. All four dispatcher tests passed in isolated Linux; Go vet passed.
-- Existing dirty `ai/data` was preserved and excluded from source commits.
-
-These are prior code verification results, not tests rerun by this documentation
-update. Authenticated deployed browser flows and real provider delivery remain
-unverified. Earlier dated suite counts describe earlier checkpoints.
+[Migration rollout](verification/MIGRATIONS_2026_10_07.md): both outstanding
+migrations applied, post-apply dry run empty, database boundary checks passed
+with zero failures. This documentation refresh did not rerun application suites.
 
 ## Providers and rollout
 

@@ -2,9 +2,9 @@ name: Ryvix CI - Continuous Integration & Quality Gateway
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, Testing_branch ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, Testing_branch ]
 
 jobs:
   lint-and-typecheck:
@@ -14,10 +14,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js Runtime (v20 LTS)
+      - name: Setup Node.js Runtime (v22 LTS)
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: Install Monorepo Dependencies
@@ -40,17 +40,23 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js Runtime (v20 LTS)
+      - name: Setup Node.js Runtime (v22 LTS)
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: Install Monorepo Dependencies
         run: npm ci
 
       - name: Execute Master Test Runner
-        run: npm test
+        run: npm run test:offline
+
+      - name: Install browser test runtime
+        run: npx playwright install --with-deps chromium
+
+      - name: Run provider-free browser fixtures
+        run: npm run test:browser
 
   ai-neural-training-and-rag:
     name: Offline Synthetic AI Regression (Not Production Training)
@@ -60,10 +66,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js Runtime (v20 LTS)
+      - name: Setup Node.js Runtime (v22 LTS)
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: Install Monorepo Dependencies
@@ -85,10 +91,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js Runtime (v20 LTS)
+      - name: Setup Node.js Runtime (v22 LTS)
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: Install Monorepo Dependencies

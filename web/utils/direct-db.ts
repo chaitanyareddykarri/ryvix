@@ -22,6 +22,8 @@ export function getDirectDbPool(): Pool {
       max: 5,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000,
+      keepAlive: true,
+      keepAliveInitialDelayMillis: 10000,
     });
 
     // CRITICAL: Suppress unhandled EventEmitter errors on idle clients.
@@ -46,6 +48,7 @@ export async function queryDirectDb<T = any>(queryText: string, params?: any[]):
     const res = await p.query(queryText, params);
     return (res.rows || []) as T[];
   } catch (err: unknown) {
+    // A disconnected write may already have committed. Never replay arbitrary SQL.
     const code = err && typeof err === 'object' && 'code' in err && typeof err.code === 'string'
       ? err.code.replace(/[^A-Z0-9_]/gi, '').slice(0, 16) : 'UNKNOWN';
     console.error('[PostgreSQL Query Failure]', { code });

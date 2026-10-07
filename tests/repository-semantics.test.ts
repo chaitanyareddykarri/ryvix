@@ -11,6 +11,8 @@ export async function testRepositorySemantics(){
       {path:'b.ts',content:'OTHER TENANT',repository_id:'other',commit_sha:'other',embedding_model:null,embedding:null}];
     let revoked=false,snapshots=0;
     const pool={query:async(sql:string,args:any[])=>{
+      if(sql.includes('INSERT INTO model_usage_attempts')){assert.equal(args[1],'authorized-org');assert.equal(args[2],'authorized-user');return {rows:[{id:args[3]}]};}
+      if(sql.includes('UPDATE model_usage_attempts'))return {rows:[]};
       assert.equal(args[0],'authorized-org');assert.equal(args[1],'authorized-user');
       assert.ok(sql.includes('m.user_id=$2'));assert.ok(sql.includes('p.organization_id=$1'));
       if(sql.includes('ts_headline'))return {rows:[{path:'lexical.ts'}]};

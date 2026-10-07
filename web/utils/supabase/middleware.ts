@@ -53,20 +53,31 @@ export const updateSession = async (request: NextRequest) => {
       pathname === "/" ||
       pathname.startsWith("/login") || 
       pathname.startsWith("/auth/reset-password") ||
+      pathname === "/auth/callback" ||
+      pathname === "/auth/error" ||
       isApiRoute;
+
+    const redirectWithSession = (url: URL) => {
+      const response = NextResponse.redirect(url);
+      for (const cookie of supabaseResponse.cookies.getAll()) response.cookies.set(cookie);
+      response.headers.set("Cache-Control", "no-store");
+      return response;
+    };
 
     // If user is authenticated and attempts to access /login, redirect to /dashboard
     if (user && pathname.startsWith("/login")) {
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";
-      return NextResponse.redirect(url);
+      url.search = "";
+      return redirectWithSession(url);
     }
 
     // If user is unauthenticated and attempts to access protected routes, redirect to /login
     if (!user && !isPublicRoute) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
-      return NextResponse.redirect(url);
+      url.search = "";
+      return redirectWithSession(url);
     }
 
     return supabaseResponse;

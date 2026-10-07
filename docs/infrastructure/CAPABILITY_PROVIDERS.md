@@ -1,5 +1,20 @@
 # Provider setup through the October 5 follow-up
 
+## Google login — after deployment
+
+User deferred activation to the real-provider phase. Code is implemented; follow
+[Google login setup](../integrations/GOOGLE_LOGIN.md) after domain/HTTPS deployment.
+Point the domain's DNS at the server public IP; use the HTTPS domain for the
+application origin and `RYVIX_PUBLIC_URL`. Google web OAuth origins/redirects do
+not accept raw public IP hosts (localhost is an exception). In this architecture,
+Google redirects to the Supabase Auth hostname; Supabase then redirects to the
+Ryvix `/auth/callback` on its configured domain.
+
+Pending: Google credentials/consent audience, Supabase provider activation and
+redirect allowlist, then real account chooser, identity linking, session, workspace
+provisioning and mobile acceptance. Email/password login remains available.
+See [Google URI rules](https://developers.google.com/identity/protocols/oauth2/web-server#uri-validation).
+
 Application OTP, security alerts and deployment mail continue to use your Gmail
 SMTP configuration. Resend is not required. Existing external LLM credentials can
 be reused when mounted into the web and appropriate worker processes.
@@ -64,8 +79,10 @@ cache usage is reported. Monetary results are **configured-rate estimates**.
 Streaming attempts in web chat, WhatsApp and Gmail drafting now persist starts and
 completion/failure/cancellation independently, including fallbacks. `/usage` displays
 the current user's last 100 attempts. Partial provider counts are explicitly partial;
-a start without completion is an unknown outcome. Non-stream/embedding attempt
-coverage, provider invoices and account-wide billing remain incomplete.
+a start without completion is an unknown outcome. Coding, repository embeddings
+and chat reranking are also accounted after migration `20261005000004` (applied
+October 6). Production calls without a backend accounting observer fail closed.
+Provider invoices and account-wide billing remain incomplete.
 No fixed pricing or free-tier promise is made.
 
 ## Optional P1 transports

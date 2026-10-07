@@ -357,9 +357,9 @@ export default function WebChatPage() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "#090d16", color: "#f8fafc", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
+    <div className="chat-shell" style={{ display: "flex", flexDirection: "column", height: "100dvh", background: "#090d16", color: "#f8fafc", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
       {/* 1. Header Bar */}
-      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem 1.5rem", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", background: "rgba(15, 23, 42, 0.8)", backdropFilter: "blur(12px)", zIndex: 20 }}>
+      <header className="chat-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem 1.5rem", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", background: "rgba(15, 23, 42, 0.8)", backdropFilter: "blur(12px)", zIndex: 20 }}>
         <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
           <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <span style={{ fontSize: "1.3rem", fontWeight: 800, letterSpacing: "-0.03em", color: "#fff" }}>
@@ -398,7 +398,7 @@ export default function WebChatPage() {
           <div style={{ height: "18px", width: "1px", background: "rgba(255, 255, 255, 0.15)" }} />
 
           {/* Nav Links */}
-          <div style={{ display: "flex", gap: "0.5rem" }}>
+          <nav className="chat-navigation" aria-label="Chat navigation" style={{ display: "flex", gap: "0.5rem" }}>
             <Link href="/channels">Inbox</Link>
             <Link href="/learning">Learning</Link>
             <Link href="/usage">AI usage</Link>
@@ -427,12 +427,12 @@ export default function WebChatPage() {
             <Link href="/tasks" style={{ padding: "0.3rem 0.75rem", borderRadius: "6px", fontSize: "0.8rem", color: "#cbd5e1", textDecoration: "none", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }}>
               📋 Tasks &amp; PRs
             </Link>
-          </div>
+          </nav>
         </div>
       </header>
 
       {/* 2. Main Dual-Pane Workspace */}
-      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+      <div className="chat-workspace" style={{ display: "flex", flex: 1, minHeight:0, overflow: "hidden" }}>
         {/* Left Pane: Conversation Thread & Thought Stream */}
         <section style={{ flex: 1, display: "flex", flexDirection: "column", borderRight: activeDiff ? "1px solid rgba(255,255,255,0.08)" : "none", overflow: "hidden" }}>
           
@@ -634,7 +634,7 @@ export default function WebChatPage() {
 
           {/* Starter Prompt Chips (shown if messages <= 2) */}
           {messages.length <= 2 && (
-            <div style={{ padding: "0 1.5rem 1rem", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "0.75rem" }}>
+            <div style={{ padding: "0 1.5rem 1rem", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))", gap: "0.75rem" }}>
               {STARTER_PROMPTS.map((sp, idx) => (
                 <div
                   key={idx}
