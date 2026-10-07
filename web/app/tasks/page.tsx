@@ -152,7 +152,7 @@ export default function TasksPage() {
       {/* Header Bar */}
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2.5rem", flexWrap: "wrap", gap: "1rem" }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
             <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
               <h1 style={{ fontSize: "1.8rem", fontWeight: 700, letterSpacing: "-0.03em" }}>
                 RY<span className="gradient-text">VIX</span>
@@ -167,20 +167,20 @@ export default function TasksPage() {
           </p>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap", minWidth: 0, overflowWrap: "anywhere" }}>
           {userEmail && (
             <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
               {userEmail}
             </span>
           )}
-          <Link href="/" className="btn-secondary" style={{ padding: "0.4rem 0.9rem", fontSize: "0.82rem", textDecoration: "none" }}>
+          <Link href="/dashboard" className="btn-secondary" style={{ padding: "0.4rem 0.9rem", fontSize: "0.82rem", textDecoration: "none" }}>
             Return to Dashboard
           </Link>
         </div>
       </header>
 
       {/* Main Coding Workspace Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "2rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: "2rem" }}>
         {/* Prompt Input Panel */}
         <div className="glass-panel glow-indigo" style={{ padding: "2rem" }}>
           <h2 style={{ fontSize: "1.2rem", fontWeight: 600, marginBottom: "0.5rem" }}>
@@ -191,7 +191,7 @@ export default function TasksPage() {
           </p>
 
           <form onSubmit={handleSubmitPrompt} style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-            <select required value={repositoryId} onChange={event => setRepositoryId(event.target.value)} disabled={loading} aria-label="Repository">
+            <select required value={repositoryId} onChange={event => setRepositoryId(event.target.value)} disabled={loading} aria-label="Repository" style={{ minWidth: 0, maxWidth: "100%" }}>
               <option value="">Select a connected repository</option>
               {connectedRepos.map(repo => <option key={repo.id} value={repo.id}>{repo.full_name}</option>)}
             </select>
@@ -203,14 +203,14 @@ export default function TasksPage() {
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="e.g. Build a dark mode toggle button on the top navigation bar..."
               className="input-field"
-              style={{ flex: "1 1 300px" }}
+              style={{ flex: "1 1 300px", minWidth: 0, maxWidth: "100%" }}
               disabled={loading}
             />
             <button
               type="submit"
               disabled={loading || !prompt.trim()}
               className="btn-primary"
-              style={{ width: "auto", padding: "0.85rem 1.8rem" }}
+              style={{ width: "auto", maxWidth: "100%", whiteSpace: "normal", padding: "0.85rem 1.8rem" }}
             >
               {loading ? (
                 <>

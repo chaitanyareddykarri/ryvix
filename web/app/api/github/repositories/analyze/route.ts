@@ -5,7 +5,7 @@ import { requireTenant, RequestError } from '@/utils/tenant-context';
 
 export const dynamic = "force-dynamic";
 
-async function handleAnalysis(owner: string | null, repo: string | null, requestedBranch: string | null) {
+async function handleAnalysis(owner: string | null, repo: string | null, requestedBranch: string | null, requestSignal: AbortSignal) {
   try { await requireTenant(); } catch (error) {
     return NextResponse.json({ success: false, error: 'Authentication or organization access required.' },
       { status: error instanceof RequestError ? error.status : 503 });
@@ -30,11 +30,15 @@ async function handleAnalysis(owner: string | null, repo: string | null, request
     );
   }
 
+  // One deadline bounds the entire provider inspection, including body reads.
+  const timeout = AbortSignal.timeout(15000);
+  const signal = AbortSignal.any([requestSignal, timeout]);
   try {
     let defaultBranch = requestedBranch;
     const repoInfoRes = await fetch(
       `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`,
       {
+        signal,
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: "application/vnd.github.v3+json",
@@ -77,6 +81,7 @@ async function handleAnalysis(owner: string | null, repo: string | null, request
     const treeRes = await fetch(
       `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/trees/${encodeURIComponent(defaultBranch!)}?recursive=1`,
       {
+        signal,
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: "application/vnd.github.v3+json",
@@ -98,6 +103,7 @@ async function handleAnalysis(owner: string | null, repo: string | null, request
       const contentsRes = await fetch(
         `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents`,
         {
+          signal,
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: "application/vnd.github.v3+json",
@@ -123,6 +129,7 @@ async function handleAnalysis(owner: string | null, repo: string | null, request
           const rawRes = await fetch(
             `https://raw.githubusercontent.com/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/${encodeURIComponent(defaultBranch!)}/${foundPath}`,
             {
+              signal,
               headers: {
                 Authorization: `Bearer ${token}`,
                 "User-Agent": "Ryvix-Platform",
@@ -136,6 +143,7 @@ async function handleAnalysis(owner: string | null, repo: string | null, request
             }
           }
         } catch {
+          signal.throwIfAborted();
           // silently continue
         }
       }
@@ -158,6 +166,9 @@ async function handleAnalysis(owner: string | null, repo: string | null, request
       analysis,
     });
   } catch (err: any) {
+    if (signal.aborted) return NextResponse.json({success:false,error:timeout.aborted
+      ? "Repository inspection timed out. Please try again."
+      : "Repository inspection was cancelled."},{status:timeout.aborted?504:408});
     console.error("[Repository Analyze Error]: repository inspection failed");
     return NextResponse.json(
       {
@@ -174,13 +185,13 @@ export async function GET(request: Request) {
   const owner = searchParams.get("owner");
   const repo = searchParams.get("repo");
   const branch = searchParams.get("branch");
-  return handleAnalysis(owner, repo, branch);
+  return handleAnalysis(owner, repo, branch, request.signal);
 }
 
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
-    return handleAnalysis(body.owner || null, body.repo || null, body.branch || null);
+    return handleAnalysis(body.owner || null, body.repo || null, body.branch || null, request.signal);
   } catch {
     return NextResponse.json({ success: false, error: "Invalid repository analysis request." }, { status: 400 });
   }

@@ -1,12 +1,11 @@
-import {Pool} from 'pg';
+import {createWorkerPool} from './worker-database';
 import {CloudRecoveryStore} from '../backend/src/services/cloud-recovery-store';
 import {WhatsAppOutbox} from '../backend/src/services/whatsapp-outbox';
 import {EmailNotifications} from '../backend/src/services/email-notifications';
 import {IncidentNotifications} from '../backend/src/services/incident-notifications';
 
 async function main(){
-  const url=new URL(process.env.DATABASE_URL!);for(const key of ['sslmode','sslcert','sslkey','sslrootcert'])url.searchParams.delete(key);
-  const pool=new Pool({connectionString:url.toString(),max:3,connectionTimeoutMillis:10000,ssl:{rejectUnauthorized:true,ca:process.env.DATABASE_CA_CERT}});
+  const pool=createWorkerPool('Operations',3);
   let stopped=false;const stop=()=>{stopped=true;};process.on('SIGTERM',stop);process.on('SIGINT',stop);
   const cloud=new CloudRecoveryStore(pool),alerts=new WhatsAppOutbox(pool),email=new EmailNotifications(pool);
   const notifications=new IncidentNotifications(pool);

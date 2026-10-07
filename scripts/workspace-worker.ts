@@ -1,4 +1,4 @@
-import { Pool } from 'pg';
+import {createWorkerPool} from './worker-database';
 import { RepositoryJobStore } from '../backend/src/services/repository-job-store';
 import { serveRepositoryWorker } from '../services/src/workspace/repository-worker';
 import { verifyWorkerDocker } from '../services/src/workspace/worker-preflight';
@@ -8,11 +8,7 @@ async function main() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL required');
   const {hostId}=workerHostConfiguration();
   await verifyWorkerDocker();
-  const url = new URL(process.env.DATABASE_URL);
-  for (const name of ['sslmode','sslcert','sslkey','sslrootcert']) url.searchParams.delete(name);
-  const pool = new Pool({ connectionString: url.toString(), max: 5, connectionTimeoutMillis: 10000,
-    ssl: { rejectUnauthorized: true, ...(process.env.DATABASE_CA_CERT ? { ca: process.env.DATABASE_CA_CERT } : {}) } });
-  pool.on('error', () => console.error('Workspace worker database connection unavailable.'));
+  const pool=createWorkerPool('Workspace',5);
   const controller = new AbortController();
   process.once('SIGINT', () => controller.abort());
   process.once('SIGTERM', () => controller.abort());

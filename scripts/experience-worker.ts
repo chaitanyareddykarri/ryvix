@@ -1,12 +1,10 @@
-import {Pool} from 'pg';
+import {createWorkerPool} from './worker-database';
 import {ExperienceCollector} from '../backend/src/services/experience-collector';
 import {RepositoryKnowledge} from '../backend/src/services/repository-knowledge';
 async function main(){
   const collect=process.env.RYVIX_EXPERIENCE_COLLECTION_ENABLED==='true',index=process.env.RYVIX_REPOSITORY_KNOWLEDGE_ENABLED==='true';
   if(!collect&&!index)throw new Error('Experience worker is not enabled');
-  const url=new URL(process.env.DATABASE_URL!);for(const k of ['sslmode','sslcert','sslkey','sslrootcert'])url.searchParams.delete(k);
-  const pool=new Pool({connectionString:url.toString(),max:2,connectionTimeoutMillis:10000,ssl:{rejectUnauthorized:true,ca:process.env.DATABASE_CA_CERT}});
-  pool.on('error',()=>console.error('Experience database connection unavailable.'));
+  const pool=createWorkerPool('Experience',2);
   const abort=new AbortController();process.once('SIGTERM',()=>abort.abort());process.once('SIGINT',()=>abort.abort());
   const worker=new ExperienceCollector(pool);
   try{do{

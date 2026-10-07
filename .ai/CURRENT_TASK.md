@@ -1,5 +1,10 @@
 # Current Task & Implementation State
 
+Latest [worker/HTTP/CI follow-up](../docs/verification/WORKER_HTTP_CI_2026_10_07.md) centralizes safe worker pools,
+bounds repository inspection and fixes the Linux 320px Tasks overflow.
+Testing-branch CI verification precedes main promotion. Missing infrastructure
+and provider configuration remain separate external requirements.
+
 ## Publication handoff - October 7, 2026
 
 User authorized synchronizing source to `main` and `Testing_branch`. Fresh checks

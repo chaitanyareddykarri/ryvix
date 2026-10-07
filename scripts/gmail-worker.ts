@@ -1,15 +1,11 @@
-import {Pool} from 'pg';
+import {createWorkerPool} from './worker-database';
 import {scheduledGmailIds} from '../backend/src/services/gmail-scheduler';
 import {gmailWorkerCycle} from '../backend/src/services/gmail-maintenance';
 
 async function main(){
   if(process.env.RYVIX_GMAIL_POLL_ENABLED!=='true')throw new Error('Gmail polling disabled');
   const ids=scheduledGmailIds(process.env.RYVIX_GMAIL_POLL_CONNECTORS||'');
-  const url=new URL(process.env.DATABASE_URL!);
-  for(const key of ['sslmode','sslcert','sslkey','sslrootcert'])url.searchParams.delete(key);
-  const pool=new Pool({connectionString:url.toString(),max:3,connectionTimeoutMillis:10000,
-    statement_timeout:15000,ssl:{rejectUnauthorized:true,ca:process.env.DATABASE_CA_CERT}});
-  pool.on('error',()=>console.error('Gmail worker database unavailable.'));
+  const pool=createWorkerPool('Gmail',3,15000);
   const stop=new AbortController();process.once('SIGINT',()=>stop.abort());process.once('SIGTERM',()=>stop.abort());
   let nextPeriodic=0;
   try {do{

@@ -1,5 +1,10 @@
 # Pending work - October 7, 2026
 
+Latest [worker/HTTP/CI follow-up](verification/WORKER_HTTP_CI_2026_10_07.md) centralizes safe worker pools,
+bounds repository inspection and fixes the Linux 320px Tasks overflow.
+Testing-branch CI verification precedes main promotion. Missing infrastructure
+and provider configuration remain separate external requirements.
+
 Latest [pre-publish cross-check](verification/PREPUBLISH_2026_10_07.md) corrects
 remaining approval/preview evidence labels and updates vulnerable sharp. Five
 unpatched development-chain audit findings and missing runtime/provider settings
