@@ -1,0 +1,8 @@
+[Unit]
+Description=Ryvix explicitly selected background workers
+Documentation=file:/opt/ryvix/current/docs/infrastructure/WORKER_OPERATIONS.md
+After=network-online.target
+Wants=network-online.target
+
+[Install]
+WantedBy=multi-user.target

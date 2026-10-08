@@ -1,4 +1,5 @@
 [Unit]
+PartOf=ryvix-workers.target
 Description=Ryvix bounded experience collection and observation-only classifier
 After=network-online.target
 Wants=network-online.target

@@ -35,6 +35,21 @@ test('worker pools handle idle errors, preserve TLS and never retry queries',asy
  }
 });
 
+test('worker pool caps reject starvation and session workers reject transaction endpoints',()=>{
+ let options;
+ const env={DATABASE_URL:'postgresql://fixture@localhost:5432/fixture',RYVIX_WORKER_POOL_MAX:'2'};
+ const {createWorkerPool}=load('scripts/worker-database.ts',()=>({Pool:class extends EventEmitter{
+  constructor(config){super();options=config;}
+ }}),{process:{env},console:{error(){}}});
+ createWorkerPool('Workspace',5,undefined,true);assert.equal(options.max,2);
+ for(const value of ['0','1','-2','2.5','6','abc','']){
+  env.RYVIX_WORKER_POOL_MAX=value;assert.throws(()=>createWorkerPool('Workspace',5),/POOL_MAX/);
+ }
+ env.RYVIX_WORKER_POOL_MAX='2';env.DATABASE_URL='postgresql://fixture@localhost:6543/fixture';
+ assert.throws(()=>createWorkerPool('Workspace',5,undefined,true),/session-mode/);
+ assert.throws(()=>createWorkerPool('Gmail',3,15000,true),/session-mode/);
+});
+
 function analysisFixture(hangAt,cancel=false){
  const timeout=new AbortController(),caller=new AbortController();let calls=0;const signals=[];
  const require=name=>{

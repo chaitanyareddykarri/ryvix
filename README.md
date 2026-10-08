@@ -43,6 +43,10 @@ remaining live acceptance. Provider delivery and model quality are not certified
 
 ## Development and verification
 
+For one sequential local check command, run `npm run verify:all`; inspect its
+scope with `npm run verify:all -- --list`. See the [scripts guide](docs/SCRIPTS_GUIDE.md)
+and [worker operations plan](docs/infrastructure/WORKER_OPERATIONS.md).
+
 Read [AGENTS.md](AGENTS.md) and its linked instructions before changes. Install
 workspace dependencies with `npm ci`; configure ignored environment files using
 [the provider plan](docs/infrastructure/PRODUCTION_PROVIDER_PLAN.md). Secrets must

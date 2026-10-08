@@ -1,5 +1,17 @@
 # Ryvix Current Project Context
 
+October 8 dependency follow-up: [current audit](../docs/verification/DEPENDENCIES_2026_10_08.md). Next patched to
+15.5.27; missing runtime/development declarations corrected; unused web artifact
+writer removed. Production audit is clean; five development-chain findings remain.
+Publication target: Testing_branch. Promotion to main is a separate manual step.
+
+October 8 operations cleanup: [scripts guide](../docs/SCRIPTS_GUIDE.md) and
+[worker plan](../docs/infrastructure/WORKER_OPERATIONS.md). Added sequential
+verify:all, bounded per-worker pool caps and optional systemd grouping. Kept
+separate worker processes/session locks; unified-daemon RAM/free-tier guarantees
+were unsupported. SMTP remains in services; duplicate web declarations removed.
+Host deployment and representative resource measurements remain pending.
+
 Latest [worker/HTTP/CI follow-up](../docs/verification/WORKER_HTTP_CI_2026_10_07.md) centralizes safe worker pools,
 bounds repository inspection and fixes the Linux 320px Tasks overflow.
 Testing-branch CI verification precedes main promotion. Missing infrastructure

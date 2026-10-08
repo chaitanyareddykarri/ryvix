@@ -1,5 +1,8 @@
 # Repository worker deployment
 
+See [worker operations and resource budgets](WORKER_OPERATIONS.md) for optional
+systemd grouping, per-worker pool caps and the direct/session connection requirement.
+
 ## Implementation status - October 7, 2026
 
 Hosted migrations are applied through `20261007000001`; no numbered migrations

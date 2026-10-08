@@ -5,7 +5,7 @@ import {gmailWorkerCycle} from '../backend/src/services/gmail-maintenance';
 async function main(){
   if(process.env.RYVIX_GMAIL_POLL_ENABLED!=='true')throw new Error('Gmail polling disabled');
   const ids=scheduledGmailIds(process.env.RYVIX_GMAIL_POLL_CONNECTORS||'');
-  const pool=createWorkerPool('Gmail',3,15000);
+  const pool=createWorkerPool('Gmail',3,15000,true);
   const stop=new AbortController();process.once('SIGINT',()=>stop.abort());process.once('SIGTERM',()=>stop.abort());
   let nextPeriodic=0;
   try {do{

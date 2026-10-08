@@ -8,7 +8,7 @@ async function main() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL required');
   const {hostId}=workerHostConfiguration();
   await verifyWorkerDocker();
-  const pool=createWorkerPool('Workspace',5);
+  const pool=createWorkerPool('Workspace',5,undefined,true);
   const controller = new AbortController();
   process.once('SIGINT', () => controller.abort());
   process.once('SIGTERM', () => controller.abort());

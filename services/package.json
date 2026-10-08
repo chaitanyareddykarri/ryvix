@@ -10,7 +10,8 @@
   "dependencies": {
     "@aws-sdk/client-ec2": "^3.1141.0",
     "@ryvix/database": "*",
-    "nodemailer": "^10.0.13"
+    "nodemailer": "^10.0.13",
+    "@ryvix/ai": "*"
   },
   "devDependencies": {
     "@types/node": "^22.13.4",

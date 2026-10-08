@@ -1,4 +1,5 @@
 [Unit]
+PartOf=ryvix-workers.target
 Description=Ryvix opted-in Gmail inbox polling
 After=network-online.target
 Wants=network-online.target

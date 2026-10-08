@@ -1,5 +1,10 @@
 # Ryvix development guide
 
+Use `npm run verify:all` for sequential local checks. Hosted read-only checks are
+explicit options; migrations, destructive utilities and live fixture probes are
+excluded. See [scripts guide](../docs/SCRIPTS_GUIDE.md) and
+[worker operations](../docs/infrastructure/WORKER_OPERATIONS.md).
+
 Use npm workspaces and the repository lockfile. Production worker scripts use
 Node's `--env-file-if-exists`; use the Node 22 environment used by verification.
 Install dependencies with `npm ci`. Docker is for isolated customer coding
