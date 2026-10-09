@@ -20,5 +20,8 @@ test('Next lint root discovery preserves directory glob and Windows path behavio
   assert.deepEqual(discover([`${normalized}/web`,`${normalized}/admin`,null]),[`${normalized}/admin`,`${normalized}/web`]);
   assert.deepEqual(discover(`${normalized}/missing/*`),[]);
   assert.deepEqual(discover(`${normalized}/web`.replaceAll('/','\\')),[`${normalized}/web`]);
+  mkdirSync(join(root,'web','nested'));
+  assert.deepEqual(discover(`${normalized}/web`),[`${normalized}/web`],'Literal root must not expand into descendant directories');
+  assert.throws(()=>discover(`${normalized}/`+'{'.repeat(100)+'x'+'}'.repeat(100)),/nesting/);
  }finally{rmSync(root,{recursive:true,force:true});}
 });

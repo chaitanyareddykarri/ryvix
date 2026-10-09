@@ -115,6 +115,9 @@ export async function ingestDevice(body: Buffer, headers: Headers) {
       last_sample_at=greatest(telemetry_metric_rollups.last_sample_at,EXCLUDED.last_sample_at)`,
     [sample.serverId, sample.timestamp, sample.cpu, sample.memoryMb, sample.memory, sample.disk]);
     await client.query('UPDATE connectors SET last_heartbeat_at=now(),updated_at=now() WHERE id=$1', [connector.id]);
+    for(const item of sample.inventory)await client.query(`INSERT INTO services_inventory(server_id,service_name,unit_type,status,last_seen_at)
+      VALUES($1,$2,$3,$4,$5) ON CONFLICT(server_id,service_name,unit_type) DO UPDATE SET status=EXCLUDED.status,last_seen_at=EXCLUDED.last_seen_at
+      WHERE services_inventory.last_seen_at<=EXCLUDED.last_seen_at`,[sample.serverId,item.name,item.type,item.status,sample.timestamp]);
     await client.query(`UPDATE servers SET status=$2,updated_at=$3 WHERE id=$1 AND updated_at<=$3`,
       [sample.serverId, Math.max(sample.cpu, sample.memory, sample.disk) >= 95 ? 'critical'
         : Math.max(sample.cpu, sample.memory, sample.disk) >= 85 ? 'warning' : 'healthy', sample.timestamp]);

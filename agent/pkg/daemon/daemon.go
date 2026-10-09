@@ -10,8 +10,10 @@ import (
 	"github.com/ryvix/agent/pkg/commands"
 	"github.com/ryvix/agent/pkg/container"
 	"github.com/ryvix/agent/pkg/dispatcher"
+	"github.com/ryvix/agent/pkg/hostlogs"
 	"github.com/ryvix/agent/pkg/systemd"
 	"github.com/ryvix/agent/pkg/telemetry"
+	"strings"
 )
 
 type Config struct {
@@ -138,5 +140,24 @@ func (a *AgentDaemon) tick() bool {
 		}
 	}
 
+	if configured := os.Getenv("RYVIX_LOG_UNITS"); configured != "" {
+		units := strings.Split(configured, ",")
+		if len(units) > 4 {
+			log.Print("Log collection supports at most four units")
+		} else {
+			for _, unit := range units {
+				entries, err := hostlogs.Collect(strings.TrimSpace(unit))
+				if err != nil {
+					log.Print("Journal collection unavailable; check unit allowlist and read permissions")
+					continue
+				}
+				if len(entries) > 0 {
+					if _, err = a.dispatcher.SendLogs(a.config.ServerID, entries); err != nil {
+						log.Print("Log forwarding unavailable; bounded journal window will be retried")
+					}
+				}
+			}
+		}
+	}
 	return true
 }

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import {ModelQuotaError} from '../../../ai/src/model-capacity';
 import { RepositoryJobStore } from '../../../backend/src/services/repository-job-store';
 import { dockerWorkspaceManager } from './docker-workspace.manager';
 import { executeRepositoryTask } from './repository-task';
@@ -36,9 +37,12 @@ export async function runRepositoryJob(store: RepositoryJobStore, workerId: stri
     });
     if (lostLease) throw new Error('Worker lease lost');
     await store.complete(job,workerId,result);
-  } catch {
-    if (sessionId) await dockerWorkspaceManager.terminateSession(sessionId).catch(() => {});
-    await store.fail(job,workerId);
+  } catch (error) {
+    let cleaned=true;
+    if (sessionId) try {await dockerWorkspaceManager.terminateSession(sessionId);await store.markDestroyed(sessionId);}catch{cleaned=false;}
+    const deferred=error instanceof ModelQuotaError&&!lostLease&&cleaned
+      ? await store.deferQuota(job,workerId,error.retryAt).catch(()=>false):false;
+    if(!deferred)await store.fail(job,workerId);
   } finally { clearInterval(heartbeat); }
   return true;
 }

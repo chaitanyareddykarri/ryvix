@@ -6,6 +6,7 @@ COPY ai/package.json ai/package.json
 COPY backend/package.json backend/package.json
 COPY services/package.json services/package.json
 COPY packages/database/package.json packages/database/package.json
+COPY tools/next-root-glob tools/next-root-glob
 RUN npm ci
 COPY . .
 RUN mkdir -p ai/data

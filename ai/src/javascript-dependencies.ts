@@ -33,8 +33,17 @@ export function javascriptReferences(file:Source,files:Source[]):string[]{
     }
   }
   const references:string[]=[];
+  // Compiler module resolution uses only the supplied snapshot: never host disk,
+  // installed customer packages, plugins or executable configuration.
+  const snapshot=new Map(files.slice(0,2000).filter(f=>!f.path.startsWith('/')&&!f.path.includes('\\')&&!f.path.split('/').includes('..')).map(f=>['/'+f.path,f.content]));
+  const directories=new Set<string>(['/']);
+  for(const path of snapshot.keys()){let directory=posix.dirname(path);while(directory!=='/'){directories.add(directory);directory=posix.dirname(directory);}}
+  const host:ts.ModuleResolutionHost={fileExists:path=>snapshot.has(posix.normalize(path)),readFile:path=>snapshot.get(posix.normalize(path)),
+    directoryExists:path=>directories.has(posix.normalize(path)),getCurrentDirectory:()=>'/'};
   for(const specifier of imports){
     if(specifier.length>512)continue;
+    const resolved=ts.resolveModuleName(specifier,'/'+file.path,{module:ts.ModuleKind.ESNext,moduleResolution:ts.ModuleResolutionKind.Bundler,allowJs:true,...options},host).resolvedModule;
+    if(resolved&&snapshot.has(resolved.resolvedFileName)){references.push(resolved.resolvedFileName);continue;}
     if(specifier.startsWith('.')){references.push(specifier);continue;}
     if(!options||specifier.length>512||specifier.includes('\\')||specifier.startsWith('/'))continue;
     const base='.';

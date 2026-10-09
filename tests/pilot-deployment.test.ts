@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {workspaceCapacity} from '../services/src/workspace/host-budget';
 import {ModelGateway} from '../ai/src/model-gateway';
+import {ModelQuotaError} from '../ai/src/model-capacity';
 
 test('approved Gemini to Groq fallback preserves context and accounts for both attempts',async()=>{
   const saved={...process.env}, original=globalThis.fetch;
@@ -21,7 +22,7 @@ test('approved Gemini to Groq fallback preserves context and accounts for both a
     let output='';for await(const chunk of new ModelGateway().stream(messages,{onAttempt:()=>{}}))output+=chunk;
     assert.equal(output,'backup answer');assert.equal(calls.length,4);
     globalThis.fetch=async()=>new Response('',{status:429});
-    await assert.rejects(new ModelGateway().complete(messages,{onAttempt:()=>{}}),/No AI provider/);
+    await assert.rejects(new ModelGateway().complete(messages,{onAttempt:()=>{}}),error=>error instanceof ModelQuotaError&&error.retryAt>Date.now());
     process.env.RYVIX_MODEL_FALLBACK_ORDER='gemini,groq,groq';
     await assert.rejects(new ModelGateway().complete(messages,{onAttempt:()=>{}}),/Invalid model/);
   } finally {globalThis.fetch=original;for(const k of Object.keys(process.env))if(!(k in saved))delete process.env[k];Object.assign(process.env,saved);}

@@ -14,6 +14,9 @@ export async function testDeviceProtocol() {
     'x-ryvix-signature': sign(null, signingMessage(raw, String(now), nonce), privateKey).toString('base64') });
   assert.equal(verifyDeviceRequest(raw, headers, encoded, now), nonce);
   assert.equal(measuredTelemetry(raw, now).cpu, 0);
+  const inventory=measuredTelemetry(Buffer.from(JSON.stringify({...payload,services:[{name:'nginx',status:'active'}],containers:[{id:'abc123',status:'running'}]})),now).inventory;
+  assert.deepEqual(inventory,[{name:'nginx',type:'systemd',status:'active'},{name:'abc123',type:'docker_container',status:'active'}]);
+  assert.throws(()=>measuredTelemetry(Buffer.from(JSON.stringify({...payload,services:[{name:'../../bad',status:'active'}]})),now));
   assert.throws(() => verifyDeviceRequest(Buffer.from('{}'), headers, encoded, now));
   assert.throws(() => verifyDeviceRequest(raw, headers, encoded, now + 120001));
   assert.throws(() => devicePublicKey('invalid'));

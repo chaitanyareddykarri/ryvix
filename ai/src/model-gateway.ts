@@ -1,5 +1,5 @@
-import * as fs from 'fs';
-import * as path from 'path';
+import {compactMessages} from './context/message-budget';
+import {ModelQuotaError} from './model-capacity';
 import { streamProvider } from './provider-stream';
 import type {TokenUsage} from './token-usage';
 import {tokenCount} from './token-usage';
@@ -74,6 +74,7 @@ export class ModelGateway {
   async *stream(messages: LLMMessage[], options: { maxTokens?: number; temperature?: number; signal?: AbortSignal;
     onProvider?: (provider: string, model: string) => void;onUsage?:(usage:TokenUsage&{provider:string;model:string})=>void;onAttempt?:AttemptObserver } = {}) {
     requireAttemptObserver(options.onAttempt);
+    messages=compactMessages(messages,Number(process.env.RYVIX_MODEL_CONTEXT_CHAR_BUDGET||200000));
     const signal = AbortSignal.any([AbortSignal.timeout(120000), ...(options.signal ? [options.signal] : [])]);
     for (const provider of this.selectedProviders()) {
       if (!process.env.RYVIX_MODEL_FALLBACK_ORDER?.trim() && process.env.RYVIX_CHAT_PROVIDER && provider.id !== process.env.RYVIX_CHAT_PROVIDER) continue;
@@ -110,11 +111,16 @@ export class ModelGateway {
         await options.onAttempt?.({...attempt,status:outcome,latencyMs:Math.min(300000,Math.max(0,Date.now()-started))});
       }
     }
+    this.throwIfQuotaLimited();
     throw new Error('No streaming AI provider is available. Configure a provider and retry.');
   }
 
   constructor() {
     this.initializeDefaultProviders();
+  }
+  private throwIfQuotaLimited() {
+    const selected=this.selectedProviders();
+    if(selected.length&&selected.every(p=>p.isRateLimitedUntil>Date.now()))throw new ModelQuotaError(Math.min(...selected.map(p=>p.isRateLimitedUntil)));
   }
 
   /**
@@ -122,7 +128,7 @@ export class ModelGateway {
    */
 
   /**
-   * Dynamically resolves the API key from process.env or disk files (.env / web/.env.local).
+   * Resolves credentials only from the explicit process environment loaded by the entry point.
    */
   public getApiKey(providerId: string): string | undefined {
     let key: string | undefined;
@@ -144,47 +150,6 @@ export class ModelGateway {
         break;
     }
 
-    if (!key) {
-      try {
-        const path = require('path');
-        const candidates = [
-          path.resolve(process.cwd(), '.env'),
-          path.resolve(process.cwd(), 'web/.env.local'),
-          path.resolve(process.cwd(), '../.env'),
-          path.resolve(process.cwd(), '../web/.env.local'),
-          'D:/Ryvix/.env',
-          'D:/Ryvix/web/.env.local'
-        ];
-        const keyNameMap: Record<string, string> = {
-          groq: 'GROQ_API_KEY',
-          openai: 'OPENAI_API_KEY',
-          claude: 'ANTHROPIC_API_KEY',
-          gemini: 'GEMINI_API_KEY',
-          huggingface: 'HUGGINGFACE_API_KEY'
-        };
-        const targetVar = keyNameMap[providerId];
-        if (targetVar) {
-          for (const filePath of candidates) {
-            if (fs.existsSync(filePath)) {
-              const fileContent = fs.readFileSync(filePath, 'utf8');
-              const lines = fileContent.split('\n');
-              for (const line of lines) {
-                const trimmed = line.trim();
-                if (trimmed.startsWith(targetVar + '=')) {
-                  const parsed = trimmed.slice(targetVar.length + 1).trim().replace(/^["']|["']$/g, '');
-                  if (parsed) {
-                    process.env[targetVar] = parsed;
-                    return parsed;
-                  }
-                }
-              }
-            }
-          }
-        }
-      } catch {
-        // Ignore file read error in edge environments
-      }
-    }
     return key;
   }
 
@@ -281,6 +246,7 @@ export class ModelGateway {
     }
   ): Promise<LLMCompletionResult> {
     requireAttemptObserver(options?.onAttempt);
+    messages=compactMessages(messages,Number(process.env.RYVIX_MODEL_CONTEXT_CHAR_BUDGET||200000));
     const startTime = Date.now();
     const signal = AbortSignal.any([AbortSignal.timeout(120000), ...(options?.signal ? [options.signal] : [])]);
     const failedProviders: string[] = [];
@@ -362,6 +328,7 @@ export class ModelGateway {
     // If all external API providers are exhausted or no keys are set,
     // legacy unconfigured development callers may use a deterministic fixture plan.
     const latencyMs = Date.now() - startTime;
+    this.throwIfQuotaLimited();
     if (options?.requireProvider || process.env.RYVIX_MODEL_PROVIDER || process.env.RYVIX_MODEL_FALLBACK_ORDER?.trim() || process.env.NODE_ENV==='production') throw new Error('No AI provider is available. Configure a provider and retry.');
     const userMsg = messages.find((m) => m.role === 'user')?.content || 'Autonomous Task';
     const localContent = this.generateLocalReasoning(userMsg);

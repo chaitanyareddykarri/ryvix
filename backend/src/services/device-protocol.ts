@@ -43,7 +43,23 @@ export function measuredTelemetry(body: Buffer, now = Date.now()) {
   if (typeof metrics.memoryUsedMb !== 'number' || !Number.isFinite(metrics.memoryUsedMb)
     || metrics.memoryUsedMb < 0 || metrics.memoryUsedMb > 2147483647)
     throw new DeviceError('Invalid or missing memoryUsedMb.');
-  return { serverId: payload.serverId as string, timestamp: new Date(payload.timestamp),
+  const inventory:Array<{name:string;type:string;status:string}>=[];
+  for(const [key,type] of [['services','systemd'],['containers','docker_container']]){
+    if(payload[key]===undefined||payload[key]===null)continue;
+    if(!Array.isArray(payload[key])||payload[key].length>200)throw new DeviceError('Invalid service inventory.');
+    const names=new Set<string>();
+    for(const item of payload[key]){
+      const name=key==='containers'?item?.id:item?.name;
+      if(typeof name!=='string'||!/^[a-zA-Z0-9_.@-]{1,128}$/.test(name)||names.has(name)||typeof item.status!=='string')throw new DeviceError('Invalid inventory item.');
+      names.add(name);
+      if(key==='services'&&item.status==='unknown')continue;
+      const status=key==='containers'?({running:'active',exited:'inactive',dead:'failed',restarting:'restarting',created:'inactive',paused:'inactive'} as Record<string,string>)[item.status]
+        :({activating:'restarting',deactivating:'inactive',reloading:'active'} as Record<string,string>)[item.status]||item.status;
+      if(!['active','failed','inactive','restarting'].includes(status))throw new DeviceError('Invalid inventory status.');
+      inventory.push({name,type,status});
+    }
+  }
+  return { serverId: payload.serverId as string, timestamp: new Date(payload.timestamp),inventory,
     cpu: metrics.cpuUsagePercent as number, memory: metrics.memoryUsagePercent as number,
     disk: metrics.diskUsagePercent as number, memoryMb: Math.round(metrics.memoryUsedMb) };
 }

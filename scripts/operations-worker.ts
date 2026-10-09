@@ -10,6 +10,10 @@ async function main(){
   const cloud=new CloudRecoveryStore(pool),alerts=new WhatsAppOutbox(pool),email=new EmailNotifications(pool);
   const notifications=new IncidentNotifications(pool);
   try{do{
+    if(process.env.RYVIX_HOST_LOGS_ENABLED==='true')try{
+      await pool.query(`DELETE FROM host_log_entries WHERE (server_id,event_id) IN
+        (SELECT server_id,event_id FROM host_log_entries WHERE received_at<now()-interval '7 days' LIMIT 1000)`);
+    }catch{console.error('Host log retention incomplete; check migration and database permissions.');}
     // Optional workloads are independent: a bad notification configuration must not halt recovery observation.
     if(process.env.RYVIX_CLOUD_RECOVERY_ENABLED==='true')try{await cloud.verifyPending();await cloud.dispatchOne();}catch{console.error('Cloud recovery iteration incomplete; review configuration and persisted outcomes.');}
     if(process.env.RYVIX_WHATSAPP_ALERTS_ENABLED==='true')try{await alerts.expireClaims();await alerts.reconcileReceipts();await alerts.enqueue();await alerts.dispatchOne();}catch{console.error('WhatsApp iteration incomplete; review configuration and outbox.');}

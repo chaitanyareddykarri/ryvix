@@ -6,7 +6,7 @@ import Link from "next/link";
 interface LogEntry {
   id: string;
   timestamp: string;
-  type: "AUDIT" | "SECURITY" | "HEALTH";
+  type: "AUDIT" | "SECURITY" | "HEALTH" | "HOST";
   source: string;
   severity: "info" | "warning" | "critical";
   message: string;

@@ -1,5 +1,14 @@
 # Pending work - October 9, 2026
 
+October 9 non-deployment implementation: [current evidence and remaining work](verification/NONDEPLOYMENT_2026_10_09.md).
+Bounded signed journal logs, inventory persistence, context compaction, pre-plan
+quota retries, snapshot compiler resolution and saved usage comparison are added.
+Two new migrations are rollback-tested but not applied. Reviewed datasets have
+zero approved examples; broader analysis/scanning, external training
+and concurrency acceptance remain open. The lint dependency chain is replaced;
+see current evidence for final audit results. Older statements below about
+missing quota/context functionality or zero pending migrations are superseded.
+
 ## Current follow-up
 
 Hosting selection is deferred; the Oracle sections below describe the previous
@@ -80,7 +89,7 @@ files and passing database boundary checks. See [rollout](verification/MIGRATION
 
 | Area | Remaining work |
 | --- | --- |
-| Development dependencies | October 8 audit: five high development-chain findings remain without a patched braces release; reassess a compatible patch/replacement. Next.js upgraded to 15.5.27; fresh production audit reports zero. See the dependency audit linked above. |
+| Development dependencies | October 9: scoped lint adapter removes the vulnerable chain; full npm audit reports zero and clean installation passed. Recheck the adapter contract when upgrading Next. |
 | Repository intelligence | Broader language parsers, dynamic resolution, whole-repository compiler graphs and representative retrieval evaluation; current bounded JS/TS references and supplied-config aliases are implemented. |
 | Usage/cost | Live provider reconciliation and account-wide invoice reconciliation; durable attempt accounting exists and missing counts stay unknown. |
 | Reviewed learning | Consented representative examples, independent labels, held-out evaluation, measured quality and drift monitoring; runtime memory is not model training. |
@@ -93,6 +102,7 @@ authorized by this documentation update. Preserve existing AI runtime data.
 Ordered provider fallback is implemented; see [setup](integrations/AI_PROVIDER_FALLBACK.md).
 Local keys/models are configured and individual live provider probes passed.
 Pending: recommended key rotation, deployment secrets, deployed chat/coding
-acceptance and full sandbox/PR workflow verification. Context compaction and
-durable automatic quota-wait resumption are not included. Deployment selection
-is currently deferred; older Oracle sections above are historical plans.
+acceptance and full sandbox/PR workflow verification. Bounded extractive context
+compaction and durable pre-plan quota retries are implemented and locally tested;
+the quota migration still requires application before release. Oracle execution
+is deferred while we prepare the deployment plan.

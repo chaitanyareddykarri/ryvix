@@ -3,6 +3,43 @@
 Implementation companion to [the rollout plan](ORACLE_PILOT_DEPLOYMENT.md).
 Do not enable deployment until host configuration and the native ARM CI job pass.
 
+## October 9 execution order
+
+Deployment is deferred. Use this order for the next restricted pilot; local
+verification is recorded in [the current report](../verification/NONDEPLOYMENT_2026_10_09.md).
+
+1. Review the local change set and select a release revision. Nothing from this
+   remediation batch has been committed, pushed or deployed. Finish isolated
+   concurrent invitation, environment and repository-URL acceptance before
+   enabling those mutations for pilot users.
+2. Obtain the planned Ubuntu ARM64 A1 host (2 OCPU, 12 GB). The previous Oracle
+   attempt failed with capacity unavailable; no working instance is established
+   by these checks. Confirm current account eligibility and pricing in the
+   console. Use a public subnet/public IPv4 for the selected public HTTPS design,
+   with an internet-gateway route, restricted SSH source IP and only HTTP/HTTPS
+   public ingress. Keep application and Docker control ports private.
+3. Prepare Docker, protected configuration, disk budgets and off-host backups.
+   Build release images in CI, not on the VM. Keep deployment disabled until
+   native ARM checks pass; record immutable images for all selected roles.
+4. Back up and verify the hosted database. Apply the reviewed additive migrations
+   `20261009000001_host_logs.sql` and `20261009000002_repository_quota_retry.sql`
+   through the normal migration process before starting this revision. They were
+   tested inside a rolled-back transaction, not installed persistently. Run
+   `npm run verify:database` and require a clean migration ledger.
+5. Configure app/preview DNS and TLS, Supabase redirects/SMTP, and the explicitly
+   selected model credentials in protected role-specific files. Activate only
+   the workers and integrations whose real credentials and acceptance are ready.
+   Begin with web and essential workers, one coding session and bounded previews.
+6. Release the same revision for web and selected workers. Check HTTPS health,
+   authenticated chat, tenant denial, one disposable repository workflow,
+   preview grants, agent enrollment, metrics, inventory and opt-in journal logs.
+   Verify worker restart, quota retry and matching revisions on the real host.
+7. Exercise backup restoration and application rollback, record resource usage
+   and acceptance evidence, then decide whether to admit pilot users. Defer public
+   launch if any required gate fails. Advanced training, broad scanner coverage
+   and invoice certification remain separate unfinished capabilities and must
+   not be advertised as complete.
+
 ## Images and acceptance
 
 CD builds ARM64 on `ubuntu-24.04-arm` and publishes immutable revision tags for

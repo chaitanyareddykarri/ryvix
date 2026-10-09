@@ -34,6 +34,11 @@ export async function testRepositoryJobStore() {
   assert.equal(auditArgs[1],null,'Worker claim audit must not impersonate the task creator');
   assert.equal(auditArgs[2],'system');
   mode='empty'; assert.equal(await store.claim('worker'),null);
+  mode='ok';calls.length=0;
+  assert.equal(await store.deferQuota(job,'worker',Date.now()+60000),true);
+  assert.ok(calls.some(s=>s.includes("t.status='planning'")&&s.includes('quota_retries<3')));
+  assert.ok(calls.some(s=>s.includes('available_at=$3')));
+  assert.equal(await store.deferQuota(job,'worker',Infinity),false);
   mode='ok'; calls.length=0; auditArgs=[];
   await store.markDestroyed('session');
   assert.ok(calls.some(s=>s.includes("UPDATE workspace_sessions SET status='destroyed'")),'Production cleanup persists the terminal session state');

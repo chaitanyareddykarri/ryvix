@@ -14,6 +14,12 @@ export async function GET(request: Request) {
       SELECT p.id,p.name FROM projects p JOIN organization_members m ON m.organization_id=p.organization_id
       WHERE p.organization_id=$1 AND m.user_id=$2
     ), observations AS (
+      SELECT 'host-'||l.server_id::text||'-'||l.event_id::text AS id,l.observed_at AS timestamp,'HOST' AS type,
+        host.hostname||' / '||l.source AS source,l.severity,l.message
+      FROM host_log_entries l JOIN servers host ON host.id=l.server_id
+      JOIN environments e ON e.id=host.environment_id JOIN authorized_projects p ON p.id=e.project_id
+      WHERE l.received_at>now()-interval '7 days'
+      UNION ALL
       SELECT 'audit-'||a.id::text AS id,a.timestamp,'AUDIT' AS type,p.name AS source,
         CASE WHEN a.status='success' THEN 'info' ELSE 'warning' END AS severity,
         a.action_name||' ('||a.status||')' AS message

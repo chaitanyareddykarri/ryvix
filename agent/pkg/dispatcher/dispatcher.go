@@ -54,6 +54,13 @@ func (d *Dispatcher) SendTelemetry(payload telemetry.HostTelemetryPayload) (*Tel
 
 // SendSecurityEvents forwards measured detector events under the enrolled identity.
 // Event IDs must be stable across retries; the backend deduplicates them.
+func (d *Dispatcher) SendLogs(serverID string, entries interface{}) (*TelemetryResponse, error) {
+	return d.send(struct {
+		ServerID string      `json:"serverId"`
+		Entries  interface{} `json:"entries"`
+	}{serverID, entries}, "/api/connector/logs", 131072)
+}
+
 func (d *Dispatcher) SendSecurityEvents(serverID string, events json.RawMessage) (*TelemetryResponse, error) {
 	var entries []json.RawMessage
 	if serverID == "" || json.Unmarshal(events, &entries) != nil || len(entries) == 0 || len(entries) > 20 {

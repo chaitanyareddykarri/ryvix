@@ -1,5 +1,11 @@
 # AI provider fallback
 
+October 9: gateway now bounds history extractively; pre-plan coding jobs can defer
+quota failures up to three times using migration 20261009000002. Current request
+and instructions are never truncated. Interactive streams still require retry.
+See [current evidence](../verification/NONDEPLOYMENT_2026_10_09.md); older missing
+compaction/resumption statements below describe the October 8 checkpoint.
+
 Implemented locally on Testing_branch. Following explicit user authorization,
 credentials were installed only in ignored `.env.local` and `web/.env.local`.
 Rotation remains recommended because these credentials were disclosed in chat.

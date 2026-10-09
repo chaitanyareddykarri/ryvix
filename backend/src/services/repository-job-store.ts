@@ -68,11 +68,11 @@ export class RepositoryJobStore {
         p.organization_id,r.full_name,r.default_branch FROM repository_jobs j
         JOIN tasks t ON t.id=j.task_id JOIN projects p ON p.id=t.project_id
         JOIN repositories r ON r.id=j.repository_id AND r.project_id=t.project_id
-        WHERE j.status='queued' AND t.status='queued' ORDER BY j.created_at
+        WHERE j.status='queued' AND t.status='queued' AND j.available_at<=now() ORDER BY j.created_at
         FOR UPDATE OF t,j SKIP LOCKED LIMIT 1`);
       const job = result.rows[0]; if (!job) return null;
       await client.query(`UPDATE repository_jobs SET status='running',worker_id=$2,worker_host_id=$3,lease_expires_at=now()+interval '45 seconds',updated_at=now() WHERE task_id=$1`, [job.task_id,workerId,host]);
-      await client.query("UPDATE tasks SET status='planning',updated_at=now() WHERE id=$1", [job.task_id]);
+      await client.query("UPDATE tasks SET status='planning',error_details=NULL,updated_at=now() WHERE id=$1", [job.task_id]);
       await this.audit(client,job.project_id,null,'system',job.task_id,'task.execute.requested');
       return job;
     });
@@ -82,6 +82,19 @@ export class RepositoryJobStore {
       FROM tasks t WHERE j.task_id=$1 AND j.worker_id=$2 AND j.status='running' AND j.lease_expires_at>now()
       AND t.id=j.task_id AND t.status IN ('planning','executing','verifying') RETURNING j.task_id`, [taskId,workerId]);
     return result.rowCount === 1;
+  }
+  async deferQuota(job:RepositoryJob,workerId:string,retryAt:number):Promise<boolean> {
+    if(!Number.isFinite(retryAt)||retryAt>Date.now()+86400000)return false;
+    return this.transaction(async client=>{
+      await this.lock(client,job,workerId);
+      const result=await client.query(`UPDATE repository_jobs j SET status='queued',worker_id=NULL,lease_expires_at=NULL,
+        available_at=$3,quota_retries=quota_retries+1,updated_at=now() FROM tasks t
+        WHERE j.task_id=$1 AND j.worker_id=$2 AND t.id=j.task_id AND t.status='planning' AND j.quota_retries<3 RETURNING j.task_id`,
+        [job.task_id,workerId,new Date(Math.max(Date.now()+60000,retryAt))]);
+      if(!result.rowCount)return false;
+      await client.query("UPDATE tasks SET status='queued',error_details='Waiting for model quota; automatic retry is scheduled.',updated_at=now() WHERE id=$1",[job.task_id]);
+      await this.audit(client,job.project_id,null,'system',job.task_id,'task.quota.deferred');return true;
+    });
   }
   private async lock(client: PoolClient, job: RepositoryJob, workerId: string) {
     const valid = await client.query(`SELECT t.id FROM tasks t JOIN repository_jobs j ON j.task_id=t.id

@@ -4,6 +4,12 @@ import {streamProvider} from '../ai/src/provider-stream';
 import {repositoryDependencies} from '../ai/src/repository-dependencies';
 
 export async function testCapabilityFoundations(){
+  const compilerResolved=repositoryDependencies([
+    {path:'src/main.mts',content:"export * from './feature.mjs'; const lazy=import('./lazy');"},
+    {path:'src/feature.mts',content:'export const value=1;'},
+    {path:'src/lazy/index.ts',content:'export const lazy=1;'},
+  ]);
+  assert.deepEqual(compilerResolved.map(e=>e.target).sort(),['src/feature.mts','src/lazy/index.ts']);
   const parsed=repositoryDependencies([
     {path:'tsconfig.json',content:'{"compilerOptions":{"baseUrl":".","paths":{"@/*":["src/*"]}}}'},
     {path:'src/main.ts',content:"// import './ignored';\nexport {x} from '@/feature'; const p=import('./lazy.js'); const q=import(variable);"},

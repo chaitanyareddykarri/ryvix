@@ -1,5 +1,14 @@
 # Ryvix project status
 
+October 9 non-deployment implementation: [current evidence and remaining work](verification/NONDEPLOYMENT_2026_10_09.md).
+Bounded signed journal logs, inventory persistence, context compaction, pre-plan
+quota retries, snapshot compiler resolution and saved usage comparison are added.
+Two new migrations are rollback-tested but not applied. Reviewed datasets have
+zero approved examples; broader analysis/scanning, external training
+and concurrency acceptance remain open. The lint dependency chain is replaced;
+see current evidence for final audit results. Older statements below about
+missing quota/context functionality or zero pending migrations are superseded.
+
 October 8 Oracle phase 1 implementation: [verification](verification/ORACLE_PHASE1_2026_10_08.md)
 and [release runbook](infrastructure/ORACLE_RELEASE_RUNBOOK.md). Deployment code
 is local on Testing_branch. Native CI and actual host/provider acceptance remain
