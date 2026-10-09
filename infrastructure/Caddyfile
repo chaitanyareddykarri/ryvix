@@ -1,0 +1,19 @@
+# Run standard Caddy on the host; both upstreams bind loopback. Do not enable request/access logs
+# on previews: URLs contain authorization material.
+{
+    email {$ACME_EMAIL}
+    admin localhost:2019
+}
+{$RYVIX_APP_HOST} {
+    reverse_proxy 127.0.0.1:3000 {
+        flush_interval -1
+    }
+}
+*.{$PREVIEW_BASE_DOMAIN} {
+    # Wildcard certificate provisioned/renewed by the chosen DNS-01 ACME client.
+    tls {$PREVIEW_TLS_CERT_FILE} {$PREVIEW_TLS_KEY_FILE}
+    header Referrer-Policy no-referrer
+    reverse_proxy 127.0.0.1:8081 {
+        flush_interval -1
+    }
+}

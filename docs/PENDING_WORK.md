@@ -1,4 +1,24 @@
-# Pending work - October 7, 2026
+# Pending work - October 9, 2026
+
+## Current follow-up
+
+Hosting selection is deferred; the Oracle sections below describe the previous
+plan, not a selected or deployed host. AI fallback is implemented and small live
+Gemini/Groq completion and streaming probes passed locally. Complete the
+[post-deployment checklist](infrastructure/POST_DEPLOYMENT_CHECKLIST.md) before
+claiming deployed chat or coding works. Local secrets are not published by Git.
+
+October 8 Oracle phase 1: deployment code is implemented locally; see
+[evidence](verification/ORACLE_PHASE1_2026_10_08.md). Next gates are publication
+and native ARM CI, Oracle/DNS installation, live model selection/acceptance and
+the restricted pilot checks. Use the [release runbook](infrastructure/ORACLE_RELEASE_RUNBOOK.md).
+
+Current deployment plan (October 8): [Oracle pilot rollout](infrastructure/ORACLE_PILOT_DEPLOYMENT.md).
+Oracle hosts Next.js UI/APIs and separate workers; Supabase stays hosted and
+model inference uses an external API. Finish ARM64/resource/deployment work,
+prepare accounts in parallel, then activate providers on a restricted HTTPS
+deployment before public launch. The plan records acceptance gates and does not
+claim that infrastructure or real integrations are deployed.
 
 October 8 dependency follow-up: [current audit](verification/DEPENDENCIES_2026_10_08.md). Next patched to
 15.5.27; missing runtime/development declarations corrected; unused web artifact
@@ -68,3 +88,11 @@ files and passing database boundary checks. See [rollout](verification/MIGRATION
 
 No real messages, paid training jobs, customer PR merges or recovery commands are
 authorized by this documentation update. Preserve existing AI runtime data.
+# AI provider activation follow-up
+
+Ordered provider fallback is implemented; see [setup](integrations/AI_PROVIDER_FALLBACK.md).
+Local keys/models are configured and individual live provider probes passed.
+Pending: recommended key rotation, deployment secrets, deployed chat/coding
+acceptance and full sandbox/PR workflow verification. Context compaction and
+durable automatic quota-wait resumption are not included. Deployment selection
+is currently deferred; older Oracle sections above are historical plans.

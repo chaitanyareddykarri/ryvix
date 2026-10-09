@@ -7,6 +7,36 @@ on:
     branches: [ main, Testing_branch ]
 
 jobs:
+  arm64-runtime:
+    name: Native ARM64 images and sandbox acceptance
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 40
+    env:
+      RYVIX_ARM_WEB_IMAGE: ryvix-arm-web:ci
+      RYVIX_ARM_WORKER_IMAGE: ryvix-arm-worker:ci
+      RYVIX_WORKSPACE_NODE_IMAGE: ryvix-arm-node:ci
+      RYVIX_WORKSPACE_EGRESS_IMAGE: ryvix-arm-egress:ci
+      RYVIX_WORKER_HOST_ID: arm-ci
+      RYVIX_WORKER_PREVIEW_DOMAINS: '{"arm-ci":"preview.example.test"}'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Require native ARM Docker host
+        run: test "$(docker info --format '{{.Architecture}}')" = aarch64
+      - name: Build ARM64 images
+        run: |
+          docker build --platform linux/arm64 -f infrastructure/Dockerfile -t "$RYVIX_ARM_WEB_IMAGE" --build-arg NEXT_PUBLIC_SUPABASE_URL=https://placeholder-project.supabase.co --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=public-build-placeholder .
+          docker build --platform linux/arm64 -f infrastructure/Dockerfile.workers -t "$RYVIX_ARM_WORKER_IMAGE" .
+          docker build --platform linux/arm64 -f infrastructure/workspaces/Dockerfile.node -t "$RYVIX_WORKSPACE_NODE_IMAGE" infrastructure/workspaces
+          docker build --platform linux/arm64 -f infrastructure/workspaces/Dockerfile.egress -t "$RYVIX_WORKSPACE_EGRESS_IMAGE" infrastructure/workspaces
+      - run: npm run verify:arm64
+      - name: Actual restricted sandbox, egress and preview lifecycle
+        run: npm run verify:workspace
+
   lint-and-typecheck:
     name: Monorepo Typecheck & Static Analysis
     runs-on: ubuntu-latest

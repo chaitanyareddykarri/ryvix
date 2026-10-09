@@ -1,5 +1,16 @@
 # Ryvix provider and deployment plan
 
+Current deployment plan (October 8): [Oracle pilot rollout](ORACLE_PILOT_DEPLOYMENT.md).
+Oracle hosts Next.js UI/APIs and separate workers; Supabase stays hosted and
+model inference uses an external API. Finish ARM64/resource/deployment work,
+prepare accounts in parallel, then activate providers on a restricted HTTPS
+deployment before public launch. The plan records acceptance gates and does not
+claim that infrastructure or real integrations are deployed.
+
+The linked plan supersedes the historical sizing and rollout order below.
+The provider inventory remains useful; consult current feature runbooks where
+older sections describe subsequently implemented capabilities as missing.
+
 ## October 7 implementation update
 
 All numbered database migrations through `20261007000001` are applied. Next

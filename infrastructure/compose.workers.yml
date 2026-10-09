@@ -1,0 +1,61 @@
+# Merge with compose.production.yml. Profiles are explicit; no worker starts by default.
+x-worker: &worker
+  image: ${RYVIX_WORKER_IMAGE:?Set the matching worker release image}
+  restart: unless-stopped
+  init: true
+  user: "1000:1000"
+  labels:
+    com.ryvix.revision: ${RYVIX_RELEASE_SHA}
+  environment:
+    NODE_ENV: production
+    RYVIX_RELEASE_SHA: ${RYVIX_RELEASE_SHA}
+  security_opt: [no-new-privileges:true]
+  cap_drop: [ALL]
+  mem_limit: 768m
+  pids_limit: 128
+  stop_grace_period: 16m
+  logging:
+    driver: json-file
+    options: {max-size: "10m", max-file: "3"}
+
+services:
+  workspace:
+    <<: *worker
+    profiles: [workspace]
+    env_file: ["${RYVIX_WORKER_ENV_DIR:?Set protected worker environment directory}/workspace.env"]
+    # Host networking is required for the existing loopback preview relays.
+    network_mode: host
+    group_add: ["${RYVIX_DOCKER_GID:?Set host Docker socket group ID}"]
+    volumes: [/var/run/docker.sock:/var/run/docker.sock, workspace-ai:/app/ai/data]
+    command: [node, scripts/worker-entry.mjs, workspace]
+  operations:
+    <<: *worker
+    profiles: [operations]
+    env_file: ["${RYVIX_WORKER_ENV_DIR}/operations.env"]
+    volumes: [operations-ai:/app/ai/data]
+    command: [node, scripts/worker-entry.mjs, operations]
+  gmail:
+    <<: *worker
+    profiles: [gmail]
+    env_file: ["${RYVIX_WORKER_ENV_DIR}/gmail.env"]
+    volumes: [gmail-ai:/app/ai/data]
+    command: [node, scripts/worker-entry.mjs, gmail]
+  whatsapp:
+    <<: *worker
+    profiles: [whatsapp]
+    env_file: ["${RYVIX_WORKER_ENV_DIR}/whatsapp.env"]
+    volumes: [whatsapp-ai:/app/ai/data]
+    command: [node, scripts/worker-entry.mjs, whatsapp]
+  experience:
+    <<: *worker
+    profiles: [experience]
+    env_file: ["${RYVIX_WORKER_ENV_DIR}/experience.env"]
+    volumes: [experience-ai:/app/ai/data]
+    command: [node, scripts/worker-entry.mjs, experience]
+
+volumes:
+  workspace-ai:
+  operations-ai:
+  gmail-ai:
+  whatsapp-ai:
+  experience-ai:

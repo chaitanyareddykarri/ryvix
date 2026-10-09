@@ -1,5 +1,12 @@
 # Repository worker deployment
 
+Current deployment plan (October 8): [Oracle pilot rollout](ORACLE_PILOT_DEPLOYMENT.md).
+Oracle hosts Next.js UI/APIs and separate workers; Supabase stays hosted and
+model inference uses an external API. Finish ARM64/resource/deployment work,
+prepare accounts in parallel, then activate providers on a restricted HTTPS
+deployment before public launch. The plan records acceptance gates and does not
+claim that infrastructure or real integrations are deployed.
+
 See [worker operations and resource budgets](WORKER_OPERATIONS.md) for optional
 systemd grouping, per-worker pool caps and the direct/session connection requirement.
 

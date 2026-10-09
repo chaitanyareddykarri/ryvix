@@ -5,6 +5,7 @@ import { executeRepositoryTask } from './repository-task';
 import { ensurePreviewGateway } from './preview-gateway';
 
 export async function runRepositoryJob(store: RepositoryJobStore, workerId: string): Promise<boolean> {
+  if (!await dockerWorkspaceManager.hasCapacity()) return false;
   const job = await store.claim(workerId);
   if (!job) return false;
   let sessionId: string | undefined;

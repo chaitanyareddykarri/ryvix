@@ -19,8 +19,11 @@ export async function* streamProvider(provider: ProviderDefinition, messages: LL
         : ['openai','groq','gemini'].includes(provider.id)?{stream_options:{include_usage:true}}:{}) };
   const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload), signal: options.signal });
   if (!response.ok || !response.body) {
+    const retry = response.headers.get('retry-after');
+    const seconds = retry === null ? NaN : Number(retry);
+    const retryAt = Number.isFinite(seconds) ? Date.now()+Math.max(0,seconds)*1000 : Date.parse(retry || '');
     await response.body?.cancel();
-    throw new Error(`Provider stream unavailable (HTTP ${response.status})`);
+    throw Object.assign(new Error(`Provider stream unavailable (HTTP ${response.status})`),{retryAt});
   }
   if (!response.headers.get('content-type')?.includes('text/event-stream')) {
     await response.body.cancel(); throw new Error('Provider did not return an event stream');

@@ -16,8 +16,14 @@ async function main() {
   process.env.PREVIEW_BASE_DOMAIN='preview.example.test';
   process.env.RYVIX_PUBLIC_URL='https://app.example.test';
   process.env.PREVIEW_GATEWAY_PORT='18081';
+  process.env.RYVIX_WORKSPACE_MAX_SESSIONS='1';
+  process.env.RYVIX_WORKSPACE_MEMORY_BUDGET_MB='4608';
+  process.env.RYVIX_WORKSPACE_CPU_BUDGET='2';
   const session=await manager.createSession({taskId:randomUUID(),projectId:randomUUID(),baseImage:image});
   try {
+    assert.equal(await manager.hasCapacity(),false);
+    await assert.rejects(manager.createSession({taskId:randomUUID(),projectId:randomUUID(),baseImage:image}),/capacity exhausted/);
+    console.log('PASS: actual Docker inventory blocks a second session while existing allocation is retained');
     const inspection=await runDocker(['inspect',session.container_id],10000);
     const actual=JSON.parse(inspection.stdout)[0];
     assert.equal(actual.Config.User,'1000:1000');

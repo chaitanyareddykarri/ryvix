@@ -1,5 +1,17 @@
 # Ryvix Current Project Context
 
+Oracle phase 1 implementation: [verification](../docs/verification/ORACLE_PHASE1_2026_10_08.md)
+and [release runbook](../docs/infrastructure/ORACLE_RELEASE_RUNBOOK.md).
+Code is local on Testing_branch; native CI, Oracle deployment, public TLS and
+the selected live model still require their separate acceptance checks.
+
+Current deployment plan (October 8): [Oracle pilot rollout](../docs/infrastructure/ORACLE_PILOT_DEPLOYMENT.md).
+Oracle hosts Next.js UI/APIs and separate workers; Supabase stays hosted and
+model inference uses an external API. Finish ARM64/resource/deployment work,
+prepare accounts in parallel, then activate providers on a restricted HTTPS
+deployment before public launch. The plan records acceptance gates and does not
+claim that infrastructure or real integrations are deployed.
+
 October 8 dependency follow-up: [current audit](../docs/verification/DEPENDENCIES_2026_10_08.md). Next patched to
 15.5.27; missing runtime/development declarations corrected; unused web artifact
 writer removed. Production audit is clean; five development-chain findings remain.

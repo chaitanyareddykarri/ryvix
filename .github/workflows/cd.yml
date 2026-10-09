@@ -16,7 +16,7 @@ concurrency:
 jobs:
   publish:
     if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository && vars.RYVIX_DEPLOY_ENABLED == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
       packages: write
@@ -54,10 +54,18 @@ jobs:
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
         run: |
-          docker build -f infrastructure/Dockerfile -t "$RYVIX_IMAGE" \
+          docker build --platform linux/arm64 -f infrastructure/Dockerfile -t "$RYVIX_IMAGE" \
             --build-arg NEXT_PUBLIC_SUPABASE_URL --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY \
             --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY --build-arg NEXT_PUBLIC_SITE_URL .
           docker push "$RYVIX_IMAGE"
+          WORKER_IMAGE="${RYVIX_IMAGE%:*}-workers:${RYVIX_IMAGE##*:}"
+          docker build --platform linux/arm64 -f infrastructure/Dockerfile.workers -t "$WORKER_IMAGE" .
+          docker push "$WORKER_IMAGE"
+          for KIND in node egress; do
+            IMAGE="${RYVIX_IMAGE%:*}-workspace-$KIND:${RYVIX_IMAGE##*:}"
+            docker build --platform linux/arm64 -f "infrastructure/workspaces/Dockerfile.$KIND" -t "$IMAGE" infrastructure/workspaces
+            docker push "$IMAGE"
+          done
       - name: Clear registry credentials
         if: always()
         run: docker logout ghcr.io
@@ -89,6 +97,9 @@ jobs:
           RYVIX_RUNTIME_ENV_FILE: ${{ vars.RYVIX_RUNTIME_ENV_FILE }}
           RYVIX_HEALTH_URL: ${{ vars.RYVIX_HEALTH_URL }}
           RYVIX_HTTP_PORT: ${{ vars.RYVIX_HTTP_PORT }}
+          RYVIX_DEPLOY_WORKERS: ${{ vars.RYVIX_DEPLOY_WORKERS }}
+          RYVIX_WORKER_ENV_DIR: ${{ vars.RYVIX_WORKER_ENV_DIR }}
+          RYVIX_DOCKER_GID: ${{ vars.RYVIX_DOCKER_GID }}
         run: node scripts/deploy.mjs
       - name: Clear registry credentials
         if: always()

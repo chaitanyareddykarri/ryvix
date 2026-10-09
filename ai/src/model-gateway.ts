@@ -12,7 +12,7 @@ import {requireAttemptObserver} from './model-attempt';
  * Supports:
  * - Free / Low-Cost High-Speed Providers (Groq, Hugging Face, Google Gemini, Ollama)
  * - Automatic 429 Rate-Limit Detection & Instant Failover to the next healthy provider
- * - Deterministic Local Fallback so the platform NEVER crashes even if external APIs are down
+ * - Explicit ordered fallback; selected production chains fail visibly when unavailable
  * - Token usage, latency metrics, and audit tracking
  */
 
@@ -46,13 +46,37 @@ export interface LLMCompletionResult {
 
 export class ModelGateway {
   private providers: ProviderDefinition[] = [];
+  private selectedProviders() {
+    const selected = process.env.RYVIX_MODEL_PROVIDER;
+    const chain = process.env.RYVIX_MODEL_FALLBACK_ORDER?.trim();
+    if (chain) {
+      const ids = chain.split(',').map(id => id.trim());
+      if (new Set(ids).size !== ids.length || ids.some(id => !['gemini','groq','openai','claude'].includes(id))) throw new Error('Invalid model fallback order');
+      if (selected && selected !== ids[0]) throw new Error('Primary provider conflicts with fallback order');
+      if (process.env.RYVIX_CHAT_PROVIDER && process.env.RYVIX_CHAT_PROVIDER !== ids[0]) throw new Error('Chat provider conflicts with fallback order');
+      return ids.map(id => {
+        const provider = this.providers.find(p => p.id === id)!;
+        const model = process.env[`${id.toUpperCase()}_MODEL`]?.trim();
+        if (!model) throw new Error('Every fallback provider requires an explicit model');
+        provider.model = model;
+        return provider;
+      });
+    }
+    if (selected && !this.providers.some(p => p.id === selected)) throw new Error('Unknown selected model provider');
+    return [...this.providers].filter(p => !selected || p.id === selected).sort((a,b) => a.priority-b.priority).map(p => {
+      const model = process.env[`${p.id.toUpperCase()}_MODEL`]?.trim();
+      if (selected && !model) throw new Error('Selected provider requires an explicit model');
+      if (model) p.model = model;
+      return p;
+    });
+  }
 
   async *stream(messages: LLMMessage[], options: { maxTokens?: number; temperature?: number; signal?: AbortSignal;
     onProvider?: (provider: string, model: string) => void;onUsage?:(usage:TokenUsage&{provider:string;model:string})=>void;onAttempt?:AttemptObserver } = {}) {
     requireAttemptObserver(options.onAttempt);
     const signal = AbortSignal.any([AbortSignal.timeout(120000), ...(options.signal ? [options.signal] : [])]);
-    for (const provider of [...this.providers].sort((a,b) => a.priority-b.priority)) {
-      if (process.env.RYVIX_CHAT_PROVIDER && provider.id !== process.env.RYVIX_CHAT_PROVIDER) continue;
+    for (const provider of this.selectedProviders()) {
+      if (!process.env.RYVIX_MODEL_FALLBACK_ORDER?.trim() && process.env.RYVIX_CHAT_PROVIDER && provider.id !== process.env.RYVIX_CHAT_PROVIDER) continue;
       if (signal.aborted) throw new Error('Model request cancelled');
       if (provider.isRateLimitedUntil > Date.now()) continue;
       const apiKey = this.getApiKey(provider.id) || provider.apiKey;
@@ -65,7 +89,8 @@ export class ModelGateway {
       try {
         signal.throwIfAborted();
         let usage:TokenUsage|undefined;
-        for await (const chunk of streamProvider({ ...provider, apiKey, model }, messages, { ...options, signal,onUsage:value=>{usage=value;},onObservedUsage:value=>{attempt.usage=value;} })) {
+        const attemptSignal = AbortSignal.any([signal, AbortSignal.timeout(45000)]);
+        for await (const chunk of streamProvider({ ...provider, apiKey, model }, messages, { ...options, signal:attemptSignal,onUsage:value=>{usage=value;},onObservedUsage:value=>{attempt.usage=value;} })) {
           if (!emitted) options.onProvider?.(provider.id,model);
           emitted = true;
           yield chunk;
@@ -77,7 +102,10 @@ export class ModelGateway {
       } catch (error) {
         outcome=signal.aborted?'cancelled':'failed';
         if (emitted || signal.aborted) throw new Error('Model stream interrupted. Please retry.');
-        if (error instanceof Error && error.message.includes('429')) provider.isRateLimitedUntil = Date.now()+60000;
+        if (error instanceof Error && error.message.includes('429')) {
+          const retryAt = (error as Error & {retryAt?:number}).retryAt;
+          provider.isRateLimitedUntil = Math.max(Date.now()+60000,Number.isFinite(retryAt)?retryAt!:0);
+        }
       } finally {
         await options.onAttempt?.({...attempt,status:outcome,latencyMs:Math.min(300000,Math.max(0,Date.now()-started))});
       }
@@ -259,7 +287,7 @@ export class ModelGateway {
     const now = Date.now();
 
     // Sort providers by priority
-    const sorted = [...this.providers].sort((a, b) => a.priority - b.priority);
+    const sorted = this.selectedProviders();
 
     for (const provider of sorted) {
       signal.throwIfAborted();
@@ -292,7 +320,8 @@ export class ModelGateway {
         await options?.onAttempt?.({...attempt});
         try {
           signal.throwIfAborted();
-          const res = await this.callProvider(provider, messages, {...options,signal});
+          const attemptSignal = AbortSignal.any([signal, AbortSignal.timeout(45000)]);
+          const res = await this.callProvider(provider, messages, {...options,signal:attemptSignal});
           attempt.status='completed';
           attempt.usage={promptTokens:res.promptTokens,completionTokens:res.completionTokens,cachedInputTokens:null,cacheWriteTokens:null};
           const latencyMs = Date.now() - startTime;
@@ -311,10 +340,10 @@ export class ModelGateway {
           if(signal.aborted)throw new Error('Model request cancelled');
           const errMsg = err.message || '';
           if (errMsg.includes('429') || errMsg.includes('rate limit')) {
-            provider.isRateLimitedUntil = now + 60000;
+            provider.isRateLimitedUntil = Math.max(Date.now()+60000,Number.isFinite(err.retryAt)?err.retryAt:0);
             failedProviders.push(`${provider.id} (429 Rate Limit)`);
           } else {
-            failedProviders.push(`${provider.id} (Error: ${errMsg})`);
+            failedProviders.push(`${provider.id} (Provider request failed)`);
           }
           // Continue to next provider in failover chain!
           continue;
@@ -328,12 +357,12 @@ export class ModelGateway {
     }
 
     // -----------------------------------------------------------------------
-    // DETERMINISTIC LOCAL REASONING ENGINE (ZERO-OUTAGE FALLBACK)
+    // Legacy development-only deterministic fallback (never for explicit chains).
     // -----------------------------------------------------------------------
     // If all external API providers are exhausted or no keys are set,
-    // the local reasoning engine synthesizes a high-quality response deterministically.
+    // legacy unconfigured development callers may use a deterministic fixture plan.
     const latencyMs = Date.now() - startTime;
-    if (options?.requireProvider || process.env.NODE_ENV==='production') throw new Error('No AI provider is available. Configure a provider and retry.');
+    if (options?.requireProvider || process.env.RYVIX_MODEL_PROVIDER || process.env.RYVIX_MODEL_FALLBACK_ORDER?.trim() || process.env.NODE_ENV==='production') throw new Error('No AI provider is available. Configure a provider and retry.');
     const userMsg = messages.find((m) => m.role === 'user')?.content || 'Autonomous Task';
     const localContent = this.generateLocalReasoning(userMsg);
 
@@ -381,16 +410,22 @@ export class ModelGateway {
     });
 
     if (res.status === 429) {
-      throw new Error(`429 Rate Limit Exceeded on ${provider.id} (${modelName})`);
+      const retry = res.headers.get('retry-after');
+      const seconds = retry === null ? NaN : Number(retry);
+      const retryAt = Number.isFinite(seconds) ? Date.now()+Math.max(0,seconds)*1000 : Date.parse(retry || '');
+      await res.body?.cancel();
+      throw Object.assign(new Error(`429 Rate Limit Exceeded on ${provider.id} (${modelName})`),{retryAt});
     }
 
     if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`HTTP ${res.status} from ${provider.id}: ${errText.slice(0, 100)}`);
+      await res.body?.cancel();
+      throw new Error(`HTTP ${res.status} from ${provider.id}`);
     }
 
     const data = await res.json();
+    if (data.choices?.[0]?.finish_reason === 'length') throw new Error('Provider answer reached its output limit');
     const content = data.choices?.[0]?.message?.content || '';
+    if (!content.trim()) throw new Error('Empty provider response');
     return {
       content,
       promptTokens: tokenCount(data.usage?.prompt_tokens),

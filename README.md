@@ -1,5 +1,12 @@
 # Ryvix
 
+Current deployment plan (October 8): [Oracle pilot rollout](docs/infrastructure/ORACLE_PILOT_DEPLOYMENT.md).
+Oracle hosts Next.js UI/APIs and separate workers; Supabase stays hosted and
+model inference uses an external API. Finish ARM64/resource/deployment work,
+prepare accounts in parallel, then activate providers on a restricted HTTPS
+deployment before public launch. The plan records acceptance gates and does not
+claim that infrastructure or real integrations are deployed.
+
 Active follow-up: [audit remediation queue](docs/PENDING_WORK.md). The October 3 audit found
 legacy AI safety/evidence defects; earlier passing suites are not full live acceptance.
 
@@ -7,7 +14,7 @@ Ryvix combines repository coding tasks, isolated previews, tenant-scoped chat,
 server telemetry and approved operations in an npm monorepo.
 
 Updated **2026-10-07**. Applied schema: **20261007000001**, with no pending migrations.
-The current checkout includes uncommitted implementation work; this is not a deployed release.
+Source publication does not establish a deployed release; use the rollout gates below.
 See [project status](docs/PROJECT_STATUS.md) for implementation, evidence and
 remaining live acceptance. Provider delivery and model quality are not certified.
 

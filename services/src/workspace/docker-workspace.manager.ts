@@ -2,6 +2,7 @@ import * as crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
 import type { WorkspaceSession } from '@ryvix/database';
 import { measuredFileDiff, type ChangedFile } from './task-artifacts';
+import { workspaceCapacity } from './host-budget';
 
 export interface CommandExecutionResult {
   command: string; exitCode: number; stdout: string; stderr: string; durationMs: number; success: boolean;
@@ -41,6 +42,8 @@ export class DockerWorkspaceManager {
   private prepared = new Set<string>();
   private relays = new Set<string>();
   private egress = new Set<string>();
+  private allocating = false;
+  async hasCapacity(cpu = 1, ramMb = 2048) { return !this.allocating && await workspaceCapacity(this.run,cpu,ramMb); }
   constructor(private readonly run: DockerRunner = runDocker,
     private readonly allowedImages = (process.env.RYVIX_WORKSPACE_IMAGES || '').split(',').filter(Boolean).concat(DEFAULT_IMAGES)) {}
 
@@ -74,6 +77,14 @@ export class DockerWorkspaceManager {
     if (!this.allowedImages.includes(image)) throw new Error('Workspace image is not approved');
     if (!Number.isFinite(cpu) || cpu <= 0 || cpu > 2 || !Number.isInteger(ram) || ram < 128 || ram > 4096 ||
         !Number.isFinite(ttl) || ttl <= 0 || ttl > 15) throw new Error('Workspace resource limits exceeded');
+    if (this.allocating) throw new Error('Workspace allocation already in progress');
+    this.allocating = true;
+    try {
+      if (!await workspaceCapacity(this.run,cpu,ram)) throw new Error('Workspace host capacity exhausted; retry after preview expiry');
+      return await this.allocate(options,image,cpu,ram,ttl);
+    } finally { this.allocating = false; }
+  }
+  private async allocate(options: CreateSessionOptions,image: string,cpu: number,ram: number,ttl: number): Promise<WorkspaceSession> {
     const id = crypto.randomUUID(), container = `ryvix_sbx_${id.replace(/-/g, '')}`, network = `${container}_net`;
     let port = 3100;
     while (this.allocatedPorts.has(port) && port <= 3999) port++;

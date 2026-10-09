@@ -1,5 +1,19 @@
 # Current Task & Implementation State
 
+Oracle phase 1 code is implemented locally on Testing_branch. See
+[verification](../docs/verification/ORACLE_PHASE1_2026_10_08.md) and the
+[release runbook](../docs/infrastructure/ORACLE_RELEASE_RUNBOOK.md).
+ARM64 publishing, coordinated workers, capacity admission, proxy/backup support
+and explicit model selection are added. Native CI and live host/provider gates
+remain distinct from local/emulated checks. No deployment or push was performed.
+
+Current deployment plan (October 8): [Oracle pilot rollout](../docs/infrastructure/ORACLE_PILOT_DEPLOYMENT.md).
+Oracle hosts Next.js UI/APIs and separate workers; Supabase stays hosted and
+model inference uses an external API. Finish ARM64/resource/deployment work,
+prepare accounts in parallel, then activate providers on a restricted HTTPS
+deployment before public launch. The plan records acceptance gates and does not
+claim that infrastructure or real integrations are deployed.
+
 October 8 dependency follow-up: [current audit](../docs/verification/DEPENDENCIES_2026_10_08.md). Next patched to
 15.5.27; missing runtime/development declarations corrected; unused web artifact
 writer removed. Production audit is clean; five development-chain findings remain.
@@ -502,3 +516,13 @@ current production-readiness claims. See the latest checkpoint linked above.
 Audit follow-up: production legacy-weight/memory isolation, unseeded topology,
 import-aware bounded coding context and opt-in scheduled Gmail polling are implemented.
 See [remaining work](../docs/PENDING_WORK.md) for unresolved dependency and live acceptance requirements.
+# October 8 AI fallback update
+
+Explicit Gemini -> Groq fallback is implemented locally for chat and coding.
+See [configuration and limits](../docs/integrations/AI_PROVIDER_FALLBACK.md).
+Replacement secrets, explicit model IDs and live/deployed acceptance remain open.
+Subsequent explicit activation: keys are installed in ignored local environment
+files; Gemini 3.5 Flash and Groq GPT-OSS-120B passed small live completion/stream
+checks. Simulated primary quota failure with real backup passed. Rotation is
+recommended. Hosting secrets and deployed end-to-end acceptance remain pending.
+Hosting choice is deferred.
