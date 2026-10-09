@@ -1,5 +1,15 @@
 import {test,expect} from '@playwright/test';
 import {mount} from './harness.mjs';
+test('Preview Studio without a task shows an empty state and never mounts an empty iframe',async({page})=>{
+ const h=await mount(page,'web/app/dashboard/page.tsx',{responses:{
+  '/api/github/repositories/connect':{repositories:[{id:'11111111-1111-4111-8111-111111111111',full_name:'fixture/site',default_branch:'main'}]}
+ }});
+ await page.getByRole('button',{name:/Open Preview Studio/}).first().click();
+ await expect(page.getByRole('heading',{name:'No AI Preview Available'}).first()).toBeVisible();
+ await expect(page.locator('iframe[title^="Sandboxed Preview"]')).toHaveCount(0);
+ await expect(page.locator('iframe[src=""]')).toHaveCount(0);
+ h.verify();
+});
 test('PR approval shows recorded evidence and submits only the selected task',async({page})=>{
  const id='11111111-1111-4111-8111-111111111111';
  const task={id,status:'awaiting_approval',user_prompt:'Review fixture changes',created_at:'2026-10-07T00:00:00Z',result:{files:[{path:'app.ts',additions:1,deletions:0}]}};

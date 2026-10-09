@@ -494,7 +494,7 @@ export default function WebChatPage() {
                     {msg.role === "user" ? "You" : msg.role === "assistant" ? "Ryvix AGI Core" : "System Dispatch"}
                   </span>
                   <span>•</span>
-                  <span>{msg.timestamp}</span>
+                  <span suppressHydrationWarning>{msg.timestamp}</span>
                   {msg.metrics?.durationMs && (
                     <span style={{ color: "#34d399", background: "rgba(16,185,129,0.1)", padding: "0.1rem 0.4rem", borderRadius: "4px" }}>
                       ⚡ {(msg.metrics.durationMs / 1000).toFixed(2)}s

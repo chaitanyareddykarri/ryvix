@@ -411,12 +411,7 @@ export default function DashboardPage() {
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
   const [orgName, setOrgName] = useState<string>("");
   const [websiteDomain, setWebsiteDomain] = useState<string>("");
-  const [selectedWebsite, setSelectedWebsite] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("ryvix_active_repo") || "";
-    }
-    return "";
-  });
+  const [selectedWebsite, setSelectedWebsite] = useState<string>("");
   const [activeRepo, setActiveRepo] = useState<any | null>(null);
 
   // Real Database Data
@@ -4278,7 +4273,7 @@ function RealLiveWebsiteFrame({
       {/* Embedded Live Site Frame */}
       <div style={{ flex: 1, position: "relative", background: "#ffffff" }}>
         <iframe
-          src={liveUrl}
+          src={liveUrl || undefined}
           title={`Live Website - ${repoName}`}
           onError={() => setIframeError(true)}
           style={{
@@ -4374,6 +4369,45 @@ function RealPreviewWebsiteFrame({
     );
   }
 
+  if (!previewUrl.trim()) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "580px",
+          height: "100%",
+          padding: "3rem 2rem",
+          textAlign: "center",
+          background: "#080C11",
+        }}
+      >
+        <div
+          style={{
+            width: "56px",
+            height: "56px",
+            borderRadius: "50%",
+            background: "rgba(124, 108, 255, 0.12)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: "1.2rem",
+          }}
+        >
+          <IconSparkles size={28} color="#A78BFA" />
+        </div>
+        <h3 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#F5F7FA" }}>
+          No AI Preview Available
+        </h3>
+        <p style={{ fontSize: "0.86rem", color: "#A5AFBC", maxWidth: "420px", marginTop: "0.4rem", lineHeight: 1.5 }}>
+          No active sandbox preview is available for <span style={{ color: "#42D9FF" }}>{repoName}</span>. Run a coding task and check its build status. A preview appears only when the preview server starts successfully; completed code changes alone do not guarantee a preview.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div style={{ position: "relative", width: "100%", height: "100%", minHeight: "580px", background: "#080C11", display: "flex", flexDirection: "column" }}>
       {/* Top Banner identifying Preview URL and Repository Metadata */}
@@ -4414,7 +4448,7 @@ function RealPreviewWebsiteFrame({
       {/* Embedded Real Preview Frame */}
       <div style={{ flex: 1, position: "relative", background: "#ffffff" }}>
         <iframe
-          src={previewUrl}
+          src={previewUrl || undefined}
           title={`Sandboxed Preview - ${repoName}`}
           style={{
             width: "100%",
