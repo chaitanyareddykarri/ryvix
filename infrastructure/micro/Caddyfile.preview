@@ -1,0 +1,11 @@
+{
+    email {$ACME_EMAIL}
+    admin localhost:2019
+}
+*.{$PREVIEW_BASE_DOMAIN} {
+    tls {$PREVIEW_TLS_CERT_FILE} {$PREVIEW_TLS_KEY_FILE}
+    header Referrer-Policy no-referrer
+    reverse_proxy 127.0.0.1:8081 {
+        flush_interval -1
+    }
+}

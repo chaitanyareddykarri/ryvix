@@ -1,0 +1,9 @@
+ai/data/
+tmp/
+test-results/
+playwright-report/
+**/*.key
+**/*.pem
+**/.env
+**/.env.local
+**/.env.*.local

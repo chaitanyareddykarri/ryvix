@@ -1,0 +1,36 @@
+# VM 2: sole Docker owner; no web application or other workers on this host.
+name: ryvix-micro-workspace
+services:
+  workspace:
+    image: ${RYVIX_WORKER_IMAGE:?Set reviewed AMD64 worker digest}
+    platform: linux/amd64
+    restart: "on-failure:3"
+    init: true
+    user: "1000:1000"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 96
+    mem_limit: 256m
+    memswap_limit: 384m
+    cpus: 0.5
+    network_mode: host
+    group_add: ["${RYVIX_DOCKER_GID:?Set host Docker group ID}"]
+    env_file: ["${RYVIX_WORKER_ENV_DIR:?Set protected env directory}/workspace.env"]
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=144
+      RYVIX_WORKER_POOL_MAX: "2"
+      RYVIX_WORKSPACE_MODE: static
+      RYVIX_WORKSPACE_MAX_SESSIONS: "1"
+      RYVIX_WORKSPACE_MEMORY_BUDGET_MB: "320"
+      RYVIX_WORKSPACE_CPU_BUDGET: "0.75"
+    command: [node, scripts/worker-entry.mjs, workspace]
+    volumes: [/var/run/docker.sock:/var/run/docker.sock, workspace-ai:/app/ai/data]
+    tmpfs: ["/tmp:size=16m,mode=1777"]
+    stop_grace_period: 16m
+    logging:
+      driver: json-file
+      options: {max-size: "5m", max-file: "2"}
+volumes:
+  workspace-ai:

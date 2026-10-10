@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireTenant, RequestError } from '@/utils/tenant-context';
-import { persistedPreviewLaunchUrl } from '../../../../../../services/src/workspace/preview-gateway';
+import { persistedPreviewLaunchUrl } from '../../../../../../services/src/workspace/preview-grants';
 
 export async function GET(_request: Request, context: { params: Promise<{ sessionId: string }> }) {
   try {

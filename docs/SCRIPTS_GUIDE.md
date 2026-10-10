@@ -6,6 +6,9 @@ not automatically execute when the web server starts.
 
 | Group | Purpose and important boundary |
 | --- | --- |
+| `verify-micro-compose.mjs` | Renders both Micro host configurations with dummy env files; checks default roles, tmpfs options, memory limits and Docker socket placement. Does not start services or inspect real host secrets. |
+| `verify-vercel-boundary.mjs` | Audits web API dependencies for filesystem/process boundaries; optional `--traces` checks built output excludes ai/data. Not a live Vercel deployment test. |
+| `verify-static-workspace.ts` | Exercises actual local Docker isolation, static checks, signed previews and fixture-backed task orchestration. Requires Docker; does not certify real providers or Oracle capacity. |
 | `workspace-worker.ts` | Claims repository coding jobs and drives isolated Docker workspaces; holds a host advisory lock. |
 | `operations-worker.ts` | Runs enabled recovery verification/approved dispatch and notification outboxes. It does not install detectors or bypass recovery approval. |
 | `gmail-worker.ts` | Explicitly enabled allowlisted Gmail polling and maintenance, with session locks. |

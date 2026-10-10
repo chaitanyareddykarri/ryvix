@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process';
 import type { WorkspaceSession } from '@ryvix/database';
 import { measuredFileDiff, type ChangedFile } from './task-artifacts';
 import { workspaceCapacity } from './host-budget';
+import {staticWorkspaceMode, STATIC_MEMORY_MB, STATIC_CPU, STATIC_CHECK, STATIC_PREVIEW, validateStaticChanges} from './static-policy';
 
 export interface CommandExecutionResult {
   command: string; exitCode: number; stdout: string; stderr: string; durationMs: number; success: boolean;
@@ -43,7 +44,7 @@ export class DockerWorkspaceManager {
   private relays = new Set<string>();
   private egress = new Set<string>();
   private allocating = false;
-  async hasCapacity(cpu = 1, ramMb = 2048) { return !this.allocating && await workspaceCapacity(this.run,cpu,ramMb); }
+  async hasCapacity(cpu = staticWorkspaceMode() ? STATIC_CPU : 1, ramMb = staticWorkspaceMode() ? STATIC_MEMORY_MB : 2048) { return !this.allocating && await workspaceCapacity(this.run,cpu,ramMb); }
   constructor(private readonly run: DockerRunner = runDocker,
     private readonly allowedImages = (process.env.RYVIX_WORKSPACE_IMAGES || '').split(',').filter(Boolean).concat(DEFAULT_IMAGES)) {}
 
@@ -73,6 +74,8 @@ export class DockerWorkspaceManager {
       : taskIdOrOptions;
     const image = options.baseImage || stackImage;
     const cpu = options.cpu ?? 1, ram = options.ramMb ?? 2048, ttl = options.ttlMinutes ?? options.timeoutMinutes ?? 15;
+    if (staticWorkspaceMode() && (image !== process.env.RYVIX_WORKSPACE_STATIC_IMAGE || cpu !== STATIC_CPU || ram !== STATIC_MEMORY_MB))
+      throw new Error('Static host only accepts its bounded static profile');
     if (!options.taskId || !options.projectId) throw new Error('Task and project are required');
     if (!this.allowedImages.includes(image)) throw new Error('Workspace image is not approved');
     if (!Number.isFinite(cpu) || cpu <= 0 || cpu > 2 || !Number.isInteger(ram) || ram < 128 || ram > 4096 ||
@@ -101,8 +104,8 @@ export class DockerWorkspaceManager {
         '--security-opt', 'no-new-privileges', '--read-only', '--pids-limit', '128',
         '--cpus', String(cpu), '--memory', `${ram}m`, '--memory-swap', `${ram}m`,
         '--network', network,
-        '--tmpfs', '/tmp:rw,nosuid,nodev,size=256m',
-        '--tmpfs', '/workspace:rw,nosuid,nodev,uid=1000,gid=1000,mode=0700,size=1024m',
+        '--tmpfs', `/tmp:rw,nosuid,nodev,size=${staticWorkspaceMode() ? 16 : 256}m`,
+        '--tmpfs', `/workspace:rw,nosuid,nodev,uid=1000,gid=1000,mode=0700,size=${staticWorkspaceMode() ? 16 : 1024}m`,
         '--workdir', '/workspace', '--env', 'HOME=/tmp',
         '--env', `HTTPS_PROXY=http://${container}_egress:3128`, '--env', `https_proxy=http://${container}_egress:3128`,
         '--env', 'NO_PROXY=localhost,127.0.0.1', '--env', 'no_proxy=localhost,127.0.0.1', '--entrypoint', '/bin/sh',
@@ -130,7 +133,20 @@ export class DockerWorkspaceManager {
     for (const file of files) await this.applyDiff(id, file.path, file.content);
     return files.length;
   }
+  /** Materialize a bounded API snapshot; never clone history or run repository hooks. */
+  async prepareStaticSnapshot(id: string, files: {path:string;content:string}[]) {
+    if (!staticWorkspaceMode() || this.prepared.has(id)) throw new Error('Static snapshot unavailable');
+    if (files.length > 64 || files.reduce((sum,file)=>sum+Buffer.byteLength(file.content),0)>262144)
+      throw new Error('Static snapshot exceeds bounds');
+    validateStaticChanges(files.map(file=>({...file,action:'create'})));
+    await this.mountFiles(id,files);
+    const session = this.session(id);
+    await this.checked(['exec',session.container_id,'/bin/sh','-c',
+      'git -c core.hooksPath=/dev/null init && git -c core.hooksPath=/dev/null add --all && git -c core.hooksPath=/dev/null -c user.name=Ryvix -c user.email=snapshot@ryvix.invalid commit -m snapshot'],10000);
+    this.prepared.add(id);
+  }
   async withRestrictedEgress<T>(id: string, operation: () => Promise<T>): Promise<T> {
+    if (staticWorkspaceMode()) throw new Error('Static workspaces cannot enable outbound networking');
     const session = this.session(id);
     const image = process.env.RYVIX_WORKSPACE_EGRESS_IMAGE;
     if (!image || !this.allowedImages.includes(image)) throw new Error('An approved workspace egress broker image is required');
@@ -170,6 +186,7 @@ export class DockerWorkspaceManager {
     this.prepared.add(id);
   }
   async deleteFile(id: string, filename: string) {
+    if (staticWorkspaceMode()) validateStaticChanges([{path:filename,action:'delete'}]);
     const session = this.session(id), target = this.filePath(filename);
     await this.checked(['exec', session.container_id, '/bin/sh', '-c',
       'path="$1"; while [ "$path" != /workspace ]; do [ ! -L "$path" ] || exit 1; path=$(dirname -- "$path"); done; rm -- "$1"', 'delete-file', target]);
@@ -178,6 +195,7 @@ export class DockerWorkspaceManager {
     const session = this.session(id);
     const relative = typeof file === 'string' ? file : file.filePath;
     const content = typeof file === 'string' ? newContent : file.newContent ?? file.patchContent;
+    if (staticWorkspaceMode()) validateStaticChanges([{path:relative,action:'modify',content}]);
     if (typeof content !== 'string') throw new Error('Full file content is required');
     if (content.startsWith('diff --git ') || content.startsWith('--- ')) throw new Error('Unified patches must be resolved to full file contents before writing');
     const target = this.filePath(relative);
@@ -217,6 +235,7 @@ export class DockerWorkspaceManager {
     return files;
   }
   async startPreview(id: string, command: string, origin: string): Promise<void> {
+    if (staticWorkspaceMode() && command !== STATIC_PREVIEW) throw new Error('Only the trusted static preview is allowed');
     const session = this.session(id);
     if (!command || command.length > 1024 || !origin.startsWith('https://')) throw new Error('Invalid preview configuration');
     await this.checked(['exec', '-d', '--env', 'PORT=3000', '--env', 'HOST=0.0.0.0', session.container_id,
@@ -249,6 +268,7 @@ export class DockerWorkspaceManager {
     throw new Error('Preview application did not become ready before timeout');
   }
   async executeCommand(id: string, command: string, timeoutMs = 30000): Promise<CommandExecutionResult> {
+    if (staticWorkspaceMode() && command !== STATIC_CHECK) throw new Error('Repository commands are disabled in static mode');
     const session = this.session(id);
     if (!command || command.length > 8192 || command.includes('\0')) throw new Error('Invalid command');
     if (this.busy.has(id)) throw new Error('Workspace already executing a command');

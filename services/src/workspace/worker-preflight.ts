@@ -1,9 +1,10 @@
 import { runDocker, type DockerRunner } from './docker-workspace.manager';
+import {staticWorkspaceMode} from './static-policy';
 
 /** Read-only checks before the worker may acquire a job lease. */
 export async function verifyWorkerDocker(env: NodeJS.ProcessEnv = process.env, run: DockerRunner = runDocker) {
   const approved = (env.RYVIX_WORKSPACE_IMAGES || '').split(',').filter(Boolean);
-  const images = ['RYVIX_WORKSPACE_NODE_IMAGE', 'RYVIX_WORKSPACE_EGRESS_IMAGE'] as const;
+  const images = staticWorkspaceMode(env) ? ['RYVIX_WORKSPACE_STATIC_IMAGE','RYVIX_PREVIEW_RELAY_IMAGE'] : ['RYVIX_WORKSPACE_NODE_IMAGE', 'RYVIX_WORKSPACE_EGRESS_IMAGE'];
   for (const name of images) {
     if (!env[name] || !approved.includes(env[name]!)) {
       throw new Error(`${name} must be configured in RYVIX_WORKSPACE_IMAGES`);

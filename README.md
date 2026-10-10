@@ -1,11 +1,12 @@
 # Ryvix
 
-Current deployment plan (October 8): [Oracle pilot rollout](docs/infrastructure/ORACLE_PILOT_DEPLOYMENT.md).
-Oracle hosts Next.js UI/APIs and separate workers; Supabase stays hosted and
-model inference uses an external API. Finish ARM64/resource/deployment work,
-prepare accounts in parallel, then activate providers on a restricted HTTPS
-deployment before public launch. The plan records acceptance gates and does not
-claim that infrastructure or real integrations are deployed.
+Current deployment plan (October 10): [Vercel and two AMD64 Oracle Micro VMs](docs/infrastructure/MICRO_VERCEL_TRIAL.md).
+Step 1 host preparation is evidenced by user-provided terminal output. Step 2
+code adaptation is implemented and locally checked; it is not a live deployment.
+Vercel hosts the dashboard/APIs, VM 1 selected workers, and VM 2 one restricted
+static-page workspace. Supabase and model inference remain external.
+See the [five-item verification matrix](docs/verification/MICRO_STEP2_2026_10_10.md)
+and [ordered next steps](docs/infrastructure/MICRO_VERCEL_TRIAL.md#next-steps-in-order).
 
 Active follow-up: [audit remediation queue](docs/PENDING_WORK.md). The October 3 audit found
 legacy AI safety/evidence defects; earlier passing suites are not full live acceptance.
@@ -13,7 +14,9 @@ legacy AI safety/evidence defects; earlier passing suites are not full live acce
 Ryvix combines repository coding tasks, isolated previews, tenant-scoped chat,
 server telemetry and approved operations in an npm monorepo.
 
-Updated **2026-10-07**. Applied schema: **20261007000001**, with no pending migrations.
+Updated **2026-10-10**. Migrations **20261009000001** and **20261009000002**
+are prepared and rollback-tested but remain pending application at the latest
+recorded checkpoint. This documentation update did not query the hosted ledger.
 Source publication does not establish a deployed release; use the rollout gates below.
 See [project status](docs/PROJECT_STATUS.md) for implementation, evidence and
 remaining live acceptance. Provider delivery and model quality are not certified.

@@ -1,5 +1,20 @@
 # Ryvix Current Project Context
 
+## Deployment checkpoint - October 10, 2026
+
+Step 1 host preparation is supported by the user-provided terminal output; no
+fresh remote audit is claimed. Step 2 is implemented and locally verified for
+the restricted static-only trial. The current batch is on local main and remains
+uncommitted/unpublished. See the [recap and ordered Steps 3-7](../docs/infrastructure/MICRO_VERCEL_TRIAL.md#progress-through-step-2).
+Older dated entries below are historical snapshots, not current branch, schema
+or deployment instructions. Broader product backlog remains open.
+
+October 10 Step 2: [two Micro VMs and Vercel restricted trial](../docs/infrastructure/MICRO_VERCEL_TRIAL.md).
+AMD64 image CI, per-host worker limits/templates, static-only 192 MiB workspaces
+and serverless API boundaries are implemented locally. Standard coding workspaces
+retain their original limits. No live deployment, credentials, migrations or
+publication is implied; see the linked runbook and verification for remaining gates.
+
 October 9 non-deployment implementation: [current evidence and remaining work](../docs/verification/NONDEPLOYMENT_2026_10_09.md).
 Bounded signed journal logs, inventory persistence, context compaction, pre-plan
 quota retries, snapshot compiler resolution and saved usage comparison are added.
@@ -14,7 +29,7 @@ and [release runbook](../docs/infrastructure/ORACLE_RELEASE_RUNBOOK.md).
 Code is local on Testing_branch; native CI, Oracle deployment, public TLS and
 the selected live model still require their separate acceptance checks.
 
-Current deployment plan (October 8): [Oracle pilot rollout](../docs/infrastructure/ORACLE_PILOT_DEPLOYMENT.md).
+Historical deployment plan (October 8): [Oracle pilot rollout](../docs/infrastructure/ORACLE_PILOT_DEPLOYMENT.md).
 Oracle hosts Next.js UI/APIs and separate workers; Supabase stays hosted and
 model inference uses an external API. Finish ARM64/resource/deployment work,
 prepare accounts in parallel, then activate providers on a restricted HTTPS

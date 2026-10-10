@@ -15,11 +15,14 @@ export function getDirectDbPool(): Pool {
     }
 
     const verifiedUrl = new URL(connectionString);
+    const poolMax = Number(process.env.RYVIX_WEB_POOL_MAX || (process.env.VERCEL ? '2' : '5'));
+    if (!Number.isInteger(poolMax) || poolMax < 1 || poolMax > 5) throw new Error('Invalid web database pool limit');
     for (const option of ['sslmode', 'sslcert', 'sslkey', 'sslrootcert']) verifiedUrl.searchParams.delete(option);
     pool = new Pool({
       connectionString: verifiedUrl.toString(),
       ssl: { rejectUnauthorized: true, ...(process.env.DATABASE_CA_CERT ? { ca: process.env.DATABASE_CA_CERT } : {}) },
-      max: 5,
+      max: poolMax,
+      allowExitOnIdle: Boolean(process.env.VERCEL),
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000,
       keepAlive: true,

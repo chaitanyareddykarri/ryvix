@@ -49,7 +49,7 @@ export async function testWebChatStreaming() {
       if (dataFailure) throw new Error('private database detail');
       return observations;
     } };
-    if (name === '@ryvix/services') return { modelGateway: { stream: async function* (messages: any[], options: any) {
+    if (name.endsWith('/ai/src/model-gateway')) return { modelGateway: { stream: async function* (messages: any[], options: any) {
       assert.equal(options.maxTokens, 4096);
       assert.equal(messages[1].content,'Earlier I asked about server health.');
       const context = JSON.parse(messages[messages.length-1].content);
