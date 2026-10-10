@@ -57,13 +57,17 @@ export async function POST(request: Request) {
       const normalized = normalizePhoneNumber(rawPhone);
       const digitsOnly = rawPhone.replace(/\D/g, '');
 
-      // Search for any profile matching this phone number
+      // Search for any profile matching this phone number (exact, normalized, digits-only, or last 10 digits)
       const profileResult = await pool.query(
         `SELECT id, full_name, phone_number, organization_id 
          FROM public.profiles 
-         WHERE phone_number = $1 
+         WHERE phone_number IS NOT NULL AND (
+            phone_number = $1 
             OR phone_number = $2 
             OR regexp_replace(phone_number, '\\D', '', 'g') = $3 
+            OR (length($3) >= 10 AND length(regexp_replace(phone_number, '\\D', '', 'g')) >= 10 
+                AND RIGHT(regexp_replace(phone_number, '\\D', '', 'g'), 10) = RIGHT($3, 10))
+         )
          LIMIT 1`,
         [rawPhone, normalized, digitsOnly]
       );
