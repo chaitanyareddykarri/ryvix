@@ -1,3 +1,40 @@
+# Website checks - October 10, 2026
+
+Added /websites with real probe API results and environment-selected connectors.
+No inferred server metrics or automatic URL/connector association. Typecheck,
+offline tests and browser checks passed. Local only; see
+docs/verification/WEBSITE_CHECKS_2026_10_10.md.
+
+# Server demo and preview refresh - October 10, 2026
+
+Implemented explicit sample-only /servers/demo with editable isolated preview.
+Real dashboard previews reload on task revision/status changes and manually.
+Typecheck, offline suites and targeted browser tests passed. Local changes only.
+See docs/verification/SERVER_DEMO_PREVIEW_2026_10_10.md.
+
+# Domain cutover selected - October 10, 2026
+
+Canonical target is https://ryvix.co.in. Templates updated; DNS, Vercel, Railway,
+Supabase Auth and OAuth dashboard changes remain pending. Follow
+docs/infrastructure/DOMAIN_CUTOVER.md before changing live origins.
+
+# Hosted migrations and Meta checkpoint - October 10, 2026
+
+Both October 9 migrations are now applied; post-apply CLI reports up to date.
+Database security checks, secret scan and production dependency audit passed.
+Live WhatsApp endpoint is unconfigured. Railway database access remains unverified.
+See docs/verification/MIGRATIONS_META_2026_10_10.md for evidence and pending setup.
+
+# Local workspace trial - October 10, 2026
+
+AWS is deferred by user request. See docs/infrastructure/LOCAL_WORKSPACE_TRIAL.md.
+Local Docker Linux engine is reachable (~7.6 GiB allocation). Created ignored
+.env.workspace.local with selected worker credentials and one static session.
+Real local Docker isolation, diff, signed-preview and fixture task checks passed.
+No production queue worker was started. Wildcard HTTPS routing, matching Vercel
+preview settings, database readiness and live-provider acceptance remain pending.
+Railway remains the background-worker host, not the Docker host.
+
 # Current Task & Implementation State
 
 ## Active hosting selection - Railway and AWS

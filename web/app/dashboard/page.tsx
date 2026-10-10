@@ -4095,7 +4095,7 @@ function PreviewStudioFrame({
               </div>
               <div style={{ position: "absolute", inset: 0, width: `${sliderPos}%`, overflow: "hidden", borderRight: "2px solid #7C6CFF", boxShadow: "2px 0 15px rgba(124, 108, 255, 0.5)", background: "#080C11" }}>
                 <div style={{ width: sliderRef.current?.clientWidth || "100%", minHeight: "580px" }}>
-                  <RealPreviewWebsiteFrame previewUrl={activePreviewUrl} repoName={repoName} branch={branch} commitSha={commitSha} />
+                  <RealPreviewWebsiteFrame key={`${activeTask?.id || ""}:${activeTask?.status || ""}:${activeTask?.updated_at || ""}:${commitSha}`} previewUrl={activePreviewUrl} repoName={repoName} branch={branch} commitSha={commitSha} />
                 </div>
               </div>
               <div
@@ -4125,7 +4125,7 @@ function PreviewStudioFrame({
           ) : (
             <div>
               {isShowingAfter ? (
-                <RealPreviewWebsiteFrame previewUrl={activePreviewUrl} repoName={repoName} branch={branch} commitSha={commitSha} />
+                <RealPreviewWebsiteFrame key={`${activeTask?.id || ""}:${activeTask?.status || ""}:${activeTask?.updated_at || ""}:${commitSha}`} previewUrl={activePreviewUrl} repoName={repoName} branch={branch} commitSha={commitSha} />
               ) : (
                 <RealLiveWebsiteFrame liveUrl={activeLiveUrl} repoName={repoName} onConfigureUrl={onConfigureUrl} />
               )}
@@ -4343,6 +4343,7 @@ function RealPreviewWebsiteFrame({
   commitSha: string;
   isBuilding?: boolean;
 }) {
+  const [reload, setReload] = useState(0);
   if (isBuilding) {
     return (
       <div
@@ -4445,9 +4446,12 @@ function RealPreviewWebsiteFrame({
         </a>
       </div>
 
+      <button type="button" onClick={() => setReload(value => value + 1)} className="btn-secondary">Reload preview</button>
+
       {/* Embedded Real Preview Frame */}
       <div style={{ flex: 1, position: "relative", background: "#ffffff" }}>
         <iframe
+          key={`${previewUrl}:${commitSha}:${reload}`}
           src={previewUrl || undefined}
           title={`Sandboxed Preview - ${repoName}`}
           style={{

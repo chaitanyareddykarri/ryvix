@@ -93,6 +93,8 @@ export default function ServersPage() {
         </div>
 
         <nav aria-label="Infrastructure navigation" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.75rem", minWidth: 0, maxWidth: "100%" }}>
+          <Link href="/servers/demo" className="btn-secondary">Try server and coding demo</Link>
+          <Link href="/websites" className="btn-secondary">Check a deployed website</Link>
           {userEmail && (
             <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)", overflowWrap: "anywhere", maxWidth: "100%" }}>
               {userEmail}
