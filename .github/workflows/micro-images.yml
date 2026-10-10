@@ -36,6 +36,10 @@ jobs:
           docker build --platform linux/amd64 -f infrastructure/workspaces/Dockerfile.static -t ryvix-micro-static:ci infrastructure/workspaces
           docker image inspect --format '{{.Os}}/{{.Architecture}}' ryvix-micro-workers:ci ryvix-micro-static:ci
           docker run --rm --network none --entrypoint node ryvix-micro-workers:ci -e "if(process.arch!=='x64')process.exit(1);require('pg');require('typescript');require('fs').writeFileSync('/app/ai/data/probe','ok')"
+      - name: Verify Railway role and volume startup
+        run: |
+          docker build --platform linux/amd64 -f infrastructure/railway/Dockerfile -t ryvix-railway:local .
+          node scripts/verify-railway-worker.mjs
       - name: Verify Vercel-style build without runtime AI data
         env:
           VERCEL: "1"

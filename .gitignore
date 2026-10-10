@@ -67,6 +67,7 @@ pnpm-debug.log*
 supabase/.temp/
 
 # Scratch & Temporary agent files
+infrastructure/railway/*.env
 scratch/
 tmp/
 web/ai/

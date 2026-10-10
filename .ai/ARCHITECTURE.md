@@ -1,5 +1,15 @@
 # Ryvix System Architecture Reference
 
+## Active hosting selection - Railway and AWS
+
+The user selected [Vercel + Railway workers + AWS workspace](../docs/infrastructure/RAILWAY_AWS_TRIAL.md).
+Vercel is deployed at ryvix.vercel.app and login works by user report. Railway
+worker configuration is prepared locally; deployment and provider acceptance
+remain pending. AWS terminal access works by user report, but the 1 GB/8 GB host
+needs storage and Docker preparation. Oracle recovery is deferred, not completed.
+Earlier Oracle placement and Step 4 access notes below are historical snapshots.
+
+
 ## Current checkpoint - October 10, 2026
 
 The selected restricted trial places web/API orchestration on Vercel, selected

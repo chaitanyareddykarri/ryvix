@@ -1,11 +1,25 @@
 # Ryvix project status
 
+## Active hosting selection - Railway and AWS
+
+The user selected [Vercel + Railway workers + AWS workspace](infrastructure/RAILWAY_AWS_TRIAL.md).
+Vercel is deployed at ryvix.vercel.app and login works by user report. Railway
+worker configuration is prepared locally; deployment and provider acceptance
+remain pending. AWS terminal access works by user report, but the 1 GB/8 GB host
+needs storage and Docker preparation. Oracle recovery is deferred, not completed.
+Earlier Oracle placement and Step 4 access notes below are historical snapshots.
+
+
+Current Step 4: [setup handoff and published image digests](infrastructure/MICRO_STEP4_SETUP.md).
+Configuration templates are prepared locally. Vercel/domain details and SSH
+reachability remain unresolved; no host deployment or migrations were performed.
+
 ## Deployment checkpoint - October 10, 2026
 
 Step 1 host preparation is supported by the user-provided terminal output; no
 fresh remote audit is claimed. Step 2 is implemented and locally verified for
-the restricted static-only trial. The current batch is on local main and remains
-uncommitted/unpublished. See the [recap and ordered Steps 3-7](infrastructure/MICRO_VERCEL_TRIAL.md#progress-through-step-2).
+the restricted static-only trial. Step 3 is published at 53d9229 with passing
+GitHub CI and verified AMD64 images; main and Testing_branch were synchronized. See the [recap and ordered Steps 3-7](infrastructure/MICRO_VERCEL_TRIAL.md#progress-through-step-2).
 Older dated entries below are historical snapshots, not current branch, schema
 or deployment instructions. Broader product backlog remains open.
 

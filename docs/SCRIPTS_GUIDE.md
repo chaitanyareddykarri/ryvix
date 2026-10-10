@@ -6,6 +6,7 @@ not automatically execute when the web server starts.
 
 | Group | Purpose and important boundary |
 | --- | --- |
+| `verify-railway-worker.mjs` | Tests the built Railway wrapper with a disposable root-owned Docker volume, denied roles, non-root runtime and graceful stop. No live database/provider access. |
 | `verify-micro-compose.mjs` | Renders both Micro host configurations with dummy env files; checks default roles, tmpfs options, memory limits and Docker socket placement. Does not start services or inspect real host secrets. |
 | `verify-vercel-boundary.mjs` | Audits web API dependencies for filesystem/process boundaries; optional `--traces` checks built output excludes ai/data. Not a live Vercel deployment test. |
 | `verify-static-workspace.ts` | Exercises actual local Docker isolation, static checks, signed previews and fixture-backed task orchestration. Requires Docker; does not certify real providers or Oracle capacity. |
