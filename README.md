@@ -1,5 +1,15 @@
 # Ryvix
 
+## Active hosting selection - Railway and AWS
+
+The user selected [Vercel + Railway workers + AWS workspace](docs/infrastructure/RAILWAY_AWS_TRIAL.md).
+Vercel is deployed at ryvix.vercel.app and login works by user report. Railway
+worker configuration is prepared locally; deployment and provider acceptance
+remain pending. AWS terminal access works by user report, but the 1 GB/8 GB host
+needs storage and Docker preparation. Oracle recovery is deferred, not completed.
+Earlier Oracle placement and Step 4 access notes below are historical snapshots.
+
+
 Current deployment plan (October 10): [Vercel and two AMD64 Oracle Micro VMs](docs/infrastructure/MICRO_VERCEL_TRIAL.md).
 Step 1 host preparation is evidenced by user-provided terminal output. Step 2
 code adaptation is implemented and locally checked; it is not a live deployment.
