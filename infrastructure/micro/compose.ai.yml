@@ -1,0 +1,53 @@
+# VM 1. Start operations first. At most one optional role until measured.
+name: ryvix-micro-ai
+x-worker: &worker
+  image: ${RYVIX_WORKER_IMAGE:?Set reviewed AMD64 worker digest}
+  platform: linux/amd64
+  restart: "on-failure:3"
+  init: true
+  user: "1000:1000"
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  pids_limit: 64
+  mem_limit: 192m
+  memswap_limit: 256m
+  cpus: 0.25
+  tmpfs: ["/tmp:size=16m,mode=1777"]
+  environment:
+    NODE_ENV: production
+    NODE_OPTIONS: --max-old-space-size=112
+    RYVIX_WORKER_POOL_MAX: "2"
+  stop_grace_period: 60s
+  logging:
+    driver: json-file
+    options: {max-size: "5m", max-file: "2"}
+services:
+  operations:
+    <<: *worker
+    env_file: ["${RYVIX_WORKER_ENV_DIR:?Set protected env directory}/operations.env"]
+    command: [node, scripts/worker-entry.mjs, operations]
+    volumes: [operations-ai:/app/ai/data]
+  gmail:
+    <<: *worker
+    profiles: [gmail]
+    env_file: ["${RYVIX_WORKER_ENV_DIR}/gmail.env"]
+    command: [node, scripts/worker-entry.mjs, gmail]
+    volumes: [gmail-ai:/app/ai/data]
+  whatsapp:
+    <<: *worker
+    profiles: [whatsapp]
+    env_file: ["${RYVIX_WORKER_ENV_DIR}/whatsapp.env"]
+    command: [node, scripts/worker-entry.mjs, whatsapp]
+    volumes: [whatsapp-ai:/app/ai/data]
+  experience:
+    <<: *worker
+    profiles: [experience]
+    env_file: ["${RYVIX_WORKER_ENV_DIR}/experience.env"]
+    command: [node, scripts/worker-entry.mjs, experience]
+    volumes: [experience-ai:/app/ai/data]
+volumes:
+  operations-ai:
+  gmail-ai:
+  whatsapp-ai:
+  experience-ai:

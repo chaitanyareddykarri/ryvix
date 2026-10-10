@@ -3,6 +3,7 @@ import { GET as serverSnapshot } from '../../servers/route';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
+export const maxDuration = 60;
 const active = new Map<string, number>();
 
 /** Browser SSE observes the existing signed ingestion/rollup pipeline. */

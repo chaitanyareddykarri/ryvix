@@ -4,7 +4,7 @@ import { getDirectDbPool } from '@/utils/direct-db';
 import { boundedDeviceBody } from '@/utils/device-ingestion';
 import { DeviceError } from '../../../../backend/src/services/device-protocol';
 import { LearningStore, LearningError } from '../../../../backend/src/services/learning-store';
-import {NEURAL_THREAT_CLASSES} from '../../../../ai/src/neural-network';
+import {NEURAL_THREAT_CLASSES} from '../../../../ai/src/neural-classifier';
 export const dynamic='force-dynamic';
 const uuid=/^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
 async function handle(request:Request,mutate:boolean) {

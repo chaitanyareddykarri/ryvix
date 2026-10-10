@@ -1,5 +1,5 @@
 import type {Pool} from 'pg';
-import {NeuralThreatClassifier} from '../../../ai/src/neural-network';
+import {NeuralThreatClassifier} from '../../../ai/src/neural-classifier';
 
 // Constant, curated SQL only: never copy arbitrary JSON, prompts, logs or credentials.
 const sources:Record<string,string>={

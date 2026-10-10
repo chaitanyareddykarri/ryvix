@@ -1,6 +1,16 @@
 # Ryvix System Architecture Reference
 
-## Current checkpoint - October 7, 2026
+## Current checkpoint - October 10, 2026
+
+The selected restricted trial places web/API orchestration on Vercel, selected
+workers on VM 1 and one static-only Docker workspace on VM 2. Hosted Supabase
+remains durable storage; inference uses external model APIs. Step 2 code is
+locally verified, not deployed. See the [current runbook and next steps](../docs/infrastructure/MICRO_VERCEL_TRIAL.md).
+Migrations 20261009000001 and 20261009000002 remain pending application according
+to the latest recorded verification; no hosted ledger check was run in this
+documentation update. Earlier schema and readiness statements below are historical.
+
+## Historical checkpoint - October 7, 2026
 
 Hosted migrations through `20261007000001` are applied. Team invitation browser
 access is denied; backend CRUD, public-table RLS and repository URL constraints
@@ -16,7 +26,7 @@ Applied schema: `20261004000002`. Gmail authenticated push/reviewed replies, bou
 ## Implementation status - October 7, 2026
 
 Hosted migrations are applied through `20261007000001`; no numbered migrations
-remain pending at the latest rollout. See [project status](../docs/PROJECT_STATUS.md)
+remained pending at that October 7 checkpoint. See [project status](../docs/PROJECT_STATUS.md)
 for completed UI, authentication, team, repository and fleet work and recorded
 verification. The [pending queue](../docs/PENDING_WORK.md) separates unfinished code,
 deployment configuration and live acceptance. Design details below describe

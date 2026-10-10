@@ -1,0 +1,76 @@
+name: AMD64 micro pilot images
+on:
+  pull_request:
+    branches: [main, Testing_branch]
+  push:
+    branches: [main, Testing_branch]
+permissions:
+  contents: read
+jobs:
+  images:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Check code and serverless boundary
+        run: |
+          npm run typecheck
+          npm run security:secrets
+          node scripts/verify-vercel-boundary.mjs
+          node scripts/verify-micro-compose.mjs
+          node --import tsx --test tests/static-workspace.test.ts
+      - name: Build native AMD64 images
+        run: |
+          test "$(docker info --format '{{.Architecture}}')" = x86_64
+          docker build --platform linux/amd64 -f infrastructure/Dockerfile.workers -t ryvix-micro-workers:ci .
+          docker build --platform linux/amd64 -f infrastructure/workspaces/Dockerfile.static -t ryvix-micro-static:ci infrastructure/workspaces
+          docker image inspect --format '{{.Os}}/{{.Architecture}}' ryvix-micro-workers:ci ryvix-micro-static:ci
+          docker run --rm --network none --entrypoint node ryvix-micro-workers:ci -e "if(process.arch!=='x64')process.exit(1);require('pg');require('typescript');require('fs').writeFileSync('/app/ai/data/probe','ok')"
+      - name: Verify Vercel-style build without runtime AI data
+        env:
+          VERCEL: "1"
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder-project.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: public-build-placeholder
+        run: |
+          npm run build
+          node scripts/verify-vercel-boundary.mjs --traces web/.next
+      - name: Exercise actual static sandbox
+        env:
+          RYVIX_WORKSPACE_STATIC_IMAGE: ryvix-micro-static:ci
+        run: node --import tsx scripts/verify-static-workspace.ts
+      - name: Verify complete static flow inside capped non-root worker
+        run: |
+          docker run --rm --network host --user 1000:1000 --group-add "$(stat -c %g /var/run/docker.sock)" \
+            --read-only --cap-drop ALL --security-opt no-new-privileges \
+            --tmpfs /tmp:size=16m,mode=1777 --memory 256m --memory-swap 384m \
+            -e NODE_OPTIONS=--max-old-space-size=144 -e RYVIX_WORKSPACE_STATIC_IMAGE=ryvix-micro-static:ci \
+            -v /var/run/docker.sock:/var/run/docker.sock --entrypoint node ryvix-micro-workers:ci \
+            --import tsx scripts/verify-static-workspace.ts
+      - name: Publish revision images after this workflow passes on main
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.RYVIX_MICRO_PUBLISH_ENABLED == 'true'
+        env:
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REGISTRY_USER: ${{ github.actor }}
+          REPOSITORY: ${{ github.repository }}
+          REVISION: ${{ github.sha }}
+        run: |
+          printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io -u "$REGISTRY_USER" --password-stdin
+          for KIND in workers static; do
+            IMAGE="ghcr.io/${REPOSITORY,,}-micro-$KIND:$REVISION"
+            docker tag "ryvix-micro-$KIND:ci" "$IMAGE"
+            docker push "$IMAGE"
+            docker image inspect --format '{{json .RepoDigests}}' "$IMAGE"
+          done
+      - name: Clear registry credentials
+        if: always()
+        run: docker logout ghcr.io

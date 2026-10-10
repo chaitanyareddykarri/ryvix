@@ -1,6 +1,9 @@
+import {fileURLToPath} from 'node:url';
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
+  ...(process.env.VERCEL ? {} : {output: 'standalone'}),
+  outputFileTracingRoot: fileURLToPath(new URL('..', import.meta.url)),
+  outputFileTracingExcludes: {'/*': ['./ai/data/**/*', '../ai/data/**/*']},
   // Keep validation builds separate from a concurrently running development server.
   distDir: process.env.RYVIX_NEXT_DIST_DIR || '.next',
   allowedDevOrigins: [

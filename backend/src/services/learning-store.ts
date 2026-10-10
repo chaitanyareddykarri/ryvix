@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
-import { NEURAL_THREAT_CLASSES, NeuralThreatClassifier } from '../../../ai/src/neural-network';
+import { NEURAL_THREAT_CLASSES, NeuralThreatClassifier } from '../../../ai/src/neural-classifier';
 import { ContextBuilder } from '../../../ai/src/context/context-builder';
 import { sanitizeLearningEvent } from '../../../ai/src/learning-event';
 

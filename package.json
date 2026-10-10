@@ -27,7 +27,7 @@
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present && node --test tests/deploy-workers.test.mjs tests/verify-all.test.mjs tests/worker-http-resilience.test.mjs tests/direct-db.test.mjs tests/lint-root-dirs.test.mjs tests/secret-scan.test.mjs tests/egress-proxy.test.mjs tests/runtime-environment.test.mjs tests/offline-network.test.mjs && node --import tsx --test tests/pilot-deployment.test.ts tests/worker-preflight.test.ts tests/model-usage-scope.test.ts tests/host-logs.test.ts tests/message-budget.test.ts tests/usage-reconciliation.test.ts && tsx tests/run-all.ts",
+    "test": "npm run test --workspaces --if-present && node --test tests/deploy-workers.test.mjs tests/verify-all.test.mjs tests/worker-http-resilience.test.mjs tests/direct-db.test.mjs tests/lint-root-dirs.test.mjs tests/secret-scan.test.mjs tests/egress-proxy.test.mjs tests/runtime-environment.test.mjs tests/offline-network.test.mjs && node --import tsx --test tests/pilot-deployment.test.ts tests/worker-preflight.test.ts tests/model-usage-scope.test.ts tests/host-logs.test.ts tests/message-budget.test.ts tests/usage-reconciliation.test.ts tests/static-workspace.test.ts && tsx tests/run-all.ts",
     "security:secrets": "node scripts/check-secrets.mjs",
     "test:e2e": "npm run test:browser",
     "dev": "npm run dev --workspace=@ryvix/web",
@@ -50,7 +50,9 @@
     "verify:offline": "npm run test:offline && npm run test:browser",
     "verify:all": "node scripts/verify-all.mjs",
     "verify:arm64": "node scripts/verify-arm64.mjs",
-    "verify:model": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/verify-selected-model.ts"
+    "verify:model": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/verify-selected-model.ts",
+    "verify:vercel": "node scripts/verify-vercel-boundary.mjs",
+    "verify:static-workspace": "node --import tsx scripts/verify-static-workspace.ts"
   },
   "devDependencies": {
     "fast-glob": "file:tools/next-root-glob",

@@ -3,7 +3,8 @@ import {ModelUsage} from '../../../../backend/src/services/model-usage';
 import {ExperienceStore} from '../../../../backend/src/services/experience-store';
 import {RepositoryKnowledge} from '../../../../backend/src/services/repository-knowledge';
 import { NextResponse } from 'next/server';
-import { modelGateway } from '@ryvix/services';
+// Avoid importing the service barrel: it initializes disk-backed legacy AI stores.
+import { modelGateway } from '../../../../ai/src/model-gateway';
 import { requireTenant, RequestError } from '@/utils/tenant-context';
 import { diagnosticContext } from '@/utils/diagnostic-context';
 import { retrieveChatSources } from '@/utils/chat-retrieval';
@@ -17,6 +18,8 @@ import { repositoryChatContext } from '@/utils/repository-chat-context';
 import { rerankSources } from '../../../../ai/src/semantic-reranking';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+export const maxDuration = 180;
 const active = new Set<string>();
 
 export async function POST(request: Request) {

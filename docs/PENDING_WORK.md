@@ -1,4 +1,19 @@
-# Pending work - October 9, 2026
+# Pending work - October 10, 2026
+
+## Deployment checkpoint - October 10, 2026
+
+Step 1 host preparation is supported by the user-provided terminal output; no
+fresh remote audit is claimed. Step 2 is implemented and locally verified for
+the restricted static-only trial. The current batch is on local main and remains
+uncommitted/unpublished. See the [recap and ordered Steps 3-7](infrastructure/MICRO_VERCEL_TRIAL.md#progress-through-step-2).
+Older dated entries below are historical snapshots, not current branch, schema
+or deployment instructions. Broader product backlog remains open.
+
+October 10 Step 2: [two Micro VMs and Vercel restricted trial](infrastructure/MICRO_VERCEL_TRIAL.md).
+AMD64 image CI, per-host worker limits/templates, static-only 192 MiB workspaces
+and serverless API boundaries are implemented locally. Standard coding workspaces
+retain their original limits. No live deployment, credentials, migrations or
+publication is implied; see the linked runbook and verification for remaining gates.
 
 October 9 non-deployment implementation: [current evidence and remaining work](verification/NONDEPLOYMENT_2026_10_09.md).
 Bounded signed journal logs, inventory persistence, context compaction, pre-plan
@@ -11,8 +26,22 @@ missing quota/context functionality or zero pending migrations are superseded.
 
 ## Current follow-up
 
-Hosting selection is deferred; the Oracle sections below describe the previous
-plan, not a selected or deployed host. AI fallback is implemented and small live
+Hosting selection for the restricted trial is Vercel plus two AMD64 Oracle Micro
+VMs. The older single-ARM-host sections below are historical, not this trial's
+deployment instructions. All five Step 2 code items have local evidence in the
+[recheck matrix](verification/MICRO_STEP2_2026_10_10.md). The recheck fixed split
+Compose tmpfs options and added rendered-configuration checks to CI.
+
+Pending rollout: publish the reviewed revision, pass GitHub CI and record image
+digests; configure Vercel and protected host credentials; apply the two pending
+migrations; establish preview DNS/TLS; then verify real provider flows, streaming,
+whole-host resource usage and rollback. None is marked complete by local tests.
+Broader non-deployment work remains listed in the
+[October 9 evidence](verification/NONDEPLOYMENT_2026_10_09.md#remaining-work-separate-from-hosting):
+analysis/scanner coverage, reviewed evaluation data, external training adapters,
+usage reconciliation and isolated concurrency acceptance. It is outside Step 2.
+
+AI fallback is implemented and small live
 Gemini/Groq completion and streaming probes passed locally. Complete the
 [post-deployment checklist](infrastructure/POST_DEPLOYMENT_CHECKLIST.md) before
 claiming deployed chat or coding works. Local secrets are not published by Git.
@@ -22,7 +51,7 @@ October 8 Oracle phase 1: deployment code is implemented locally; see
 and native ARM CI, Oracle/DNS installation, live model selection/acceptance and
 the restricted pilot checks. Use the [release runbook](infrastructure/ORACLE_RELEASE_RUNBOOK.md).
 
-Current deployment plan (October 8): [Oracle pilot rollout](infrastructure/ORACLE_PILOT_DEPLOYMENT.md).
+Historical deployment plan (October 8): [Oracle pilot rollout](infrastructure/ORACLE_PILOT_DEPLOYMENT.md).
 Oracle hosts Next.js UI/APIs and separate workers; Supabase stays hosted and
 model inference uses an external API. Finish ARM64/resource/deployment work,
 prepare accounts in parallel, then activate providers on a restricted HTTPS
