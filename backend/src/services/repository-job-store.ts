@@ -38,6 +38,14 @@ export class RepositoryJobStore {
     if(!this.hostId || !/^[a-z0-9][a-z0-9-]{0,62}$/.test(this.hostId))throw new Error('Stable worker host required');
     return this.hostId;
   }
+  async getCreatorTelegramChatId(userId: string): Promise<string | null> {
+    try {
+      const res = await this.pool.query('SELECT telegram_chat_id FROM profiles WHERE id=$1', [userId]);
+      return res.rows[0]?.telegram_chat_id ? String(res.rows[0].telegram_chat_id) : null;
+    } catch {
+      return null;
+    }
+  }
   private async transaction<T>(fn: (client: PoolClient) => Promise<T>) {
     const client = await this.pool.connect();
     try { await client.query('BEGIN'); const value = await fn(client); await client.query('COMMIT'); return value; }

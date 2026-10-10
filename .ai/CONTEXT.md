@@ -14,6 +14,16 @@ Current Step 4: [setup handoff and published image digests](../docs/infrastructu
 Configuration templates are prepared locally. Vercel/domain details and SSH
 reachability remain unresolved; no host deployment or migrations were performed.
 
+## Deployment checkpoint - October 11, 2026
+
+Telegram Assistant (`@RyvixAiBot`) is integrated and verified via `/api/webhooks/telegram`,
+supporting phone verification (button share and text input), last-10-digits matching,
+external LLM reasoning (`modelGateway`), and background coding sandbox task enqueueing (`RepositoryJobStore`).
+Web UI onboarding labels and navigation links transitioned from WhatsApp to Telegram.
+GitHub Actions CI browser test failure resolved with updated Playwright specs in `d0ad4bb`.
+`Testing_branch` was fast-forward merged to `main` and pushed to `origin/main` for production deployment.
+See the [Telegram contract](../docs/integrations/TELEGRAM.md) and [verification report](../docs/verification/TELEGRAM_ASSISTANT_2026_10_11.md).
+
 ## Deployment checkpoint - October 10, 2026
 
 Step 1 host preparation is supported by the user-provided terminal output; no

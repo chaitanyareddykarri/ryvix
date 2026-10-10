@@ -1,11 +1,22 @@
+# Telegram Assistant, Local Docker Sandbox Worker & Main Synchronization - October 11, 2026
+
+The user authorized merging verified changes from `Testing_branch` into `main` for production deployment.
+- Telegram Assistant integrated under `@RyvixAiBot` via `/api/webhooks/telegram` with secret token validation, dual phone linking (contact sharing + direct phone text typing with last-10-digits normalization), LLM reasoning via `modelGateway`, and coding sandbox task enqueueing via `RepositoryJobStore`.
+- UI branding transitioned from WhatsApp to Telegram across `PhoneOnboarding`, `PhoneContactForm`, profile routes, and workspace navigation.
+- Local Docker sandbox runner implemented via `scripts/start-local-sandbox.mjs` (`npm run worker:local`) with automated Docker daemon pre-flight checks and container image verification for `ryvix-micro-static:local`, `ryvix-workspace-node:local`, and `ryvix-workspace-egress:local`.
+- Telegram task completion & failure alerts implemented in `services/src/workspace/repository-worker.ts` via `RepositoryJobStore.getCreatorTelegramChatId`.
+- Fixed GitHub Actions CI failure (obsolete WhatsApp assertions in `phone-onboarding.spec.mjs`) in commit `d0ad4bb`.
+- Verified local gates: `npm run typecheck`, `npm run security:secrets`, `npm run lint`, `npm run test:offline` (97/97 suites), and browser suite (136/136 tests).
+- GitHub Actions CI passed on `Testing_branch` (Runs #38091980361 and #38091980463) and on `main` (Runs #38092762794 and #38092762720).
+See docs/integrations/TELEGRAM.md and docs/verification/TELEGRAM_ASSISTANT_2026_10_11.md.
+
 # Navigation and mobile layout - October 11, 2026
 
-User authorized synchronization, verification and publication to the testing
-branch only. Root `/` remains Intro/Home; `/dashboard` remains Console. Shared
+Root `/` remains Intro/Home; `/dashboard` remains Console. Shared
 section navigation, contextual parent links and scoped mobile overflow fixes are
 implemented. Upstream Telegram UI changes through `9f1220a` are preserved.
 See docs/verification/NAVIGATION_MOBILE_2026_10_11.md for final verification.
-Do not promote this update to main or production without further authorization.
+Synchronized and deployed to main following user instruction.
 
 # Task history and URL mock metrics - October 11, 2026
 

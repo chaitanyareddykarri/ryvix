@@ -32,6 +32,7 @@
     "test:e2e": "npm run test:browser",
     "dev": "npm run dev --workspace=@ryvix/web",
     "worker:workspaces": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/workspace-worker.ts",
+    "worker:local": "node scripts/start-local-sandbox.mjs",
     "verify:runtime": "node scripts/check-runtime-readiness.mjs",
     "verify:database": "node scripts/verify-database-boundaries.mjs",
     "verify:deployment": "tsx scripts/verify-deployment-live.ts",

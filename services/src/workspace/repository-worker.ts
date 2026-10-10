@@ -5,6 +5,8 @@ import { dockerWorkspaceManager } from './docker-workspace.manager';
 import { executeRepositoryTask } from './repository-task';
 import { ensurePreviewGateway } from './preview-gateway';
 
+import { sendTelegramMessage } from '../communication/telegram';
+
 export async function runRepositoryJob(store: RepositoryJobStore, workerId: string): Promise<boolean> {
   if (!await dockerWorkspaceManager.hasCapacity()) return false;
   const job = await store.claim(workerId);
@@ -38,12 +40,55 @@ export async function runRepositoryJob(store: RepositoryJobStore, workerId: stri
     });
     if (lostLease) throw new Error('Worker lease lost');
     await store.complete(job,workerId,result);
+
+    if (process.env.TELEGRAM_BOT_TOKEN) {
+      try {
+        const chatId = await store.getCreatorTelegramChatId(job.created_by);
+        if (chatId) {
+          const filesCount = result.files?.length || 0;
+          const previewText = result.session?.preview_url
+            ? `\n🌐 *Preview:* ${result.session.preview_url}`
+            : (result.session?.preview_port ? `\n🌐 *Local Preview:* http://localhost:${result.session.preview_port}` : '');
+          await sendTelegramMessage(
+            process.env.TELEGRAM_BOT_TOKEN,
+            chatId,
+            `🎉 *Task #${job.task_id.slice(0, 8)} Completed in Sandbox!*\n\n` +
+            `📂 *Repo:* \`${job.full_name}\`\n` +
+            `📝 *Plan:* ${result.summary || 'Code modifications applied'}\n` +
+            `📁 *Files Changed:* ${filesCount}\n` +
+            `🧪 *Verification:* Checks passed inside container sandbox${previewText}\n\n` +
+            `📊 *Review & Merge:* https://ryvix.co.in/dashboard`,
+            { parseMode: 'Markdown' }
+          );
+        }
+      } catch (tgErr) {
+        console.warn('[Telegram Worker Notice] Could not send completion alert:', tgErr);
+      }
+    }
   } catch (error) {
     let cleaned=true;
     if (sessionId) try {await dockerWorkspaceManager.terminateSession(sessionId);await store.markDestroyed(sessionId);}catch{cleaned=false;}
     const deferred=error instanceof ModelQuotaError&&!lostLease&&cleaned
       ? await store.deferQuota(job,workerId,error.retryAt).catch(()=>false):false;
     if(!deferred)await store.fail(job,workerId);
+
+    if (process.env.TELEGRAM_BOT_TOKEN) {
+      try {
+        const chatId = await store.getCreatorTelegramChatId(job.created_by);
+        if (chatId) {
+          await sendTelegramMessage(
+            process.env.TELEGRAM_BOT_TOKEN,
+            chatId,
+            `⚠️ *Task #${job.task_id.slice(0, 8)} Stopped in Sandbox*\n\n` +
+            `📂 *Repo:* \`${job.full_name}\`\n` +
+            `❌ *Error:* ${error instanceof Error ? error.message : 'Execution failed'}\n\n` +
+            `📊 Check logs: https://ryvix.co.in/dashboard`
+          );
+        }
+      } catch (tgErr) {
+        console.warn('[Telegram Worker Notice] Could not send failure alert:', tgErr);
+      }
+    }
   } finally { clearInterval(heartbeat); }
   return true;
 }
