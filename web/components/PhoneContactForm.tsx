@@ -15,13 +15,13 @@ export default function PhoneContactForm({initialPhone='',onSaved}:{initialPhone
     finally{setBusy(false);}
   }
   return <form className="phone-contact-form workspace-controls" onSubmit={save}>
-    <label>Your WhatsApp number, with country code
+    <label>Your phone number for Telegram, with country code
       <input type="tel" autoComplete="tel" placeholder="+91 98765 43210" maxLength={32} required disabled={busy}
         value={phone} onChange={e=>{setPhone(e.target.value);setSaved(false);}}/>
     </label>
-    <p>Save your contact number now. WhatsApp verification is a separate step and requires a business connection. Saving does not enable messages or alerts.</p>
+    <p>Save your contact number to connect with Ryvix AI on Telegram (@RyvixAiBot). After saving, open Telegram to chat and manage your repositories.</p>
     {error&&<p role="alert">{error}</p>}
-    {saved&&<p role="status">Contact number saved. WhatsApp verification and notification preferences are separate.</p>}
+    {saved&&<p role="status">Contact number saved! Now open @RyvixAiBot on Telegram to connect your account.</p>}
     <button className="btn-primary" disabled={busy}>{busy?'Saving…':'Save phone number'}</button>
   </form>;
 }

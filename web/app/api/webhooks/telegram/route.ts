@@ -197,18 +197,19 @@ export async function POST(request: Request) {
       // 1. Analyze prompt with External LLM (Gemini / Groq / OpenAI)
       let aiUnderstanding = '';
       try {
+        const onAttempt = async () => {};
         const completion = await modelGateway.complete([
           {
             role: 'system',
-            content: `You are Ryvix AI, an autonomous software engineering assistant. The user is chatting via Telegram. ` +
+            content: `You are Ryvix AI, an autonomous software engineering assistant connected via Telegram. ` +
               (targetRepo ? `Target connected GitHub repository: "${targetRepo.full_name}" (branch: ${targetRepo.default_branch}).` : 'No GitHub repository connected yet.') +
-              ` Provide a concise 2-3 sentence answer explaining your engineering plan or answering their question. Do not output markdown code blocks unless requested.`,
+              ` Provide a clear, helpful 2-4 sentence answer explaining your engineering plan or answering their question directly.`,
           },
           { role: 'user', content: text },
-        ]);
+        ], { onAttempt, signal: AbortSignal.timeout(25000) });
         aiUnderstanding = completion.content?.trim() || '';
       } catch (llmErr) {
-        console.warn('[Telegram LLM Notice] Falling back without external model stream:', llmErr);
+        console.warn('[Telegram LLM Notice] Model completion fallback:', llmErr);
       }
 
       // 2. If the user has a repository, enqueue the task into the sandbox build queue!

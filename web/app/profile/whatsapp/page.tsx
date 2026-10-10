@@ -15,15 +15,16 @@ export default function WhatsAppProfile(){
   },[]);
   return <main className="phone-profile-page">
     <span className="workspace-eyebrow">Account settings</span>
-    <h1>Phone / WhatsApp</h1>
-    <p className="workspace-lead">Manage your contact number and choose how to connect with your workspace on WhatsApp.</p>
+    <h1>Phone / Telegram</h1>
+    <p className="workspace-lead">Manage your contact number and connect with your Ryvix AI bot on Telegram (@RyvixAiBot).</p>
     <div className="phone-profile-grid"><section className="workspace-card">
       <span className="workspace-eyebrow">Step 01 · Profile</span><h2>Profile contact number</h2>
       {error&&<p role="alert">{error}</p>}
       {loaded?<PhoneContactForm initialPhone={contact} onSaved={phone=>{setContact(phone);setError('');}}/>:<p role="status">Loading your contact number…</p>}
-    </section><div className="workspace-card"><span className="workspace-eyebrow">Step 02 · Optional verification</span>
-      {loaded&&<WhatsAppVerification initialPhone={contact}/>}
+    </section><div className="workspace-card"><span className="workspace-eyebrow">Step 02 · Connect Telegram</span>
+      <p style={{paddingTop:12}}>Open the Ryvix Telegram Bot and tap <strong>Share Phone Number</strong> (or type your number):</p>
+      <a href="https://t.me/RyvixAiBot" target="_blank" rel="noreferrer" className="btn-primary" style={{display:'inline-block',marginTop:12}}>Open @RyvixAiBot</a>
     </div></div>
-    <p className="phone-profile-links"><Link href="/channels">Manage business connections</Link><Link href="/chat">Open chat</Link></p>
+    <p className="phone-profile-links"><a href="https://t.me/RyvixAiBot" target="_blank" rel="noreferrer">Telegram Bot (@RyvixAiBot)</a><Link href="/chat">Open chat</Link></p>
   </main>;
 }
