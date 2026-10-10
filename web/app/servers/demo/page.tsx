@@ -35,7 +35,7 @@ export default function ServerDemoPage() {
     }catch{setGenerated(null);setMetricError('Enter an HTTP or HTTPS website URL without credentials.');}
   }
   return <main style={{maxWidth:1100,margin:"0 auto",padding:"2rem 1rem"}}>
-    <Link href="/servers">Back to real servers</Link>
+    <Link href="/servers">← Back to Servers</Link>
     <h1>Server and coding demo</h1>
     <p role="note"><strong>DEMO — sample data only.</strong> This page does not connect GitHub, enroll a server, run a security scan or deploy code. Changes stay in this page and reset when you leave.</p>
     <section style={{padding:"1rem",border:"1px solid #475569",borderRadius:12,marginBlock:20}}>

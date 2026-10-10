@@ -4,6 +4,8 @@ import Link from "next/link";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createClient } from "@/utils/supabase/client";
 import ConnectServerModal from "@/components/ConnectServerModal";
+import responsive from "@/components/InfrastructureResponsive.module.css";
+import ApplicationNavigation from '@/components/ApplicationNavigation';
 
 interface SystemdService {
   name: string;
@@ -73,7 +75,7 @@ export default function ServersPage() {
   });
 
   return (
-    <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "2.5rem 1.5rem" }}>
+    <div className={responsive.page} style={{ maxWidth: "1200px", margin: "0 auto", padding: "2.5rem 1.5rem" }}>
       {/* Header Bar */}
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2.5rem", flexWrap: "wrap", gap: "1rem" }}>
         <div style={{ minWidth: 0, maxWidth: "100%" }}>
@@ -100,17 +102,9 @@ export default function ServersPage() {
               {userEmail}
             </span>
           )}
-          <Link href="/observability" className="btn-secondary" style={{ padding: "0.4rem 0.9rem", fontSize: "0.82rem", textDecoration: "none", color: "#38bdf8", borderColor: "rgba(56, 189, 248, 0.3)" }}>📡 Observability</Link>
-          <Link href="/operations" className="btn-secondary" style={{ padding: "0.4rem 0.9rem", fontSize: "0.82rem", textDecoration: "none" }}>Service approvals</Link>
           <Link href="/servers/tools" className="btn-secondary">Keys, access diagnostics and classification</Link>
-          <Link href="/notifications" className="btn-secondary" style={{ padding: "0.4rem 0.9rem", fontSize: "0.82rem", textDecoration: "none" }}>Security emails</Link>
-          <Link href="/tasks" className="btn-secondary" style={{ padding: "0.4rem 0.9rem", fontSize: "0.82rem", textDecoration: "none" }}>
-            Coding Workspace
-          </Link>
-          <Link href="/dashboard" className="btn-secondary" style={{ padding: "0.4rem 0.9rem", fontSize: "0.82rem", textDecoration: "none" }}>
-            Dashboard
-          </Link>
         </nav>
+        <ApplicationNavigation/>
       </header>
 
       {/* Non-Coder Guidance: GitHub vs. Server */}
@@ -127,7 +121,7 @@ export default function ServersPage() {
         flexWrap: "wrap",
         gap: "1rem"
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+        <div className={responsive.guidance} style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
           <div style={{ fontSize: "1.3rem" }}>💡</div>
           <div style={{ fontSize: "0.84rem", color: "#c7d2fe", lineHeight: 1.45 }}>
             <strong>Understanding your connections:</strong> Your GitHub connection provides repository access. Server enrollment adds authenticated telemetry. Service restarts and cloud recovery require separate capabilities, configuration and approval.
@@ -335,7 +329,7 @@ export default function ServersPage() {
               </div>
 
               {/* Action Buttons */}
-              <div style={{ display: "flex", gap: "0.5rem", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "1rem" }}>
+              <div className={responsive.actions} style={{ display: "flex", gap: "0.5rem", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "1rem" }}>
                 <Link
                   href={`/operations?server=${encodeURIComponent(server.id)}`}
                   title="Choose an allowed service and request independent approval"

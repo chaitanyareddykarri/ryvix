@@ -5,12 +5,12 @@ test('phone dialog uses dashboard controls and fits a phone',async({page})=>{
  await page.setViewportSize({width:375,height:812});const h=await mount(page,'web/app/dashboard/page.tsx',{responses:{'/api/profile/contact':{phoneNumber:null}}});
  const dialog=page.getByRole('dialog');await expect(dialog).toBeVisible();
  await expect(dialog).toHaveCSS('background-color','rgb(13, 18, 24)');
- await expect(page.getByLabel('Your WhatsApp number, with country code')).toHaveCSS('background-color','rgb(8, 12, 17)');
+ await expect(page.getByLabel('Your phone number for Telegram, with country code')).toHaveCSS('background-color','rgb(8, 12, 17)');
  await page.screenshot({path:'tmp/render-audit/phone-ui-mobile.png'});h.verify();
 });
 test('profile uses consistent panels at desktop width',async({page})=>{
  await page.setViewportSize({width:1280,height:900});const h=await mount(page,'web/app/profile/whatsapp/page.tsx');
- await expect(page.getByRole('heading',{name:'Phone / WhatsApp',exact:true})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Phone / Telegram',exact:true})).toBeVisible();
  await page.screenshot({path:'tmp/render-audit/phone-ui-desktop.png'});h.verify();
 });
 test('home fleet navigation and server approval links are real destinations',async({page})=>{
@@ -20,7 +20,7 @@ test('home fleet navigation and server approval links are real destinations',asy
 test('fleet handles unavailable stream, recovery, filters and approval handoffs',async({page})=>{
  await page.addInitScript(()=>{window.EventSource=class{constructor(){this.handlers={};window.__fleetStream=this;}addEventListener(name,callback){this.handlers[name]=callback;}close(){} emit(name,data){this.handlers[name]?.({data:JSON.stringify(data)});}};});
  await page.setViewportSize({width:375,height:850});const h=await mount(page,'web/app/servers/page.tsx',{responses:{'/api/servers':{success:true,servers:[server]}}});
- await expect(page.getByRole('link',{name:'Dashboard',exact:true})).toHaveAttribute('href','/dashboard');
+ await expect(page.getByRole('link',{name:'↩ Return to Dashboard',exact:true})).toHaveAttribute('href','/');
  await expect(page.getByRole('button',{name:'unknown (1)',exact:true})).toBeVisible();
  await expect(page.getByText('Not available',{exact:true})).toHaveCount(3);
  await expect(page.getByRole('link',{name:'Request restart',exact:true})).toHaveAttribute('href',`/operations?server=${server.id}&service=nginx.service`);

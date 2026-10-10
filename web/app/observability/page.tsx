@@ -1,7 +1,9 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import styles from "./Observability.module.css";
+import ApplicationNavigation from '@/components/ApplicationNavigation';
 
 interface LogEntry {
   id: string;
@@ -79,11 +81,11 @@ export default function ObservabilityPage() {
   });
 
   return (
-    <main style={{ maxWidth: "1280px", margin: "0 auto", padding: "2.5rem 1.5rem", color: "#f8fafc" }}>
+    <main className={styles.page} style={{ maxWidth: "1280px", margin: "0 auto", padding: "2.5rem 1.5rem", color: "#f8fafc" }}>
       {/* Header */}
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <div className={styles.branding} style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
             <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
               <h1 style={{ fontSize: "1.8rem", fontWeight: 700, letterSpacing: "-0.03em", margin: 0 }}>
                 RY<span style={{ color: "#38bdf8" }}>VIX</span>
@@ -98,52 +100,12 @@ export default function ObservabilityPage() {
           </p>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          <Link
-            href="/servers"
-            style={{
-              padding: "0.45rem 0.9rem",
-              background: "rgba(255, 255, 255, 0.08)",
-              borderRadius: "8px",
-              color: "#e2e8f0",
-              fontSize: "0.82rem",
-              textDecoration: "none",
-            }}
-          >
-            🖥️ Servers
-          </Link>
-          <Link
-            href="/tasks"
-            style={{
-              padding: "0.45rem 0.9rem",
-              background: "rgba(255, 255, 255, 0.08)",
-              borderRadius: "8px",
-              color: "#e2e8f0",
-              fontSize: "0.82rem",
-              textDecoration: "none",
-            }}
-          >
-            ⚡ Tasks
-          </Link>
-          <Link
-            href="/dashboard"
-            style={{
-              padding: "0.45rem 0.9rem",
-              background: "linear-gradient(135deg, #0284c7, #2563eb)",
-              borderRadius: "8px",
-              color: "#ffffff",
-              fontSize: "0.82rem",
-              fontWeight: 600,
-              textDecoration: "none",
-            }}
-          >
-            Dashboard
-          </Link>
-        </div>
+        <ApplicationNavigation/>
       </header>
 
       {/* Top Diagnostic Probe Widget */}
       <div
+        className={styles.diagnostic}
         style={{
           background: "linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 27, 75, 0.8))",
           border: "1px solid rgba(255, 255, 255, 0.12)",
@@ -153,7 +115,7 @@ export default function ObservabilityPage() {
           boxShadow: "0 10px 30px rgba(0, 0, 0, 0.5)",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem", flexWrap: "wrap", gap: "0.5rem" }}>
+        <div className={styles.diagnosticHeader} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem", flexWrap: "wrap", gap: "0.5rem" }}>
           <div>
             <h3 style={{ fontSize: "1.05rem", fontWeight: 700, margin: 0 }}>
               📡 Tri-State Differential Outage Diagnosis
@@ -180,7 +142,7 @@ export default function ObservabilityPage() {
           </button>
         </div>
 
-        <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem" }}>
+        <div className={styles.probeInput} style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem" }}>
           <input
             type="text"
             value={probeUrl}
@@ -221,8 +183,8 @@ export default function ObservabilityPage() {
       </div>
 
       {/* Logs Controls & Filters */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "0.75rem" }}>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
+      <div className={styles.controls} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "0.75rem" }}>
+        <div className={styles.filters} style={{ display: "flex", gap: "0.5rem" }}>
           {["all", "info", "warning", "critical", "security"].map((sev) => (
             <button
               key={sev}
@@ -265,6 +227,10 @@ export default function ObservabilityPage() {
 
       {/* Logs Table */}
       <div
+        className={styles.records}
+        role="region"
+        aria-label="Observability records"
+        tabIndex={0}
         style={{
           background: "rgba(15, 23, 42, 0.6)",
           border: "1px solid rgba(255, 255, 255, 0.1)",
@@ -272,7 +238,9 @@ export default function ObservabilityPage() {
           overflowX: "auto",
         }}
       >
+        <p className={styles.scrollHint}>Scroll horizontally to see all columns →</p>
         <div
+          className={styles.recordRow}
           style={{
             display: "grid",
             gridTemplateColumns: "140px 100px 90px 1fr 180px", minWidth: "720px",
@@ -292,12 +260,12 @@ export default function ObservabilityPage() {
           <div>Source</div>
         </div>
 
-        {logsError ? <div role="alert" style={{padding:'2rem',color:'#fca5a5'}}>{logsError}</div> : loading ? (
-          <div style={{ padding: "3rem", textAlign: "center", color: "#64748b", fontSize: "0.85rem" }}>
+        {logsError ? <div className={styles.tableMessage} role="alert" style={{padding:'2rem',color:'#fca5a5'}}>{logsError}</div> : loading ? (
+          <div className={styles.tableMessage} style={{ padding: "3rem", textAlign: "center", color: "#64748b", fontSize: "0.85rem" }}>
             Loading recent observability records...
           </div>
         ) : filteredLogs.length === 0 ? (
-          <div style={{ padding: "3rem", textAlign: "center", color: "#64748b", fontSize: "0.85rem" }}>
+          <div className={styles.tableMessage} style={{ padding: "3rem", textAlign: "center", color: "#64748b", fontSize: "0.85rem" }}>
             No log events recorded matching the current filter.
           </div>
         ) : (
@@ -310,6 +278,7 @@ export default function ObservabilityPage() {
             return (
               <div
                 key={log.id}
+                className={styles.recordRow}
                 style={{
                   display: "grid",
                   gridTemplateColumns: "140px 100px 90px 1fr 180px", minWidth: "720px",

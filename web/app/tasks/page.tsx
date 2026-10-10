@@ -1,4 +1,6 @@
 "use client";
+import responsive from "@/components/InfrastructureResponsive.module.css";
+import ApplicationNavigation from '@/components/ApplicationNavigation';
 
 import Link from 'next/link';
 import TaskCheckTimeline from '@/components/TaskCheckTimeline';
@@ -152,7 +154,7 @@ export default function TasksPage() {
   }
 
   return (
-    <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "2.5rem 1.5rem" }}>
+    <div className={responsive.page} style={{ maxWidth: "1200px", margin: "0 auto", padding: "2.5rem 1.5rem" }}>
       {/* Header Bar */}
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2.5rem", flexWrap: "wrap", gap: "1rem" }}>
         <div>
@@ -177,9 +179,7 @@ export default function TasksPage() {
               {userEmail}
             </span>
           )}
-          <Link href="/dashboard" className="btn-secondary" style={{ padding: "0.4rem 0.9rem", fontSize: "0.82rem", textDecoration: "none" }}>
-            Return to Dashboard
-          </Link>
+          <ApplicationNavigation/>
         </div>
       </header>
 

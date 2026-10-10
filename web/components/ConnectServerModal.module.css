@@ -19,4 +19,11 @@
 .panel .success { color: #70dea1; }
 .setup { padding:16px; margin:16px 0; border:1px solid #293443; border-radius:12px; background:#080c11; }
 .panel input[type='checkbox'] { display:inline-block; width:18px; height:18px; min-height:18px; margin:0 8px 0 0; vertical-align:middle; accent-color:#8975f2; }
+@media (max-width: 768px) {
+  .overlay { box-sizing: border-box; grid-template-columns: minmax(0, 1fr); }
+  .panel { min-width: 0; max-width: calc(100vw - 32px); justify-self: center; overflow-wrap: anywhere; }
+  .panel :is(input, select, button, pre, .token, .setup) { min-width: 0; max-width: 100%; box-sizing: border-box; }
+  .panel button { min-height: 44px; white-space: normal; }
+  .panel :is(input, select) { font-size: 16px; }
+}
 @media (max-width: 480px) { .panel { padding: 20px; } }

@@ -1,3 +1,12 @@
+# Navigation and mobile layout - October 11, 2026
+
+User authorized synchronization, verification and publication to the testing
+branch only. Root `/` remains Intro/Home; `/dashboard` remains Console. Shared
+section navigation, contextual parent links and scoped mobile overflow fixes are
+implemented. Upstream Telegram UI changes through `9f1220a` are preserved.
+See docs/verification/NAVIGATION_MOBILE_2026_10_11.md for final verification.
+Do not promote this update to main or production without further authorization.
+
 # Task history and URL mock metrics - October 11, 2026
 
 Implemented durable bounded worker stage/check history and explicit random URL

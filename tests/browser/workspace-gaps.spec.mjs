@@ -3,8 +3,8 @@ import {mount} from './harness.mjs';
 test('dashboard exposes every operational destination on a phone',async({page})=>{
  await page.setViewportSize({width:375,height:800});const h=await mount(page,'web/app/dashboard/page.tsx');
  await page.getByText('Workspace tools',{exact:true}).click();
- const nav=page.getByRole('navigation',{name:'Workspace navigation'});
- for(const path of ['/releases','/operations','/recovery','/notifications','/knowledge','/experience','/learning','/learning/external','/profile/whatsapp','/usage'])await expect(nav.locator(`a[href="${path}"]`)).toBeVisible();
+ const nav=page.locator('.workspace-navigation');
+ for(const path of ['/releases','/server-approvals','/notifications','/knowledge','/experience','/learning','/learning/external','/profile/whatsapp','/usage'])await expect(nav.locator(`a[href="${path}"]`).last()).toBeVisible();
  const box=await nav.locator('.workspace-menu').boundingBox();expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(375);h.verify();
 });
 test('dashboard deployments uses recorded observations and distinguishes unknown health',async({page})=>{

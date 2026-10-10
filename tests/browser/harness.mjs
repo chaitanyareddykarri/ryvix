@@ -26,20 +26,22 @@ const defaults={
 };
 async function bundle(component){
  if(bundles.has(component))return bundles.get(component);
- const shell=/^web\/app\/(releases|operations|recovery|notifications|knowledge|experience|learning|profile|usage|deployments|team|repositories|servers\/tools)\//.test(component);
- const contents=`import React from 'react';import {createRoot} from 'react-dom/client';import Page from './${component}';import Shell from './web/components/WorkspaceShell';${component==='web/app/page.tsx'?"Page().then(element=>createRoot(document.getElementById('root')).render(element));":`createRoot(document.getElementById('root')).render(${shell?'React.createElement(Shell,null,React.createElement(Page))':'React.createElement(Page)'});`}`;
+ const shell=/^web\/app\/(releases|operations|recovery|server-approvals|notifications|knowledge|experience|learning|profile|usage|deployments|team|repositories|servers\/tools)\//.test(component);
+ const shellProps=/^web\/app\/(operations|recovery|servers\/tools)\//.test(component)?'{subpage:true}':/^web\/app\/(server-approvals|notifications)\//.test(component)?'{primary:true}':'null';
+ const contents=`import React from 'react';import {createRoot} from 'react-dom/client';import Page from './${component}';import Shell from './web/components/WorkspaceShell';${component==='web/app/page.tsx'?"Page().then(element=>createRoot(document.getElementById('root')).render(element));":`createRoot(document.getElementById('root')).render(${shell?`React.createElement(Shell,${shellProps},React.createElement(Page))`:'React.createElement(Page)'});`}`;
  const result=await build({stdin:{contents,resolveDir:root,loader:'tsx'},bundle:true,write:false,outfile:resolve(root,'tmp/browser/component.js'),format:'iife',platform:'browser',jsx:'automatic',define:{'process.env.NODE_ENV':'"test"'},plugins:[{name:'test-only-boundaries',setup(b){
   b.onResolve({filter:/^next\/(link|navigation|headers)$|^@\/utils\/supabase\/(client|server)$/},a=>({path:a.path,namespace:'fixture'}));
   b.onResolve({filter:/^@\//},a=>({path:['','.tsx','.ts','/index.tsx','/index.ts'].map(ext=>resolve(root,'web',a.path.slice(2)+ext)).find(path=>existsSync(path))}));
-  b.onLoad({filter:/.*/,namespace:'fixture'},a=>({resolveDir:root,loader:'js',contents:a.path==='next/headers'?`export const cookies=async()=>({getAll:()=>[]});`:a.path==='@/utils/supabase/server'?`export const createClient=()=>({auth:{getUser:async()=>({data:{user:window.__serverUser||null}})}});`:a.path==='next/link'?`import React from 'react';export default function Link({children,prefetch,...props}){return React.createElement('a',props,children);}`:a.path==='next/navigation'?`export const useRouter=()=>({push:p=>location.assign(p),replace:p=>location.replace(p)});export const useSearchParams=()=>new URLSearchParams(location.search);`:
+  b.onLoad({filter:/.*/,namespace:'fixture'},a=>({resolveDir:root,loader:'js',contents:a.path==='next/headers'?`export const cookies=async()=>({getAll:()=>[]});`:a.path==='@/utils/supabase/server'?`export const createClient=()=>({auth:{getUser:async()=>({data:{user:window.__serverUser||null}})}});`:a.path==='next/link'?`import React from 'react';export default function Link({children,prefetch,...props}){return React.createElement('a',props,children);}`:a.path==='next/navigation'?`export const useRouter=()=>({push:p=>location.assign(p),replace:p=>location.replace(p)});export const useSearchParams=()=>new URLSearchParams(location.search);export const usePathname=()=>window.__routePath||location.pathname;`:
    `const channel={on(){return this},subscribe(){return this}};export const createClient=()=>({auth:{onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),signInWithOAuth:async(options)=>{(window.__oauthCalls??=[]).push(options);return window.__oauthResult??{data:{url:null},error:{message:"Fixture unavailable"}};},signInWithPassword:async(options)=>{(window.__passwordCalls??=[]).push(options);return {data:{session:null},error:{message:"Invalid login credentials"}};},getUser:async()=>({data:{user:{id:'fixture-user',email:'fixture@example.test',user_metadata:{}}}}),signOut:async()=>({})},from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:null})})})}),channel:()=>channel,removeChannel:()=>{}});`}));
  }}]});
  const output={js:result.outputFiles.find(f=>f.path.endsWith('.js')).text,css:result.outputFiles.find(f=>f.path.endsWith('.css'))?.text||''};bundles.set(component,output);return output;
 }
 // Actual components, isolated framework/auth responses. This never starts the app
 // or bypasses its middleware. Unknown requests fail instead of reaching a provider.
-export async function mount(page,component,{responses={},query='',delay=0}={}){
+export async function mount(page,component,{responses={},query='',delay=0,pathname}={}){
  const output=await bundle(component),unexpected=[],errors=[],requests=[];
+ await page.addInitScript(path=>{window.__routePath=path;},pathname??('/'+(component.match(/^web\/app\/(.*)\/page\.tsx$/)?.[1]??'')));
  page.on('pageerror',e=>errors.push(e.message));
  await page.context().route('**/*',async route=>{
   const request=route.request(),url=new URL(request.url());

@@ -31,7 +31,7 @@ test('release requires an explicit click and sends the exact reviewed head',asyn
 });
 test('restart links never execute; self approval and expired approval are disabled',async({page})=>{
  const h=await mount(page,'web/app/operations/page.tsx',{query:'?server=host&service=app.service',responses:{'/api/servers':{servers:[{id:'host',hostname:'Fixture host'}]},'/api/servers/commands':{configured:true,userId:'fixture-user',services:['app.service'],commands:[{id:'own',hostname:'Fixture host',service:'app.service',status:'pending',requested_by:'fixture-user',expires_at:'2099-01-01T00:00:00Z'},{id:'expired',hostname:'Fixture host',service:'app.service',status:'pending',requested_by:'other',expires_at:'2000-01-01T00:00:00Z'}]}}});
- await expect(page.getByLabel('Server')).toHaveValue('host');await expect(page.getByLabel('Service',{exact:true})).toHaveValue('app.service');
+ await expect(page.getByLabel('Server',{exact:true})).toHaveValue('host');await expect(page.getByLabel('Service',{exact:true})).toHaveValue('app.service');
  await expect(page.getByRole('button',{name:'Approve this service restart'})).toBeDisabled();expect(h.requests.filter(r=>r.method==='POST')).toHaveLength(0);h.verify();
 });
 test('Gmail rejection sends only an explicit decision and preserves failure',async({page})=>{
@@ -53,7 +53,7 @@ for(const width of [320,375,768])test(`usage is readable at ${width}px and keybo
  await page.setViewportSize({width,height:900});const h=await mount(page,'web/app/usage/page.tsx');
  await expect(page.getByText('No attempts recorded.')).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
  await page.keyboard.press('Tab');await expect(page.getByRole('link',{name:'Ryvix home',exact:true})).toBeFocused();
- await page.keyboard.press('Tab');await expect(page.getByRole('navigation',{name:'Workspace navigation'}).getByRole('link',{name:'Dashboard',exact:true})).toBeFocused();
+ await page.keyboard.press('Tab');await expect(page.getByRole('navigation',{name:'Workspace navigation'}).getByRole('link',{name:'Console',exact:true})).toBeFocused();
  await page.keyboard.press('Tab');await expect(page.locator('summary').filter({hasText:'Workspace tools'})).toBeFocused();
  await page.keyboard.press('Tab');await expect(page.getByRole('link',{name:'Chat',exact:true})).toBeFocused();h.verify();
 });

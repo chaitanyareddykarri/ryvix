@@ -1,6 +1,7 @@
 'use client';
 import {useCallback,useEffect,useState,useRef} from 'react';
 import Link from 'next/link';
+import styles from '@/components/InfrastructureSettings.module.css';
 type Operation={id:string;hostname:string;service:string;status:string;requested_by:string;expires_at:string;result?:{status:string;serviceState:string}};
 export default function OperationsPage(){
   const selectionLoaded=useRef(false);
@@ -24,20 +25,22 @@ export default function OperationsPage(){
     const response=await fetch('/api/servers/commands',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await response.json();
     if(!response.ok)throw new Error(data.error||'Operation unavailable');await refresh();
   }catch(e){setError(e instanceof Error?e.message:'Operation unavailable');}finally{setBusy(false);}}
-  return <main style={{maxWidth:960,margin:'auto',padding:32,color:'#e5e7eb'}}>
-    <Link href="/servers">Back to servers</Link> · <Link href="/recovery">Cloud recovery approvals</Link><h1>Server operation approvals</h1>
+  return <main className={styles.page}>
+    <nav className={styles.links} aria-label="Server approval navigation"><Link href="/server-approvals">← Back to Server Approvals</Link></nav><h1>Server operation approvals</h1>
     <p>Request one restart of an allowed service. A different owner or administrator must approve it within ten minutes.</p>
-    {!configured&&<p>Service restart delivery is not configured.</p>}{error&&<p role="alert">{error}</p>}
+    {!configured&&<p role="status">Service restart delivery is not configured.</p>}{error&&<p role="alert">{error}</p>}
+    <div className={`workspace-card ${styles.controls}`}>
     <select aria-label="Server" disabled={busy} value={server} onChange={e=>setServer(e.target.value)}><option value="">Select server</option>{servers.map(s=><option key={s.id} value={s.id}>{s.hostname}</option>)}</select>
     <select aria-label="Service" disabled={busy} value={service} onChange={e=>setService(e.target.value)}><option value="">Select service</option>{services.map(s=><option key={s}>{s}</option>)}</select>
-    <button disabled={busy||!configured||!server||!service} onClick={()=>void mutate({action:'request',serverId:server,service})}>Request restart approval</button>
+    <button className={styles.primary} disabled={busy||!configured||!server||!service} onClick={()=>void mutate({action:'request',serverId:server,service})}>Request restart approval</button>
+    </div>
     <h2>Requests and measured outcomes</h2><p>A successful result confirms that the agent measured the service as active after restart. Application health requires its own health check.</p>
     {!operations.length&&<p>No operation requests.</p>}
-    {operations.map(op=><article key={op.id} style={{border:'1px solid #475569',padding:16,marginTop:12}}>
+    {operations.map(op=><article key={op.id} className={`workspace-card ${styles.card}`}>
       <p>{op.hostname} · {op.service} · {['pending','approved'].includes(op.status)&&Date.parse(op.expires_at)<=Date.now()?'expired':op.status}</p>
       {op.result&&<p>Measured service state: {op.result.serviceState}</p>}
       {op.status==='delivered'&&<p>Awaiting a signed execution receipt. Do not assume the restart completed.</p>}
-      {op.status==='pending'&&Date.parse(op.expires_at)>Date.now()&&<><button disabled={busy||op.requested_by===user} onClick={()=>void mutate({action:'approve',id:op.id})}>Approve this service restart</button><button disabled={busy||op.requested_by===user} onClick={()=>void mutate({action:'reject',id:op.id})}>Reject</button></>}
+      {op.status==='pending'&&Date.parse(op.expires_at)>Date.now()&&<div className={styles.controls}><button disabled={busy||op.requested_by===user} onClick={()=>void mutate({action:'approve',id:op.id})}>Approve this service restart</button><button disabled={busy||op.requested_by===user} onClick={()=>void mutate({action:'reject',id:op.id})}>Reject</button></div>}
     </article>)}
   </main>;
 }

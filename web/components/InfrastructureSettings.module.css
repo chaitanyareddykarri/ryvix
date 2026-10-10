@@ -1,0 +1,16 @@
+.page { max-width: 960px; margin: auto; padding: 32px; min-width: 0; overflow-wrap: anywhere; }
+.links, .controls, .choices { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
+.links a { padding: .4rem 0; }
+.controls { margin: 1.5rem 0; }
+.controls select { flex: 1 1 220px; width: 100%; }
+.page .primary { background: #6653db; border-color: #8975f2; }
+.page .primary:hover:not(:disabled) { background: #7663eb; }
+.card { margin-top: 12px; }
+.choices label { display: flex; align-items: center; gap: .5rem; min-height: 44px; }
+.choices input { accent-color: #8975f2; }
+.page :is(button, select) { max-width: 100%; min-width: 0; white-space: normal; }
+.card > :global(.workspace-button) { display: inline-flex; align-items: center; max-width: 100%; text-decoration: none; }
+@media (max-width: 768px) {
+  .page { width: 100%; box-sizing: border-box; }
+  .controls > button { width: 100%; }
+}

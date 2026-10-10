@@ -1,0 +1,33 @@
+/* Preserve the existing desktop layouts; adapt only at the shared mobile breakpoint. */
+@media (max-width: 768px) {
+  .page {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 1.5rem 1rem !important;
+    overflow-wrap: anywhere;
+  }
+  .page :is(header, header > div, nav, nav > *, :global(.glass-panel), form, form > *) {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .page nav > a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .page :is(button, select, input) {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .page :is(button, a) { overflow-wrap: anywhere; }
+  .page :global(.glass-panel) { padding: 1.25rem !important; }
+  .guidance { min-width: 0; max-width: 100%; }
+  .guidance > div { min-width: 0; }
+  .guidance > div:first-child { flex-shrink: 0; }
+  .actions { flex-wrap: wrap; }
+  .actions > a { min-width: 0; flex-basis: 100% !important; }
+  .page form > select { width: 100%; }
+}

@@ -1614,7 +1614,7 @@ export default function DashboardPage() {
             </button>
 
             {/* Profile Dropdown */}
-            <WorkspaceNavigation />
+            <WorkspaceNavigation primary />
             <PhoneOnboarding />
             <div style={{ display: "flex", alignItems: "center", gap: "0.55rem", padding: "0.3rem 0.65rem", borderRadius: "8px", background: "#0D1218", border: "1px solid #1D2732" }}>
               <div style={{ width: "22px", height: "22px", borderRadius: "50%", background: "linear-gradient(135deg, #7C6CFF, #A78BFA)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 700, color: "#ffffff" }}>
