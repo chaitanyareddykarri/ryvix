@@ -45,9 +45,15 @@ export async function POST(request: Request) {
   const pool = getDirectDbPool();
 
   try {
-    // 1. User shared contact (Phone Number)
-    if (message.contact) {
-      const rawPhone = message.contact.phone_number || '';
+    const text = message.text?.trim() || '';
+    const rawContactPhone = message.contact?.phone_number || '';
+    const cleanTextPhone = text.replace(/[\s()-]/g, '');
+    const isDirectPhoneInput = /^\+?[0-9]{8,15}$/.test(cleanTextPhone);
+    const phoneInputToLink = rawContactPhone || (isDirectPhoneInput ? cleanTextPhone : '');
+
+    // 1. User shared contact (button) OR typed their phone number directly as text
+    if (phoneInputToLink) {
+      const rawPhone = phoneInputToLink;
       const normalized = normalizePhoneNumber(rawPhone);
       const digitsOnly = rawPhone.replace(/\D/g, '');
 
@@ -110,7 +116,6 @@ export async function POST(request: Request) {
     }
 
     // 2. /start or /repos command
-    const text = message.text?.trim() || '';
     if (text.startsWith('/start') || text.startsWith('/repos')) {
       const existing = await pool.query(
         `SELECT id, full_name, organization_id FROM public.profiles WHERE telegram_chat_id = $1 LIMIT 1`,
