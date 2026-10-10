@@ -1,3 +1,11 @@
+# Task history and URL mock metrics - October 11, 2026
+
+Implemented durable bounded worker stage/check history and explicit random URL
+demo metrics. Tests passed; user authorized publication and deployment on October 11.
+Release proceeds through Testing_branch, CI and main; verify production separately.
+See docs/verification/TASK_HISTORY_URL_DEMO_2026_10_11.md. Previous release
+1f0d915 was deployed to Vercel; older local-only notes below are historical.
+
 # Website checks - October 10, 2026
 
 Added /websites with real probe API results and environment-selected connectors.

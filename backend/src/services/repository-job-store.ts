@@ -12,6 +12,20 @@ export interface RepositoryJob {
 
 export class RepositoryJobStore {
   constructor(private readonly pool: Pool, private readonly hostId?: string) {}
+  async progress(job:RepositoryJob,workerId:string,event:import('../../../services/src/workspace/task-progress').TaskProgress){
+    return this.transaction(async client=>{
+      await this.lock(client,job,workerId);
+      const safe={stage:event.stage,status:event.status,attempt:event.attempt,
+        ...(event.detail?{detail:event.detail.slice(0,160)}:{}),
+        ...(event.exitCode!==undefined?{exitCode:event.exitCode}:{}),
+        ...(event.durationMs!==undefined?{durationMs:event.durationMs}:{})};
+      await client.query(`INSERT INTO audit_events(project_id,actor_type,action_name,parameters_hash,diff_summary,status)
+        VALUES($1,'system','task.pipeline.progress',$2,$3,$4)`,[job.project_id,
+        createHash('sha256').update(job.task_id).digest('hex'),JSON.stringify(safe),event.status==='failed'?'failure':'success']);
+      if(['install','test','typecheck','lint','build','repair','diff','preview'].includes(event.stage))
+        await client.query("UPDATE tasks SET status='verifying',updated_at=now() WHERE id=$1",[job.task_id]);
+    });
+  }
   async modelAttempt(job:RepositoryJob,workerId:string,event:import('../../../ai/src/model-attempt').ModelAttempt){
     await new ModelUsage(this.pool).record({org:job.organization_id,user:job.created_by,channel:'coding',source:job.task_id,claim:workerId},event);
   }

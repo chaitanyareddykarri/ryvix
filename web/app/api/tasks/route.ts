@@ -3,6 +3,7 @@ import { getDirectDbPool } from '@/utils/direct-db';
 import { requireTenant, requireOperator, RequestError } from "@/utils/tenant-context";
 import { NextResponse } from "next/server";
 import { changeTaskLifecycle } from '@/utils/task-lifecycle';
+import {createHash} from 'node:crypto';
 
 export async function GET() {
   try {
@@ -15,12 +16,20 @@ export async function GET() {
       .select("*, plans:plans!plans_task_id_fkey(*), task_artifacts(*, repositories(id, full_name)), pull_requests(*), workspace_sessions(id,status,preview_url,expires_at)")
       .in("project_id", ids).order("created_at", { ascending: false }).limit(50);
     if (result.error) throw new Error("Tasks unavailable.");
+    const hashes=(result.data||[]).map(task=>createHash('sha256').update(task.id).digest('hex'));
+    const progress=hashes.length?await db.from('audit_events').select('parameters_hash,diff_summary,timestamp')
+      .eq('action_name','task.pipeline.progress').in('project_id',ids).in('parameters_hash',hashes)
+      .order('timestamp',{ascending:true}).limit(500):{data:[],error:null};
     const tasks = (result.data || []).map(task => {
+      const hash=createHash('sha256').update(task.id).digest('hex');
+      const pipeline=(progress.data||[]).filter(event=>event.parameters_hash===hash).flatMap(event=>{
+        try {const value=JSON.parse(event.diff_summary||'');return [{...value,at:event.timestamp}];}catch{return [];}
+      });
       const artifact = Array.isArray(task.task_artifacts) ? task.task_artifacts[0] : task.task_artifacts;
       const pr = task.pull_requests?.[0];
       const workspace = task.workspace_sessions?.find((session: any) => session.status === 'active' && session.preview_url && Date.parse(session.expires_at) > Date.now());
       const { task_artifacts: _artifacts, pull_requests: _requests, workspace_sessions: _workspaces, ...safe } = task;
-      return { ...safe, result: artifact ? { files: artifact.files, branch: artifact.base_branch,
+      return { ...safe, pipeline, pipelineUnavailable:!!progress.error, pipelineTruncated:(progress.data?.length||0)>=500, result: artifact ? { files: artifact.files, branch: artifact.base_branch,
         baseCommitSha: artifact.base_commit_sha, verification: artifact.verification } : null,
         repository: artifact?.repositories || null,
         workspace: workspace ? { sessionId: workspace.id, previewUrl: `/api/workspace/${workspace.id}/preview`, expiresAt: workspace.expires_at } : null,

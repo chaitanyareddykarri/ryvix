@@ -61,11 +61,16 @@ async function main(){
   };
   try {
     const {executeRepositoryTask}=await import('../services/src/workspace/repository-task');
+    const events:import('../services/src/workspace/task-progress').TaskProgress[]=[];
     const result=await executeRepositoryTask({taskId:randomUUID(),projectId:randomUUID(),fullName:'fixture/static',branch:'main',githubToken:'fixture-not-real',prompt:'Change title',onAttempt:()=>{},
-      onPlan:async()=>{planned=true;},onSession:async session=>{completedSession=session.id;}});
+      onProgress:async event=>{events.push(event);},onPlan:async()=>{planned=true;},onSession:async session=>{completedSession=session.id;}});
     assert.equal(planned,true);assert.equal(result.baseSha,'a'.repeat(40));assert.equal(result.previewError,null);
     assert.ok(result.files.some(file=>file.content?.includes('Changed')));
     assert.ok(result.verification.length===1&&result.verification[0].command===STATIC_CHECK&&result.verification[0].success);
+    assert.ok(events.some(e=>e.stage==='analysis'&&e.status==='passed'));
+    assert.ok(events.some(e=>e.stage==='test'&&e.status==='passed'));
+    assert.ok(events.some(e=>e.stage==='build'&&e.status==='skipped'));
+    assert.ok(events.some(e=>e.stage==='preview'&&e.status==='passed'));
     console.log('PASS: actual repository-task flow with fixture APIs, bounded snapshot, model changes, syntax verification and preview; no installs/builds or live providers.');
   } finally {globalThis.fetch=originalFetch;if(completedSession)await manager.terminateSession(completedSession);}
   // The verification process owns the loopback gateway; no production worker is started.

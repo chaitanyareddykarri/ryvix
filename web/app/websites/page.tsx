@@ -42,6 +42,7 @@ export default function WebsiteChecksPage(){
     <Link href="/dashboard">Dashboard</Link> · <Link href="/servers">Servers</Link>
     <h1>Website checks and connectors</h1>
     <p>Check a deployed public website and inspect your saved environment connections.</p>
+    <p>Want sample metrics instead? <Link href="/servers/demo">Generate simulated metrics for a website URL</Link>.</p>
     <form onSubmit={event=>{event.preventDefault();void check();}}>
       <label htmlFor="website-url">Deployed website URL</label>
       <input id="website-url" type="url" required maxLength={2048} placeholder="https://your-website.com" value={url} onChange={event=>{pending.current?.abort();setBusy(false);setUrl(event.target.value);setMeasurement(null);setError('');}} style={{display:'block',width:'100%',marginBlock:12}} />
