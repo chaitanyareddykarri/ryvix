@@ -1,3 +1,4 @@
+import {taskProgress,type ProgressObserver,type TaskStage} from './task-progress';
 import {verifyWithOneRepair} from './repair-checks';
 import {ContextBuilder} from '../../../ai/src/context/context-builder';
 import {repositoryContext} from './repository-context';
@@ -9,15 +10,18 @@ import { previewOrigin, ensurePreviewGateway } from './preview-gateway';
 import { repositoryPreviewCommand } from './preview-command';
 
 /** Worker orchestration; customer commands are executed exclusively by DockerWorkspaceManager. */
-export async function executeRepositoryTask(input: {
+async function executeRepositoryTaskInternal(input: {
   taskId: string; projectId: string; fullName: string; branch: string; githubToken: string; prompt: string;
   lessons?:Array<{id:string;content:string;evidenceId:string;observedAt:string;expiresAt:string}>;
   onPlan: (summary: string, steps: string[]) => Promise<void>;
   onAttempt: import('../../../ai/src/model-attempt').AttemptObserver;
   signal?:AbortSignal;
+  onProgress?:ProgressObserver;
   onSession?: (session: Awaited<ReturnType<typeof manager.createSession>>) => Promise<void>;
 }) {
+  const progress=taskProgress(input.onProgress);
   const staticOnly = staticWorkspaceMode();
+  await progress.emit({stage:"analysis",status:"running",attempt:1});
   if (!/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+$/.test(input.fullName)) throw new Error('Invalid GitHub repository');
   const api = async (suffix: string) => {
     const response = await fetch(`https://api.github.com/repos/${input.fullName}${suffix}`, {
@@ -50,12 +54,13 @@ export async function executeRepositoryTask(input: {
   }
   const profile = RepositoryAnalyzer.detectStack(entries.map((f: any) => f.path), packageText);
   if (staticOnly) Object.assign(profile,{displayName:'Restricted static website',language:'html',framework:'Static HTML/CSS/JS',packageManager:'none',installCommand:'',buildCommand:'',testCommand:STATIC_CHECK,devCommand:STATIC_PREVIEW,defaultPort:3000});
+  await progress.emit({stage:"analysis",status:"passed",attempt:1,detail:staticOnly?"Restricted static HTML/CSS/JavaScript":profile.displayName});
   const imageKey = profile.stack === 'nextjs' || profile.stack === 'nodejs' ? 'NODE' :
     profile.stack.startsWith('python') ? 'PYTHON' : profile.stack.toUpperCase();
   const image = process.env[staticOnly ? 'RYVIX_WORKSPACE_STATIC_IMAGE' : `RYVIX_WORKSPACE_${imageKey}_IMAGE`];
   if (!image) throw new Error(`Approved workspace image is not configured for ${profile.stack}`);
-  const session = await manager.createSession({ taskId: input.taskId, projectId: input.projectId, baseImage: image,
-    ...(staticOnly ? {cpu:STATIC_CPU,ramMb:STATIC_MEMORY_MB} : {}) });
+  const session = await progress.run("workspace",1,()=>manager.createSession({ taskId: input.taskId, projectId: input.projectId, baseImage: image,
+    ...(staticOnly ? {cpu:STATIC_CPU,ramMb:STATIC_MEMORY_MB} : {}) }));
   try {
     await input.onSession?.(session);
     if (staticOnly) {
@@ -70,9 +75,9 @@ export async function executeRepositoryTask(input: {
       }
       await manager.prepareStaticSnapshot(session.id,snapshot);
     } else await manager.cloneRepository(session.id, input.fullName, input.branch, input.githubToken, baseSha);
-    const files = await repositoryContext(entries,input.prompt,path => manager.readFile(session.id,path));
+    const files = await progress.run("context",1,()=>repositoryContext(entries,input.prompt,path => manager.readFile(session.id,path)));
     if (!files.length) throw new Error('No supported source files found; specify a supported repository');
-    const plan = await codingAssistant.generateRepositoryChanges(input.prompt, staticOnly ? 'static HTML/CSS/browser JavaScript only; no dependencies, builds or server scripts' : profile.stack, files,input.lessons,input.onAttempt,input.signal);
+    const plan = await progress.run("planning",1,()=>codingAssistant.generateRepositoryChanges(input.prompt, staticOnly ? 'static HTML/CSS/browser JavaScript only; no dependencies, builds or server scripts' : profile.stack, files,input.lessons,input.onAttempt,input.signal));
     await input.onPlan(plan.summary, plan.steps);
     const currentPaths = new Set(files.map(file=>file.path));
     const apply = async (changes: typeof plan.changes) => { if(staticOnly)validateStaticChanges(changes); for (const change of changes) {
@@ -81,7 +86,7 @@ export async function executeRepositoryTask(input: {
       else await manager.applyDiff(session.id, change.path, change.content);
       if(change.action==='delete')currentPaths.delete(change.path);else currentPaths.add(change.path);
     }};
-    await apply(plan.changes);
+    await progress.run("editing",1,()=>apply(plan.changes));
     const verification: Array<{ command: string; success: boolean; exitCode: number; durationMs: number }> = [];
     const check = async (command: string) => {
       const result = await manager.executeCommand(session.id, command, 240000);
@@ -91,15 +96,20 @@ export async function executeRepositoryTask(input: {
     if (profile.packageManager !== 'none') {
       const install = profile.packageManager === 'npm' && entries.some((f: any) => f.path === 'package-lock.json')
         ? 'npm ci --ignore-scripts' : profile.installCommand;
-      await manager.withRestrictedEgress(session.id, () => check(install));
+      await progress.run("install",1,()=>manager.withRestrictedEgress(session.id, () => check(install)));
     }
+    if(profile.packageManager === "none")await progress.emit({stage:"install",status:"skipped",attempt:1,detail:"No dependency installation in this profile"});
     const pkg = packageText ? JSON.parse(packageText) : null;
     const commands:string[]=[];
     if (!pkg || pkg.scripts?.test) commands.push(profile.testCommand);
     if (pkg?.scripts?.typecheck) commands.push('npm run typecheck');
+    if (pkg?.scripts?.lint) commands.push('npm run lint');
     if (!staticOnly && (!pkg || pkg.scripts?.build)) commands.push(profile.buildCommand);
+    const checkStage=(command:string):TaskStage=>command===profile.testCommand?"test":command==="npm run typecheck"?"typecheck":command==="npm run lint"?"lint":"build";
+    for(const stage of ["test","typecheck","lint","build"] as const)if(!commands.some(command=>checkStage(command)===stage))await progress.emit({stage,status:"skipped",attempt:1,detail:staticOnly?"Restricted static profile": "No configured script"});
     verification.push(...await verifyWithOneRepair(commands,
       command=>manager.executeCommand(session.id,command,240000),async(command,result)=>{
+        await progress.emit({stage:"repair",status:"running",attempt:1});
         const fresh:Array<{path:string;content:string}>=[];let bytes=0;
         const repairPaths=new Set([...plan.changes.filter(change=>change.action!=='delete').map(change=>change.path),...currentPaths]);
         for(const path of repairPaths){
@@ -114,21 +124,41 @@ export async function executeRepositoryTask(input: {
           evidence:ContextBuilder.sanitizeText((result.stderr+'\n'+result.stdout).slice(0,8000))});
         const correction=await codingAssistant.generateRepositoryChanges(instruction,profile.stack,fresh,input.lessons,input.onAttempt,input.signal);
         await apply(correction.changes);
-      }));
-    const changes = await manager.captureDiff(session.id);
+        await progress.emit({stage:"repair",status:"passed",attempt:1,detail:"Correction applied; checks must rerun"});
+      },async(command,attempt,result)=>{await progress.emit({stage:checkStage(command),status:result?(result.success?"passed":"failed"):"running",attempt,
+        ...(result?{exitCode:result.exitCode,durationMs:result.durationMs}:{}),...(staticOnly?{detail:"Static syntax and file checks only"}:{})});}));
+    const changes = await progress.run("diff",1,async()=>{const diff=await manager.captureDiff(session.id);if(!diff.length)throw Error("No changes");return diff;},"Measured repository diff; not an independent security review");
     if (!changes.length) throw new Error('Task produced no repository changes');
     let previewError: string | null = null;
     if (staticOnly || pkg?.scripts?.dev || pkg?.scripts?.start) {
       try {
+        await progress.emit({stage:"preview",status:"running",attempt:1});
         await ensurePreviewGateway();
         // PORT=3000 is supplied to the detected application's own start script.
         const command = staticOnly ? STATIC_PREVIEW : repositoryPreviewCommand(profile.stack,profile.packageManager,pkg)!;
         await manager.startPreview(session.id, command, previewOrigin(session.id));
-      } catch { previewError = 'Preview unavailable. Check the gateway configuration and application startup logs.'; }
+        await progress.emit({stage:"preview",status:"passed",attempt:1});
+      } catch { await progress.emit({stage:'preview',status:'failed',attempt:1}); previewError = 'Preview unavailable. Check the gateway configuration and application startup logs.'; }
     }
+    else await progress.emit({stage:"preview",status:"skipped",attempt:1,detail:"No preview command configured"});
     return { session: manager.getSession(session.id)!, profile, files: changes, verification, baseSha, summary: plan.summary, previewError };
   } catch (error) {
     await manager.terminateSession(session.id);
+    throw error;
+  }
+}
+
+export async function executeRepositoryTask(input:Parameters<typeof executeRepositoryTaskInternal>[0]){
+  const running=new Map<string,import('./task-progress').TaskProgress>();
+  try{return await executeRepositoryTaskInternal({...input,onProgress:async event=>{
+    await input.onProgress?.(event);
+    const key=`${event.stage}:${event.attempt}`;
+    if(event.status==='running')running.set(key,event);else running.delete(key);
+  }});}catch(error){
+    // Record bounded stage failures, never raw provider output or credentials.
+    // Lost authorization/lease can prevent writes; the UI labels unfinished
+    // events as interrupted once the task reaches its terminal state.
+    for(const event of running.values())await input.onProgress?.({...event,status:'failed',detail:'Execution stopped before this stage completed'}).catch(()=>{});
     throw error;
   }
 }

@@ -49,8 +49,18 @@ export async function testRepositoryJobStore() {
   assert.equal(auditArgs[2],'system');
   assert.equal(auditArgs[3],'task.execute.failure');
   mode='lease-lost'; calls.length=0;
+  await assert.rejects(store.progress(job,'worker',{stage:'test',status:'passed',attempt:1}),/lease lost/);
+  assert.ok(!calls.some(s=>s.includes('INSERT INTO audit_events')));
   await assert.rejects(store.plan(job,'worker','summary',['step']),/lease lost/);
   assert.ok(!calls.some(s=>s.includes('INSERT INTO plans')));
   await assert.rejects(store.complete(job,'worker',{} as any),/lease lost/);
   assert.ok(!calls.some(s=>s.includes('INSERT INTO task_artifacts')));
+  mode='ok';calls.length=0;
+  await store.progress(job,'worker',{stage:'test',status:'failed',attempt:2,exitCode:1,durationMs:34});
+  assert.ok(calls.some(s=>s.includes('task.pipeline.progress')));
+  assert.equal(JSON.parse(auditArgs[2] as string).exitCode,1);
+  assert.ok(calls.includes('COMMIT'));
+  mode='audit-failure';calls.length=0;
+  await assert.rejects(store.progress(job,'worker',{stage:'build',status:'running',attempt:1}),/audit unavailable/);
+  assert.ok(calls.includes('ROLLBACK')&&!calls.includes('COMMIT'));
 }

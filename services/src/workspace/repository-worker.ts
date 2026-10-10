@@ -28,6 +28,7 @@ export async function runRepositoryJob(store: RepositoryJobStore, workerId: stri
     const result = await executeRepositoryTask({ taskId: job.task_id,projectId: job.project_id,
       fullName: job.full_name,branch: job.default_branch,prompt: job.user_prompt,githubToken,lessons,
       signal:cancellation.signal,onAttempt:event=>store.modelAttempt(job,workerId,event),
+      onProgress:event=>store.progress(job,workerId,event),
       onSession: async session => {
         sessionId = session.id;
         if (lostLease) throw new Error('Worker lease lost');

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from 'next/link';
+import TaskCheckTimeline from '@/components/TaskCheckTimeline';
 
 import React, { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
@@ -24,10 +25,13 @@ interface ActiveTask {
   verification: Array<{command:string;success:boolean;exitCode:number}>;
   hasDiff: boolean;
   pullRequestUrl?: string;
+  pipeline?:React.ComponentProps<typeof TaskCheckTimeline>['events'];
+  pipelineUnavailable?:boolean;
+  pipelineTruncated?:boolean;
 }
 
 function recordedTask(task:any):ActiveTask {
-  return {id:task.id,prompt:task.user_prompt,title:task.summary||'Repository task',status:task.status,
+  return {id:task.id,prompt:task.user_prompt,title:task.summary||'Repository task',status:task.status,pipeline:task.pipeline,pipelineUnavailable:task.pipelineUnavailable,pipelineTruncated:task.pipelineTruncated,
     steps:task.plans?.find((p:any)=>p.id===task.active_plan_id)?.steps||[],
     previewUrl:task.workspace?.previewUrl,verification:Array.isArray(task.result?.verification)?task.result.verification:[],
     hasDiff:Array.isArray(task.result?.files)&&task.result.files.length>0,pullRequestUrl:task.pullRequest?.url};
@@ -247,6 +251,7 @@ export default function TasksPage() {
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
+                <TaskCheckTimeline events={activeTask.pipeline} status={activeTask.status} unavailable={activeTask.pipelineUnavailable} truncated={activeTask.pipelineTruncated}/>
                 {activeTask.steps.map((step, idx) => (
                   <div key={idx} style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem", padding: "0.75rem", background: "rgba(255, 255, 255, 0.03)", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
                     <span style={{ width: "22px", height: "22px", borderRadius: "50%", background: "#4f46e5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", fontWeight: 700, flexShrink: 0 }}>

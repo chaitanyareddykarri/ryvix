@@ -1,4 +1,5 @@
 "use client";
+import TaskCheckTimeline from '@/components/TaskCheckTimeline';
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
@@ -4013,6 +4014,7 @@ function PreviewStudioFrame({
   const hasPendingChanges = previewState === "preview_ready";
   return (
     <>
+      {activeTask && <TaskCheckTimeline events={activeTask.pipeline} status={activeTask.status} unavailable={activeTask.pipelineUnavailable} truncated={activeTask.pipelineTruncated}/>}
       <div style={{ padding: "0.65rem 1rem", background: "#080C11", borderBottom: "1px solid #1D2732", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
           <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#F06A6A" }} />

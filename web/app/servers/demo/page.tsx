@@ -19,8 +19,21 @@ export default function ServerDemoPage() {
   const [scenario, setScenario] = useState<keyof typeof scenarios>("normal");
   const [code, setCode] = useState(initialCode);
   const [preview, setPreview] = useState(initialCode);
+  const [website,setWebsite]=useState('');
+  const [metricError,setMetricError]=useState('');
+  const [generated,setGenerated]=useState<{url:string;cpu:number;memory:number;disk:number;responseMs:number;requests:number}|null>(null);
   useEffect(() => { const timer = setTimeout(() => setPreview(code), 300); return () => clearTimeout(timer); }, [code]);
-  const sample = scenarios[scenario];
+  const sample = generated?{...scenarios[scenario],cpu:generated.cpu,memory:generated.memory,disk:generated.disk}:scenarios[scenario];
+  function generateMetrics(){
+    try{
+      const parsed=new URL(website.trim());
+      if(!['https:','http:'].includes(parsed.protocol)||parsed.username||parsed.password)throw Error();
+      // Local display only: do not fetch this URL or infer a hosting provider.
+      const number=(minimum:number,maximum:number)=>Math.floor(Math.random()*(maximum-minimum+1))+minimum;
+      setGenerated({url:parsed.origin,cpu:number(8,95),memory:number(20,90),disk:number(15,85),responseMs:number(40,900),requests:number(10,1200)});
+      setMetricError('');
+    }catch{setGenerated(null);setMetricError('Enter an HTTP or HTTPS website URL without credentials.');}
+  }
   return <main style={{maxWidth:1100,margin:"0 auto",padding:"2rem 1rem"}}>
     <Link href="/servers">Back to real servers</Link>
     <h1>Server and coding demo</h1>
@@ -34,8 +47,17 @@ export default function ServerDemoPage() {
     </section>
     <section aria-label="Sample server telemetry" style={{padding:"1rem",border:"1px solid #475569",borderRadius:12}}>
       <h2>2. Inspect a sample server</h2>
+      <form onSubmit={event=>{event.preventDefault();generateMetrics();}}>
+        <label htmlFor="demo-website">Website URL for simulated metrics</label>
+        <input id="demo-website" type="url" required maxLength={2048} placeholder="https://your-website.com" value={website} onChange={event=>{setWebsite(event.target.value);setGenerated(null);setMetricError('');}} style={{display:'block',width:'100%',marginBlock:12}} />
+        <button className="btn-secondary">Generate random demo metrics</button>
+      </form>
+      {metricError&&<p role="alert">{metricError}</p>}
+      {generated&&<div role="status"><strong>SIMULATED metrics for {generated.url}</strong><p>Random examples only. This URL was not contacted and no server was connected. Actual hosting, traffic and security are unknown.</p>
+        <p>Sample response time: {generated.responseMs} ms · Sample requests/minute: {generated.requests}</p>
+      </div>}
       <p><strong>demo-web-01</strong> · Ubuntu · Mock server · No agent connected</p>
-      <label>Demo scenario <select value={scenario} onChange={event => setScenario(event.target.value as keyof typeof scenarios)}>
+      <label>Demo scenario <select value={scenario} onChange={event => {setScenario(event.target.value as keyof typeof scenarios);setGenerated(null);}}>
         {Object.entries(scenarios).map(([key,value]) => <option key={key} value={key}>{value.name}</option>)}
       </select></label>
       <dl style={{display:"flex",gap:24,flexWrap:"wrap"}}>{([["CPU",sample.cpu],["Memory",sample.memory],["Disk",sample.disk]] as const).map(([label,value]) => <div key={label}><dt>{label} (sample)</dt><dd>{value}%</dd></div>)}</dl>

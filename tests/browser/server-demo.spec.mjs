@@ -8,6 +8,13 @@ test('server demo stays simulated and code edits update the isolated preview',as
   await expect(page.getByText('Demo repository linked to demo-web-01 (simulated).',{exact:true})).toBeVisible();
   await page.getByLabel('Demo scenario').selectOption('security');
   await expect(page.getByText(/No real attack was detected/)).toBeVisible();
+  await page.getByLabel('Website URL for simulated metrics').fill('https://customer.example.test/private?token=not-real');
+  await page.getByRole('button',{name:'Generate random demo metrics'}).click();
+  await expect(page.getByText('SIMULATED metrics for https://customer.example.test',{exact:true})).toBeVisible();
+  await expect(page.getByText(/Sample response time:/)).toBeVisible();
+  await expect(page.getByText(/This URL was not contacted/)).toBeVisible();
+  await page.getByLabel('Website URL for simulated metrics').fill('https://another.example.test');
+  await expect(page.getByText(/SIMULATED metrics for/)).toHaveCount(0);
   const frame=page.frameLocator('iframe[title="Editable demo preview"]');
   await expect(frame.getByRole('heading',{name:'My demo website'})).toBeVisible();
   await page.getByLabel('Demo page source').fill('<h1>Updated page</h1><script>document.body.dataset.executed="yes"</script>');

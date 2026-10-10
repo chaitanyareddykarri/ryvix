@@ -4,6 +4,7 @@ import {SystemTopologyGraph} from '../ai/src/graph-rag';
 import {scheduledGmailIds,pollScheduledGmail} from '../backend/src/services/gmail-scheduler';
 import {repositoryContext} from '../services/src/workspace/repository-context';
 import {verifyWithOneRepair} from '../services/src/workspace/repair-checks';
+import {taskProgress,type TaskProgress} from '../services/src/workspace/task-progress';
 
 export async function testOfflineAndGmail():Promise<void>{
   const result=spawnSync(process.execPath,['--import','tsx','-e',`
@@ -54,13 +55,20 @@ export async function testOfflineAndGmail():Promise<void>{
   const bounded=await repositoryContext(Array.from({length:20},(_,i)=>({path:`x${i}.ts`,size:30000})),
     'test',async()=> 'x'.repeat(30000));
   assert.ok(bounded.reduce((sum,f)=>sum+Buffer.byteLength(f.content),0)<=160000);
+  const progressEvents:TaskProgress[]=[];
+  const recorder=taskProgress(async event=>{progressEvents.push(event);});
+  await assert.rejects(recorder.run('context',1,async()=>{throw Error('private fixture failure');}),/private fixture failure/);
+  assert.deepEqual(progressEvents.map(e=>e.status),['running','failed']);
+  assert.ok(!JSON.stringify(progressEvents).includes('private fixture failure'));
+  const attempts:Array<{command:string;attempt:number;success:boolean|null}>=[];
   let repairs=0;const commandsRun:string[]=[];
   const checked=await verifyWithOneRepair(['test','build'],async command=>{
     commandsRun.push(command);return {success:command==='test'||repairs===1,exitCode:command==='build'&&repairs===0?1:0,
       durationMs:1,stdout:'',stderr:'compile failure'};
-  },async()=>{repairs++;});
+  },async()=>{repairs++;},async(command,attempt,result)=>{attempts.push({command,attempt,success:result?.success??null});});
   assert.equal(repairs,1);assert.deepEqual(commandsRun,['test','build','test','build']);
   assert.equal(checked[1].success,true);assert.equal(checked[1].previousAttempts?.[0].success,false);
+  assert.deepEqual(attempts.filter(x=>x.command==='build').map(x=>[x.attempt,x.success]),[[1,null],[1,false],[2,null],[2,true]]);
   repairs=0;
   await assert.rejects(verifyWithOneRepair(['build'],async()=>({success:false,exitCode:1,durationMs:1,stdout:'',stderr:''}),async()=>{repairs++;}),/after one bounded repair/);
   assert.equal(repairs,1);
