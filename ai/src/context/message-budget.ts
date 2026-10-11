@@ -1,7 +1,7 @@
 export interface BudgetMessage {role:'system'|'user'|'assistant';content:string}
 /** Extractive history compaction; instructions and the current request remain intact. */
-export function compactMessages<T extends BudgetMessage>(messages:T[],budget=64000):T[] {
-  if(!Number.isInteger(budget)||budget<1024||budget>1000000)throw new Error('Invalid model context character budget');
+export function compactMessages<T extends BudgetMessage>(messages:T[],budget=2000000):T[] {
+  if(!Number.isInteger(budget)||budget<1024||budget>10000000)throw new Error('Invalid model context character budget');
   if(messages.reduce((sum,m)=>sum+m.content.length,0)<=budget)return messages;
   const required=new Set(messages.map((m,i)=>m.role==='system'||i===messages.length-1?i:-1));
   let remaining=budget-messages.reduce((sum,m,i)=>sum+(required.has(i)?m.content.length:0),0);

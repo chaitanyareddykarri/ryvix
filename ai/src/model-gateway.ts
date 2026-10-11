@@ -74,7 +74,7 @@ export class ModelGateway {
   async *stream(messages: LLMMessage[], options: { maxTokens?: number; temperature?: number; signal?: AbortSignal;
     onProvider?: (provider: string, model: string) => void;onUsage?:(usage:TokenUsage&{provider:string;model:string})=>void;onAttempt?:AttemptObserver } = {}) {
     requireAttemptObserver(options.onAttempt);
-    messages=compactMessages(messages,Number(process.env.RYVIX_MODEL_CONTEXT_CHAR_BUDGET||200000));
+    messages=compactMessages(messages,Number(process.env.RYVIX_MODEL_CONTEXT_CHAR_BUDGET||2000000));
     const signal = AbortSignal.any([AbortSignal.timeout(120000), ...(options.signal ? [options.signal] : [])]);
     for (const provider of this.selectedProviders()) {
       if (!process.env.RYVIX_MODEL_FALLBACK_ORDER?.trim() && process.env.RYVIX_CHAT_PROVIDER && provider.id !== process.env.RYVIX_CHAT_PROVIDER) continue;
@@ -246,7 +246,7 @@ export class ModelGateway {
     }
   ): Promise<LLMCompletionResult> {
     requireAttemptObserver(options?.onAttempt);
-    messages=compactMessages(messages,Number(process.env.RYVIX_MODEL_CONTEXT_CHAR_BUDGET||200000));
+    messages=compactMessages(messages,Number(process.env.RYVIX_MODEL_CONTEXT_CHAR_BUDGET||2000000));
     const startTime = Date.now();
     const signal = AbortSignal.any([AbortSignal.timeout(120000), ...(options?.signal ? [options.signal] : [])]);
     const failedProviders: string[] = [];
