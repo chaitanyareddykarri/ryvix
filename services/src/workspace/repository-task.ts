@@ -132,7 +132,9 @@ async function executeRepositoryTaskInternal(input: {
     const changes = await progress.run("diff",1,async()=>{const diff=await manager.captureDiff(session.id);if(!diff.length)throw Error("No changes");return diff;},"Measured repository diff; not an independent security review");
     if (!changes.length) throw new Error('Task produced no repository changes');
     let previewError: string | null = null;
-    if (staticOnly || profile.stack==='static' || pkg?.scripts?.dev || pkg?.scripts?.start) {
+    if(process.env.RYVIX_PREVIEW_MODE==='browser') {
+      await progress.emit({stage:'preview',status:'skipped',attempt:1,detail:'Public preview disabled; saved static files can be viewed in the browser after completion'});
+    } else if (staticOnly || profile.stack==='static' || pkg?.scripts?.dev || pkg?.scripts?.start) {
       try {
         await progress.emit({stage:"preview",status:"running",attempt:1});
         await ensurePreviewGateway();

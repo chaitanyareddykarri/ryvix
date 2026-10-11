@@ -1,3 +1,11 @@
+# October 11 browser preview update
+
+Static saved-code snapshots no longer require preview DNS or a public tunnel.
+Local verification is recorded in verification/BROWSER_SNAPSHOT_2026_10_11.md.
+Still required: real task acceptance, provider quota availability, and runtime
+preview hosting for framework/backend applications. Vercel demo metrics are
+explicitly simulated, not live monitoring. Older deployment notes follow.
+
 # Pending work - October 10, 2026
 
 ## Active hosting selection - Railway and AWS

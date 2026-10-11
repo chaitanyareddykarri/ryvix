@@ -15,6 +15,7 @@ test('PR approval shows recorded evidence and submits only the selected task',as
  const task={id,status:'awaiting_approval',user_prompt:'Review fixture changes',created_at:'2026-10-07T00:00:00Z',result:{files:[{path:'app.ts',additions:1,deletions:0}]}};
  const h=await mount(page,'web/app/dashboard/page.tsx',{responses:{
   '/api/tasks':{tasks:[task]},
+  [`/api/tasks/${id}/browser-preview`]:{status:422,body:{error:'This fixture has no static entry page.'}},
   [`/api/tasks/${id}/ship`]:{task:{status:'completed'},pullRequest:{url:'https://example.test/pr/1',number:1}}
  }});
  await page.getByRole('button',{name:'Previews',exact:true}).click();

@@ -19,7 +19,7 @@ async function main() {
   try {
     const lock=await hostLease.query('SELECT pg_try_advisory_lock(hashtextextended($1,0)) AS owned',[`ryvix-worker:${hostId}`]);
     if(!lock.rows[0]?.owned)throw new Error('Another worker already owns this Docker host');
-    await ensurePreviewGateway();
+    if(process.env.RYVIX_PREVIEW_MODE!=='browser')await ensurePreviewGateway();
     if(process.env.RYVIX_REQUIRE_PUBLIC_PREVIEW==='true'){
       try{const response=await fetch('https://00000000-0000-0000-0000-000000000000.'+process.env.PREVIEW_BASE_DOMAIN,{redirect:'manual',signal:AbortSignal.timeout(15000)});
         const body=await response.text();
@@ -27,6 +27,6 @@ async function main() {
       }catch{throw Error('Public preview HTTPS does not reach this gateway. Fix wildcard DNS, tunnel and TLS before starting jobs.');}
     }
     await serveRepositoryWorker(new RepositoryJobStore(pool,hostId),controller.signal);
-  } finally { clearInterval(health);await hostLease.query('SELECT pg_advisory_unlock(hashtextextended($1,0))',[`ryvix-worker:${hostId}`]).catch(()=>{});hostLease.release();await pool.end(); }
+  } finally { await hostLease.query('SELECT pg_advisory_unlock(hashtextextended($1,0))',[`ryvix-worker:${hostId}`]).catch(()=>{});hostLease.release();await pool.end(); }
 }
 main().catch((err) => { console.error('Workspace worker could not start. Check database session access, Docker, matching preview settings and wildcard HTTPS.'); process.exitCode=1; });

@@ -1,3 +1,10 @@
+# Browser snapshots and chat preservation - October 11, 2026
+
+Local launcher defaults to tunnel-free browser previews for saved static files.
+Chat preserves interrupted answers; Observability has labelled Vercel samples.
+See docs/verification/BROWSER_SNAPSHOT_2026_10_11.md. Public gateway requirements
+below now apply only to public runtime previews.
+
 # Laptop workspace repair - October 11, 2026
 
 Reviewed provider, database-lock, static-preview, Telegram identity and mobile UI

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import styles from "./Observability.module.css";
+import VercelDemoMonitoring from '@/components/VercelDemoMonitoring';
 import ApplicationNavigation from '@/components/ApplicationNavigation';
 
 interface LogEntry {
@@ -102,6 +103,8 @@ export default function ObservabilityPage() {
 
         <ApplicationNavigation/>
       </header>
+
+      <VercelDemoMonitoring/>
 
       {/* Top Diagnostic Probe Widget */}
       <div

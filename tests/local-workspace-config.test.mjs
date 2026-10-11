@@ -6,3 +6,10 @@ test('preflight rejects incomplete models, host mapping, images and transaction 
  assert.deepEqual(localWorkspaceConfiguration(env).images,['static']);
  for(const changed of [{GEMINI_API_KEY:''},{GEMINI_MODEL:''},{PREVIEW_SIGNING_SECRET:''},{PREVIEW_BASE_DOMAIN:'wrong.example.test'},{RYVIX_WORKSPACE_IMAGES:''},{DATABASE_URL:env.DATABASE_URL.replace('5432','6543')}])assert.throws(()=>localWorkspaceConfiguration({...env,...changed}));
 });
+
+test('browser mode needs no DNS map or signing secret but still requires provider and host',()=>{
+ const browser={...env,RYVIX_PREVIEW_MODE:'browser',PREVIEW_SIGNING_SECRET:'',PREVIEW_BASE_DOMAIN:'',RYVIX_WORKER_PREVIEW_DOMAINS:''};
+ assert.deepEqual(localWorkspaceConfiguration(browser).images,['static']);
+ assert.throws(()=>localWorkspaceConfiguration({...browser,RYVIX_WORKER_HOST_ID:''}));
+ assert.throws(()=>localWorkspaceConfiguration({...browser,GEMINI_API_KEY:''}));
+});

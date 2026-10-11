@@ -1,4 +1,5 @@
 "use client";
+import BrowserStaticPreview from '@/components/BrowserStaticPreview';
 import TaskCheckTimeline from '@/components/TaskCheckTimeline';
 
 import React, { useState, useEffect, useRef } from "react";
@@ -899,6 +900,7 @@ export default function DashboardPage() {
     setChatMessages((prev) => [...prev, assistantMsg]);
     const chatAbort = new AbortController();
     chatAbortRef.current = chatAbort;
+    let accumulated = "";
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -919,14 +921,12 @@ export default function DashboardPage() {
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let accumulated = "";
       let lastThought = "";
       let eventBuffer = '';
 
       while (true) {
         const { value, done } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
+        const chunk = done ? decoder.decode() + "\n" : decoder.decode(value, { stream: true });
         eventBuffer += chunk;
         const lines = eventBuffer.split("\n");
         eventBuffer = lines.pop() || '';
@@ -957,7 +957,9 @@ export default function DashboardPage() {
           }
           return updated;
         });
+        if (done) break;
       }
+      if (!accumulated.trim()) throw new Error("Empty response");
     } catch {
       setChatMessages((prev) => {
         const updated = [...prev];
@@ -965,7 +967,7 @@ export default function DashboardPage() {
         if (lastIdx >= 0 && updated[lastIdx].role === "assistant") {
           updated[lastIdx] = {
             ...updated[lastIdx],
-            content: "Chat request failed. Please retry.",
+            content: (accumulated || updated[lastIdx].content) ? `${accumulated || updated[lastIdx].content}\n\nResponse interrupted. The partial answer above is preserved; please retry.` : "Chat request failed. Your message is still here; please retry.",
             thoughtTrace: undefined,
           };
         }
@@ -4110,7 +4112,7 @@ function PreviewStudioFrame({
               </div>
               <div style={{ position: "absolute", inset: 0, width: `${sliderPos}%`, overflow: "hidden", borderRight: "2px solid #7C6CFF", boxShadow: "2px 0 15px rgba(124, 108, 255, 0.5)", background: "#080C11" }}>
                 <div style={{ width: sliderRef.current?.clientWidth || "100%", minHeight: "580px" }}>
-                  <RealPreviewWebsiteFrame key={`${activeTask?.id || ""}:${activeTask?.status || ""}:${activeTask?.updated_at || ""}:${commitSha}`} previewUrl={activePreviewUrl} repoName={repoName} branch={branch} commitSha={commitSha} />
+                  <RealPreviewWebsiteFrame key={`${activeTask?.id || ""}:${activeTask?.status || ""}:${activeTask?.updated_at || ""}:${commitSha}`} taskId={activeTask?.result ? activeTask.id : undefined} previewUrl={activePreviewUrl} repoName={repoName} branch={branch} commitSha={commitSha} />
                 </div>
               </div>
               <div
@@ -4140,7 +4142,7 @@ function PreviewStudioFrame({
           ) : (
             <div>
               {isShowingAfter ? (
-                <RealPreviewWebsiteFrame key={`${activeTask?.id || ""}:${activeTask?.status || ""}:${activeTask?.updated_at || ""}:${commitSha}`} previewUrl={activePreviewUrl} repoName={repoName} branch={branch} commitSha={commitSha} />
+                <RealPreviewWebsiteFrame key={`${activeTask?.id || ""}:${activeTask?.status || ""}:${activeTask?.updated_at || ""}:${commitSha}`} taskId={activeTask?.result ? activeTask.id : undefined} previewUrl={activePreviewUrl} repoName={repoName} branch={branch} commitSha={commitSha} />
               ) : (
                 <RealLiveWebsiteFrame liveUrl={activeLiveUrl} repoName={repoName} onConfigureUrl={onConfigureUrl} />
               )}
@@ -4346,12 +4348,14 @@ function RealLiveWebsiteFrame({
 }
 
 function RealPreviewWebsiteFrame({
+  taskId,
   previewUrl,
   repoName,
   branch,
   commitSha,
   isBuilding,
 }: {
+  taskId?: string;
   previewUrl: string;
   repoName: string;
   branch: string;
@@ -4384,6 +4388,8 @@ function RealPreviewWebsiteFrame({
       </div>
     );
   }
+
+  if (!previewUrl.trim() && taskId) return <BrowserStaticPreview taskId={taskId}/>;
 
   if (!previewUrl.trim()) {
     return (
@@ -4418,7 +4424,7 @@ function RealPreviewWebsiteFrame({
           No AI Preview Available
         </h3>
         <p style={{ fontSize: "0.86rem", color: "#A5AFBC", maxWidth: "420px", marginTop: "0.4rem", lineHeight: 1.5 }}>
-          No active sandbox preview is available for <span style={{ color: "#42D9FF" }}>{repoName}</span>. Run a coding task and check its build status. A preview appears only when the preview server starts successfully; completed code changes alone do not guarantee a preview.
+          No active sandbox preview is available for <span style={{ color: "#42D9FF" }}>{repoName}</span>. Run a coding task and check its build status. Saved HTML/CSS/JavaScript changes can be previewed here without a tunnel. Framework applications require a running preview server.
         </p>
       </div>
     );

@@ -11,6 +11,10 @@ export function workerPreviewDomain(hostId: string, env: NodeJS.ProcessEnv = pro
 }
 export function workerHostConfiguration(env: NodeJS.ProcessEnv = process.env) {
   const hostId=env.RYVIX_WORKER_HOST_ID || '';
+  if(env.RYVIX_PREVIEW_MODE==='browser'){
+    if(!/^[a-z0-9][a-z0-9-]{0,62}$/.test(hostId))throw Error('Valid stable worker host ID required');
+    return {hostId,domain:''};
+  }
   const domain=workerPreviewDomain(hostId,env);
   if(domain!==env.PREVIEW_BASE_DOMAIN)throw new Error('Worker preview domain does not match its host allowlist');
   return {hostId,domain};

@@ -7,10 +7,14 @@ export function localWorkspaceConfiguration(env){
   if(!providers.length||new Set(providers).size!==providers.length||providers.some(p=>!keys[p]))throw Error('Configure a valid explicit model provider chain.');
   if(env.RYVIX_MODEL_PROVIDER&&env.RYVIX_MODEL_PROVIDER!==providers[0])throw Error('Primary provider conflicts with fallback order.');
   for(const provider of providers)if(!env[provider.toUpperCase()+'_MODEL']?.trim()||!(env[keys[provider]]||provider==='claude'&&env.CLAUDE_API_KEY)?.trim())throw Error('Model name or API key missing for '+provider+'.');
+  if(!/^[a-z0-9][a-z0-9-]{0,62}$/.test(env.RYVIX_WORKER_HOST_ID||''))throw Error('Valid stable worker host ID required');
+  if(env.RYVIX_PREVIEW_MODE!=='browser'){
   if(!/^[a-f0-9]{64}$/i.test(env.PREVIEW_SIGNING_SECRET||''))throw Error('Configure a fresh 64-character hex PREVIEW_SIGNING_SECRET on worker and Vercel.');
   let map;try{map=JSON.parse(env.RYVIX_WORKER_PREVIEW_DOMAINS||'{}');}catch{throw Error('Worker preview domain map is invalid JSON.');}
   const domain=env.PREVIEW_BASE_DOMAIN;
   if(!domain||map[env.RYVIX_WORKER_HOST_ID]!==domain||!/^([a-z0-9-]+\.)+[a-z]{2,63}$/.test(domain))throw Error('Worker ID and public preview domain map must match.');
+  }
+  const domain=env.PREVIEW_BASE_DOMAIN;
   let origin;try{origin=new URL(env.RYVIX_PUBLIC_URL);}catch{throw Error('RYVIX_PUBLIC_URL must be a public HTTPS origin.');}
   if(origin.protocol!=='https:'||origin.username||origin.password||origin.pathname!=='/'||origin.search||origin.hash)throw Error('RYVIX_PUBLIC_URL must be a public HTTPS origin.');
   const names=env.RYVIX_WORKSPACE_MODE==='static'?['RYVIX_WORKSPACE_STATIC_IMAGE','RYVIX_PREVIEW_RELAY_IMAGE']:['RYVIX_WORKSPACE_NODE_IMAGE','RYVIX_WORKSPACE_EGRESS_IMAGE'];

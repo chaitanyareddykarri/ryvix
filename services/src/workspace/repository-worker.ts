@@ -121,7 +121,7 @@ export async function serveRepositoryWorker(store: RepositoryJobStore, signal: A
       }
       for (const session of await store.previewSessions()) {
         if (!dockerWorkspaceManager.getSession(session.id)) {
-          try { await dockerWorkspaceManager.restoreSession(session); await ensurePreviewGateway(); }
+          try { await dockerWorkspaceManager.restoreSession(session); if(process.env.RYVIX_PREVIEW_MODE!=='browser')await ensurePreviewGateway(); }
           catch { console.error('Persisted preview could not be restored on this worker.'); }
         }
       }
