@@ -1,3 +1,4 @@
+import {verifiedTelegramPhone} from '../../../../../services/src/communication/telegram-identity';
 import { NextResponse } from 'next/server';
 import { timingSafeEqual } from 'node:crypto';
 import { getDirectDbPool } from '@/utils/direct-db';
@@ -18,7 +19,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Telegram bot token is not configured.' }, { status: 503 });
   }
 
-  // Verify webhook secret token if configured
+  if(!expectedSecret)return NextResponse.json({error:'Telegram webhook authentication is not configured.'},{status:503});
+
+  // Require webhook authentication before processing identities or jobs.
   if (expectedSecret) {
     const suppliedSecret = request.headers.get('x-telegram-bot-api-secret-token') || '';
     if (
@@ -41,6 +44,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
   }
 
+  if(message.chat.type!=='private'||message.chat.id!==message.from?.id)return NextResponse.json({ok:true});
   const chatId = message.chat.id;
   const pool = getDirectDbPool();
 
@@ -49,30 +53,23 @@ export async function POST(request: Request) {
     const rawContactPhone = message.contact?.phone_number || '';
     const cleanTextPhone = text.replace(/[\s()-]/g, '');
     const isDirectPhoneInput = /^\+?[0-9]{8,15}$/.test(cleanTextPhone);
-    const phoneInputToLink = rawContactPhone || (isDirectPhoneInput ? cleanTextPhone : '');
+    const phoneInputToLink = verifiedTelegramPhone(message);
+    if((rawContactPhone||isDirectPhoneInput)&&!phoneInputToLink){
+      await sendTelegramContactPrompt(token,chatId,'Use Share Phone Number to share your own Telegram contact. Typed numbers cannot verify account ownership.');
+      return NextResponse.json({ok:true});
+    }
 
-    // 1. User shared contact (button) OR typed their phone number directly as text
+    // 1. Link only an authenticated private-chat sender sharing their own contact.
     if (phoneInputToLink) {
       const rawPhone = phoneInputToLink;
       const normalized = normalizePhoneNumber(rawPhone);
       const digitsOnly = rawPhone.replace(/\D/g, '');
 
-      // Search for any profile matching this phone number (exact, normalized, digits-only, or last 10 digits)
+      // Match the complete international number; ambiguous profiles fail closed.
       const profileResult = await pool.query(
-        `SELECT id, full_name, phone_number, organization_id 
-         FROM public.profiles 
-         WHERE phone_number IS NOT NULL AND (
-            phone_number = $1 
-            OR phone_number = $2 
-            OR regexp_replace(phone_number, '\\D', '', 'g') = $3 
-            OR (length($3) >= 10 AND length(regexp_replace(phone_number, '\\D', '', 'g')) >= 10 
-                AND RIGHT(regexp_replace(phone_number, '\\D', '', 'g'), 10) = RIGHT($3, 10))
-         )
-         LIMIT 1`,
-        [rawPhone, normalized, digitsOnly]
-      );
-
-      const profile = profileResult.rows[0];
+        `SELECT id, full_name, phone_number, organization_id FROM public.profiles
+         WHERE regexp_replace(phone_number, '[^0-9]', '', 'g') = $1 LIMIT 2`, [digitsOnly]);
+      const profile = profileResult.rows.length===1?profileResult.rows[0]:null;
       if (profile) {
         // Link this Telegram chat_id to the user's profile
         await pool.query(

@@ -1,5 +1,6 @@
 FROM node:22-alpine
 RUN apk add --no-cache git ca-certificates
+COPY static-site.cjs /opt/ryvix/static-site.cjs
 USER 1000:1000
 WORKDIR /workspace
 # The manager supplies read-only root, tmpfs workspace, limits and network policy.

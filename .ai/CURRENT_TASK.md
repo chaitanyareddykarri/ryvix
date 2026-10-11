@@ -1,3 +1,10 @@
+# Laptop workspace repair - October 11, 2026
+
+Reviewed provider, database-lock, static-preview, Telegram identity and mobile UI
+failures. See docs/verification/LAPTOP_WORKSPACE_REPAIR_2026_10_11.md for evidence.
+Local fixes verified; public wildcard DNS/TLS and real task acceptance remain open.
+Older readiness claims below are historical and do not establish preview access.
+
 # Telegram Assistant, Local Docker Sandbox Worker & Main Synchronization - October 11, 2026
 
 The user authorized merging verified changes from `Testing_branch` into `main` for production deployment.

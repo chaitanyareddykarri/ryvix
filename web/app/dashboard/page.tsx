@@ -2146,7 +2146,7 @@ export default function DashboardPage() {
 
           {/* 2. AI ASSISTANT DEEP WORKSPACE */}
                     {activeTab === "ai" && (
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(380px, 460px) 1fr", gap: "1.5rem", height: "calc(100vh - 120px)", minHeight: "680px" }}>
+            <div className="dashboard-coding-grid">
               {/* Left Column: Interactive Streaming AI Conversation */}
               <div style={{ display: "flex", flexDirection: "column", background: "#0D1218", border: "1px solid #1D2732", borderRadius: "14px", overflow: "hidden" }}>
                 {/* Project-Aware Context Bar */}
@@ -2230,7 +2230,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Quick Prompts Bar */}
-                <div style={{ padding: "0.4rem 0.85rem", background: "#080C11", borderTop: "1px solid #1D2732", display: "flex", gap: "0.4rem", overflowX: "auto" }}>
+                <div style={{ padding: "0.4rem 0.85rem", background: "#080C11", borderTop: "1px solid #1D2732", display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
                   {suggestedChanges.map((chip) => (
                     <button
                       key={chip.id}
@@ -3920,7 +3920,7 @@ function SidebarNavGroup({
   onSelect: (id: NavSection) => void;
 }) {
   return (
-    <div style={{ marginBottom: "0.6rem" }}>
+    <div className="sidebar-nav-group" style={{ marginBottom: "0.6rem" }}>
       {!collapsed && (
         <div className="desktop-only" style={{ fontSize: "0.62rem", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", color: "#66717F", fontWeight: 700, padding: "0.2rem 0.65rem", letterSpacing: "0.08em", textTransform: "uppercase" }}>
           {title}
@@ -3933,7 +3933,9 @@ function SidebarNavGroup({
             <button
               key={item.id}
               onClick={() => onSelect(item.id)}
-              title={collapsed ? item.label : undefined}
+              title={item.label}
+              aria-label={item.label}
+              aria-pressed={isActive}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -4026,19 +4028,19 @@ function PreviewStudioFrame({
   return (
     <>
       {activeTask && <TaskCheckTimeline events={activeTask.pipeline} status={activeTask.status} unavailable={activeTask.pipelineUnavailable} truncated={activeTask.pipelineTruncated}/>}
-      <div style={{ padding: "0.65rem 1rem", background: "#080C11", borderBottom: "1px solid #1D2732", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
+      <div className="preview-toolbar" style={{ padding: "0.65rem 1rem", background: "#080C11", borderBottom: "1px solid #1D2732", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
           <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#F06A6A" }} />
           <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#E8B85C" }} />
           <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#45D483" }} />
         </div>
 
-        <div style={{ flex: 1, maxWidth: "580px", display: "flex", alignItems: "center", gap: "0.55rem", padding: "0.32rem 0.85rem", borderRadius: "6px", background: "#121922", border: "1px solid #1D2732", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", fontSize: "0.74rem" }}>
+        <div className="preview-address" style={{ minWidth: 0, flex: 1, maxWidth: "580px", display: "flex", alignItems: "center", gap: "0.55rem", padding: "0.32rem 0.85rem", borderRadius: "6px", background: "#121922", border: "1px solid #1D2732", fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)", fontSize: "0.74rem" }}>
           <IconLock size={12} color="#45D483" />
           <span style={{ padding: "0.1rem 0.35rem", borderRadius: "3px", background: "rgba(124, 108, 255, 0.2)", color: "#A78BFA", fontSize: "0.65rem", fontWeight: 700 }}>
             PREVIEW
           </span>
-          <span style={{ color: "#42D9FF", fontSize: "0.72rem", fontWeight: 600 }}>
+          <span style={{ color: "#42D9FF", fontSize: "0.72rem", fontWeight: 600, overflowWrap: "anywhere", minWidth: 0 }}>
             {repoName}
           </span>
           <span style={{ color: "#66717F" }}>|</span>

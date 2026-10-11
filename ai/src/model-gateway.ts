@@ -1,3 +1,4 @@
+import {ModelUnavailableError,providerFailureReason} from './provider-errors';
 import {compactMessages} from './context/message-budget';
 import {ModelQuotaError} from './model-capacity';
 import { streamProvider } from './provider-stream';
@@ -74,7 +75,7 @@ export class ModelGateway {
   async *stream(messages: LLMMessage[], options: { maxTokens?: number; temperature?: number; signal?: AbortSignal;
     onProvider?: (provider: string, model: string) => void;onUsage?:(usage:TokenUsage&{provider:string;model:string})=>void;onAttempt?:AttemptObserver } = {}) {
     requireAttemptObserver(options.onAttempt);
-    messages=compactMessages(messages,Number(process.env.RYVIX_MODEL_CONTEXT_CHAR_BUDGET||2000000));
+    messages=compactMessages(messages,Number(process.env.RYVIX_MODEL_CONTEXT_CHAR_BUDGET||64000));
     const signal = AbortSignal.any([AbortSignal.timeout(120000), ...(options.signal ? [options.signal] : [])]);
     for (const provider of this.selectedProviders()) {
       if (!process.env.RYVIX_MODEL_FALLBACK_ORDER?.trim() && process.env.RYVIX_CHAT_PROVIDER && provider.id !== process.env.RYVIX_CHAT_PROVIDER) continue;
@@ -246,7 +247,7 @@ export class ModelGateway {
     }
   ): Promise<LLMCompletionResult> {
     requireAttemptObserver(options?.onAttempt);
-    messages=compactMessages(messages,Number(process.env.RYVIX_MODEL_CONTEXT_CHAR_BUDGET||2000000));
+    messages=compactMessages(messages,Number(process.env.RYVIX_MODEL_CONTEXT_CHAR_BUDGET||64000));
     const startTime = Date.now();
     const signal = AbortSignal.any([AbortSignal.timeout(120000), ...(options?.signal ? [options.signal] : [])]);
     const failedProviders: string[] = [];
@@ -309,7 +310,7 @@ export class ModelGateway {
             provider.isRateLimitedUntil = Math.max(Date.now()+60000,Number.isFinite(err.retryAt)?err.retryAt:0);
             failedProviders.push(`${provider.id} (429 Rate Limit)`);
           } else {
-            failedProviders.push(`${provider.id} (Provider request failed)`);
+            failedProviders.push(`${provider.id} (${providerFailureReason(err)})`);
           }
           // Continue to next provider in failover chain!
           continue;
@@ -329,7 +330,7 @@ export class ModelGateway {
     // legacy unconfigured development callers may use a deterministic fixture plan.
     const latencyMs = Date.now() - startTime;
     this.throwIfQuotaLimited();
-    if (options?.requireProvider || process.env.RYVIX_MODEL_PROVIDER || process.env.RYVIX_MODEL_FALLBACK_ORDER?.trim() || process.env.NODE_ENV==='production') throw new Error('No AI provider is available. Configure a provider and retry.');
+    if (options?.requireProvider || process.env.RYVIX_MODEL_PROVIDER || process.env.RYVIX_MODEL_FALLBACK_ORDER?.trim() || process.env.NODE_ENV==='production') throw new ModelUnavailableError(failedProviders);
     const userMsg = messages.find((m) => m.role === 'user')?.content || 'Autonomous Task';
     const localContent = this.generateLocalReasoning(userMsg);
 
@@ -429,7 +430,10 @@ export class ModelGateway {
       });
 
       if (res.status === 429) {
-        throw new Error(`429 Rate Limit Exceeded on ${provider.id}`);
+        const retry = res.headers.get('retry-after');
+      const seconds = retry === null ? NaN : Number(retry);
+      await res.body?.cancel();
+      throw Object.assign(new Error(`429 Rate Limit Exceeded on ${provider.id}`), {retryAt: Number.isFinite(seconds) ? Date.now()+Math.max(0,seconds)*1000 : Date.parse(retry || '')});
       }
       if (!res.ok) {
         const errText = await res.text();
@@ -479,7 +483,10 @@ export class ModelGateway {
     });
 
     if (res.status === 429) {
-      throw new Error(`429 Rate Limit Exceeded on ${provider.id}`);
+      const retry = res.headers.get('retry-after');
+      const seconds = retry === null ? NaN : Number(retry);
+      await res.body?.cancel();
+      throw Object.assign(new Error(`429 Rate Limit Exceeded on ${provider.id}`), {retryAt: Number.isFinite(seconds) ? Date.now()+Math.max(0,seconds)*1000 : Date.parse(retry || '')});
     }
 
     if (!res.ok) {
@@ -499,7 +506,7 @@ export class ModelGateway {
       promptTokens = tokenCount(data.usage?.prompt_tokens);
       completionTokens = tokenCount(data.usage?.completion_tokens);
     } else {
-      content = JSON.stringify(data);
+      throw new Error('Empty provider response');
     }
 
     return { content, promptTokens, completionTokens };
