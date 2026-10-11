@@ -93,7 +93,10 @@ async function main() {
   );
 
   child.on('exit', code => {
-    if (code !== 0) console.log(`Worker exited with code ${code}`);
+    if (code !== 0) {
+      console.log(`\n⚠️ Worker process exited with code ${code}.`);
+      console.log(`💡 Tip: If you see "Another worker already owns this Docker host", press Ctrl+C in your other running terminal running 'npm run worker:local' and re-run.\n`);
+    }
   });
 }
 

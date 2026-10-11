@@ -25,21 +25,36 @@ export async function runRepositoryJob(store: RepositoryJobStore, workerId: stri
     if (lostLease && sessionId) await dockerWorkspaceManager.terminateSession(sessionId).catch(() => {});
   }, 10000);
   try {
+    console.log(`\n======================================================`);
+    console.log(`[Ryvix Worker] 📦 Claimed Task #${job.task_id.slice(0, 8)}`);
+    console.log(`[Ryvix Worker] 📂 Repository: ${job.full_name} (${job.default_branch})`);
+    console.log(`[Ryvix Worker] 💬 User prompt: "${job.user_prompt}"`);
+    console.log(`======================================================`);
     const githubToken = await store.credentials(job,workerId);
     const lessons=await store.learningContext(job);
     const result = await executeRepositoryTask({ taskId: job.task_id,projectId: job.project_id,
       fullName: job.full_name,branch: job.default_branch,prompt: job.user_prompt,githubToken,lessons,
       signal:cancellation.signal,onAttempt:event=>store.modelAttempt(job,workerId,event),
-      onProgress:event=>store.progress(job,workerId,event),
+      onProgress:event=>{
+        console.log(`[Ryvix Worker] ⚙️  Stage [${event.stage.toUpperCase()}]: ${event.status}${event.detail ? ` (${event.detail})` : ''}`);
+        return store.progress(job,workerId,event);
+      },
       onSession: async session => {
         sessionId = session.id;
         if (lostLease) throw new Error('Worker lease lost');
+        console.log(`[Ryvix Worker] 🐳 Container sandbox active: ${session.container_id} (port ${session.preview_port || 'none'})`);
         await store.session(job,workerId,session);
       },
-      onPlan: async (summary,steps) => { if (lostLease) throw new Error('Worker lease lost'); await store.plan(job,workerId,summary,steps); },
+      onPlan: async (summary,steps) => {
+        if (lostLease) throw new Error('Worker lease lost');
+        console.log(`[Ryvix Worker] 📋 Plan generated: ${summary} (${steps.length} steps)`);
+        await store.plan(job,workerId,summary,steps);
+      },
     });
     if (lostLease) throw new Error('Worker lease lost');
     await store.complete(job,workerId,result);
+    console.log(`[Ryvix Worker] 🎉 Task #${job.task_id.slice(0, 8)} COMPLETED successfully!`);
+    console.log(`[Ryvix Worker] 📁 Files changed: ${result.files?.length || 0}`);
 
     if (process.env.TELEGRAM_BOT_TOKEN) {
       try {
@@ -66,11 +81,13 @@ export async function runRepositoryJob(store: RepositoryJobStore, workerId: stri
       }
     }
   } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error(`[Ryvix Worker] ❌ Task #${job.task_id.slice(0, 8)} failed:`, errorMsg);
     let cleaned=true;
     if (sessionId) try {await dockerWorkspaceManager.terminateSession(sessionId);await store.markDestroyed(sessionId);}catch{cleaned=false;}
     const deferred=error instanceof ModelQuotaError&&!lostLease&&cleaned
       ? await store.deferQuota(job,workerId,error.retryAt).catch(()=>false):false;
-    if(!deferred)await store.fail(job,workerId);
+    if(!deferred)await store.fail(job,workerId,false,errorMsg);
 
     if (process.env.TELEGRAM_BOT_TOKEN) {
       try {
@@ -81,7 +98,7 @@ export async function runRepositoryJob(store: RepositoryJobStore, workerId: stri
             chatId,
             `⚠️ *Task #${job.task_id.slice(0, 8)} Stopped in Sandbox*\n\n` +
             `📂 *Repo:* \`${job.full_name}\`\n` +
-            `❌ *Error:* ${error instanceof Error ? error.message : 'Execution failed'}\n\n` +
+            `❌ *Error:* ${errorMsg}\n\n` +
             `📊 Check logs: https://ryvix.co.in/dashboard`
           );
         }
@@ -95,6 +112,8 @@ export async function runRepositoryJob(store: RepositoryJobStore, workerId: stri
 
 export async function serveRepositoryWorker(store: RepositoryJobStore, signal: AbortSignal) {
   const workerId = randomUUID();
+  console.log(`[Ryvix Worker] 🚀 Worker active (ID: ${workerId.slice(0, 8)}, Host: ${store.workerHost()})`);
+  console.log(`[Ryvix Worker] 📡 Polling for pending repository tasks from Telegram & Web...`);
   while (!signal.aborted) {
     try {
       await store.expireLeases();

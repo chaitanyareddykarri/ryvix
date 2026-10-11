@@ -21,4 +21,4 @@ async function main() {
     await serveRepositoryWorker(new RepositoryJobStore(pool,hostId),controller.signal);
   } finally { await hostLease.query('SELECT pg_advisory_unlock(hashtextextended($1,0))',[`ryvix-worker:${hostId}`]).catch(()=>{});hostLease.release();await pool.end(); }
 }
-main().catch(() => { console.error('Workspace worker could not start. Check runtime configuration.'); process.exitCode=1; });
+main().catch((err) => { console.error('Workspace worker could not start:', err); process.exitCode=1; });

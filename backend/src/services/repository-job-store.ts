@@ -34,7 +34,7 @@ export class RepositoryJobStore {
     const lessons=await store.retrieve(job.organization_id,job.created_by,job.project_id,job.user_prompt);
     return lessons.map(l=>({id:l.id,content:l.content,evidenceId:l.event_id,observedAt:l.observed_at,expiresAt:l.expires_at}));
   }
-  private workerHost() {
+  workerHost() {
     if(!this.hostId || !/^[a-z0-9][a-z0-9-]{0,62}$/.test(this.hostId))throw new Error('Stable worker host required');
     return this.hostId;
   }
@@ -165,14 +165,15 @@ export class RepositoryJobStore {
       await this.audit(client,job.project_id,null,'system',job.task_id,'task.execute.success');
     });
   }
-  async fail(job: RepositoryJob, workerId: string, expiredOnly=false) {
+  async fail(job: RepositoryJob, workerId: string, expiredOnly = false, errorDetails?: string) {
     return this.transaction(async client => {
       const valid = await client.query(`SELECT t.status FROM tasks t JOIN repository_jobs j ON j.task_id=t.id
         WHERE t.id=$1 AND j.worker_id=$2 AND j.status='running'
           AND (NOT $3::boolean OR j.lease_expires_at<=now()) FOR UPDATE OF t,j`, [job.task_id,workerId,expiredOnly]);
       if (!valid.rows[0]) return;
-      await client.query(`UPDATE tasks SET status='failed',error_details='Workspace execution interrupted or verification failed. No changes were shipped.',updated_at=now()
-        WHERE id=$1 AND status IN ('planning','executing','verifying')`, [job.task_id]);
+      const details = errorDetails || 'Workspace execution interrupted or verification failed. No changes were shipped.';
+      await client.query(`UPDATE tasks SET status='failed',error_details=$2,updated_at=now()
+        WHERE id=$1 AND status IN ('planning','executing','verifying')`, [job.task_id, details]);
       await client.query("UPDATE repository_jobs SET status=$2,lease_expires_at=NULL,updated_at=now() WHERE task_id=$1", [job.task_id,valid.rows[0].status==='cancelled'?'cancelled':'failed']);
       await this.audit(client,job.project_id,null,'system',job.task_id,'task.execute.failure',false);
     });

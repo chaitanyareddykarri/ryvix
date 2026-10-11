@@ -57,7 +57,9 @@ async function executeRepositoryTaskInternal(input: {
   await progress.emit({stage:"analysis",status:"passed",attempt:1,detail:staticOnly?"Restricted static HTML/CSS/JavaScript":profile.displayName});
   const imageKey = profile.stack === 'nextjs' || profile.stack === 'nodejs' ? 'NODE' :
     profile.stack.startsWith('python') ? 'PYTHON' : profile.stack.toUpperCase();
-  const image = process.env[staticOnly ? 'RYVIX_WORKSPACE_STATIC_IMAGE' : `RYVIX_WORKSPACE_${imageKey}_IMAGE`];
+  const image = process.env[staticOnly ? 'RYVIX_WORKSPACE_STATIC_IMAGE' : `RYVIX_WORKSPACE_${imageKey}_IMAGE`] ||
+    process.env.RYVIX_WORKSPACE_NODE_IMAGE ||
+    process.env.RYVIX_WORKSPACE_STATIC_IMAGE;
   if (!image) throw new Error(`Approved workspace image is not configured for ${profile.stack}`);
   const session = await progress.run("workspace",1,()=>manager.createSession({ taskId: input.taskId, projectId: input.projectId, baseImage: image,
     ...(staticOnly ? {cpu:STATIC_CPU,ramMb:STATIC_MEMORY_MB} : {}) }));
@@ -101,10 +103,10 @@ async function executeRepositoryTaskInternal(input: {
     if(profile.packageManager === "none")await progress.emit({stage:"install",status:"skipped",attempt:1,detail:"No dependency installation in this profile"});
     const pkg = packageText ? JSON.parse(packageText) : null;
     const commands:string[]=[];
-    if (!pkg || pkg.scripts?.test) commands.push(profile.testCommand);
+    if (profile.testCommand && (!pkg || pkg.scripts?.test)) commands.push(profile.testCommand);
     if (pkg?.scripts?.typecheck) commands.push('npm run typecheck');
     if (pkg?.scripts?.lint) commands.push('npm run lint');
-    if (!staticOnly && (!pkg || pkg.scripts?.build)) commands.push(profile.buildCommand);
+    if (!staticOnly && profile.buildCommand && (!pkg || pkg.scripts?.build)) commands.push(profile.buildCommand);
     const checkStage=(command:string):TaskStage=>command===profile.testCommand?"test":command==="npm run typecheck"?"typecheck":command==="npm run lint"?"lint":"build";
     for(const stage of ["test","typecheck","lint","build"] as const)if(!commands.some(command=>checkStage(command)===stage))await progress.emit({stage,status:"skipped",attempt:1,detail:staticOnly?"Restricted static profile": "No configured script"});
     verification.push(...await verifyWithOneRepair(commands,
