@@ -29,4 +29,4 @@ async function main() {
     await serveRepositoryWorker(new RepositoryJobStore(pool,hostId),controller.signal);
   } finally { await hostLease.query('SELECT pg_advisory_unlock(hashtextextended($1,0))',[`ryvix-worker:${hostId}`]).catch(()=>{});hostLease.release();await pool.end(); }
 }
-main().catch((err) => { console.error('Workspace worker could not start. Check database session access, Docker, matching preview settings and wildcard HTTPS.'); process.exitCode=1; });
+main().catch((err) => { console.error(`Workspace worker could not start: ${err instanceof Error ? err.message : String(err)}. Check database session access, Docker, matching preview settings and wildcard HTTPS.`); process.exitCode=1; });
