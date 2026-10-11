@@ -212,12 +212,16 @@ export async function POST(request: Request) {
         console.warn('[Telegram LLM Notice] Model completion fallback:', llmErr);
       }
 
-      // 2. If the user has a repository, enqueue the task into the sandbox build queue!
+      // 2. Determine if the user message is an actionable code change vs conversational greeting/question
+      const cleanPrompt = text.trim().toLowerCase();
+      const isConversational = /^(hi|hello|hey|greetings|good\s+(morning|afternoon|evening)|yo|sup|who\s+are\s+you|what\s+can\s+you\s+do.*|wt\s+u\s+can\s+do.*|how\s+does\s+this\s+work.*|help|capabilities)[\s!.,?]*$/i.test(cleanPrompt);
+      const isActionableCode = !isConversational && cleanPrompt.length >= 3;
+
       let taskEnqueued = false;
       let taskId = '';
       let enqueueNotice = '';
 
-      if (targetRepo) {
+      if (targetRepo && isActionableCode) {
         try {
           const jobStore = new RepositoryJobStore(pool);
           const task = await jobStore.enqueue(
@@ -246,13 +250,14 @@ export async function POST(request: Request) {
           { parseMode: 'Markdown' }
         );
       } else if (targetRepo) {
-        // Has repo but enqueue had a notice (e.g. GitHub app not installed or general question)
+        // Conversational response or informational query
         await sendTelegramMessage(
           token,
           chatId,
-          `🤖 *Ryvix AI:*\n${aiUnderstanding || 'I received your request.'}\n\n` +
-          (enqueueNotice ? `ℹ️ *Repository Status:* ${enqueueNotice}\n` : '') +
-          `📊 Dashboard: https://ryvix.co.in/dashboard`
+          `🤖 *Ryvix AI:*\n${aiUnderstanding || 'I received your message.'}\n\n` +
+          (enqueueNotice ? `ℹ️ *Status:* ${enqueueNotice}\n\n` : '') +
+          `💡 *Tip:* Send a code instruction (e.g. \`Make my homepage modern\` or \`Add a dark theme\`) to run sandbox builds in Docker!`,
+          { parseMode: 'Markdown' }
         );
       } else {
         // No repo connected yet
