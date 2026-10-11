@@ -886,10 +886,15 @@ export default function DashboardPage() {
     setChatInput("");
     setIsChatStreaming(true);
 
+    const isCodeChange = /make|build|add|change|update|fix|redesign|dark|navbar|button|homepage|style|page|color|create|delete|remove|implement/i.test(message);
+    if (activeRepo?.id && isCodeChange && !isProcessing) {
+      void handlePromptSubmit(undefined, message, true);
+    }
+
     const assistantMsg = {
       role: "assistant" as const,
       content: "",
-      thoughtTrace: "Retrieving authorized project context...",
+      thoughtTrace: isCodeChange ? "Queuing sandbox build & analyzing codebase..." : "Retrieving authorized project context...",
     };
     setChatMessages((prev) => [...prev, assistantMsg]);
     const chatAbort = new AbortController();
@@ -1136,7 +1141,7 @@ export default function DashboardPage() {
   }, []);
 
   // Submit Prompt to AI & Orchestrate Workflow with Real API and Database
-  async function handlePromptSubmit(e?: React.FormEvent, customPrompt?: string) {
+  async function handlePromptSubmit(e?: React.FormEvent, customPrompt?: string, keepCurrentTab = false) {
     if (e) e.preventDefault();
     const finalPrompt = customPrompt || promptText.trim();
     if (!finalPrompt || isProcessing) return;
@@ -1180,7 +1185,7 @@ export default function DashboardPage() {
         setAnalyzingStep(data.task.status === 'queued' ? 1 : 4);
         setPreviewState(data.task.status === 'queued' ? 'analyzing' : data.workspace?.previewUrl ? "preview_ready" : "none");
         setStatusMessage(data.task.status === 'queued' ? 'QUEUED FOR ANALYSIS' : data.workspace?.previewUrl ? "PREVIEW READY" : "Preview unavailable.");
-        setActiveTab("previews");
+        if (!keepCurrentTab) setActiveTab("previews");
       }
     } catch (err: any) {
       console.error("[Prompt Submit Error]:", err);
@@ -2291,8 +2296,11 @@ export default function DashboardPage() {
               <div style={{ display: "flex", flexDirection: "column", background: "#0D1218", border: "1px solid #1D2732", borderRadius: "14px", overflow: "hidden" }}>
                 <PreviewStudioFrame
                   orgName={orgName}
-                  activeLiveUrl={activeLiveUrl}
-                  activePreviewUrl={activePreviewUrl}
+                  repoName={activeRepo?.full_name || selectedWebsite || "Production Website"}
+                  branch={activeRepo?.default_branch || "main"}
+                  commitSha={activeTask?.pullRequest?.commitSha || "Not recorded"}
+                  activeLiveUrl={customLiveUrl || activeLiveUrl || ""}
+                  activePreviewUrl={activePreviewUrlState || activePreviewUrl || ""}
                   comparisonMode={comparisonMode}
                   setComparisonMode={setComparisonMode}
                   isShowingAfter={isShowingAfter}
@@ -2311,6 +2319,9 @@ export default function DashboardPage() {
                     setPreviewState("none");
                     setPromptText("");
                   }}
+                  onConfigureUrl={handleOpenLiveUrlModal}
+                  taskSteps={taskSteps}
+                  activeTask={activeTask}
                 />
               </div>
             </div>
