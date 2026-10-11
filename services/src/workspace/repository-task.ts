@@ -55,7 +55,7 @@ async function executeRepositoryTaskInternal(input: {
   const profile = RepositoryAnalyzer.detectStack(entries.map((f: any) => f.path), packageText);
   if (staticOnly) Object.assign(profile,{displayName:'Restricted static website',language:'html',framework:'Static HTML/CSS/JS',packageManager:'none',installCommand:'',buildCommand:'',testCommand:STATIC_CHECK,devCommand:STATIC_PREVIEW,defaultPort:3000});
   await progress.emit({stage:"analysis",status:"passed",attempt:1,detail:staticOnly?"Restricted static HTML/CSS/JavaScript":profile.displayName});
-  const imageKey = profile.stack === 'nextjs' || profile.stack === 'nodejs' ? 'NODE' :
+  const imageKey = profile.stack === 'static' || profile.stack === 'nextjs' || profile.stack === 'nodejs' ? 'NODE' :
     profile.stack.startsWith('python') ? 'PYTHON' : profile.stack.toUpperCase();
   const image = process.env[staticOnly ? 'RYVIX_WORKSPACE_STATIC_IMAGE' : `RYVIX_WORKSPACE_${imageKey}_IMAGE`] ||
     process.env.RYVIX_WORKSPACE_NODE_IMAGE ||
@@ -132,12 +132,12 @@ async function executeRepositoryTaskInternal(input: {
     const changes = await progress.run("diff",1,async()=>{const diff=await manager.captureDiff(session.id);if(!diff.length)throw Error("No changes");return diff;},"Measured repository diff; not an independent security review");
     if (!changes.length) throw new Error('Task produced no repository changes');
     let previewError: string | null = null;
-    if (staticOnly || pkg?.scripts?.dev || pkg?.scripts?.start) {
+    if (staticOnly || profile.stack==='static' || pkg?.scripts?.dev || pkg?.scripts?.start) {
       try {
         await progress.emit({stage:"preview",status:"running",attempt:1});
         await ensurePreviewGateway();
         // PORT=3000 is supplied to the detected application's own start script.
-        const command = staticOnly ? STATIC_PREVIEW : repositoryPreviewCommand(profile.stack,profile.packageManager,pkg)!;
+        const command = staticOnly ? STATIC_PREVIEW : profile.stack==='static' ? profile.devCommand : repositoryPreviewCommand(profile.stack,profile.packageManager,pkg)!;
         await manager.startPreview(session.id, command, previewOrigin(session.id));
         await progress.emit({stage:"preview",status:"passed",attempt:1});
       } catch { await progress.emit({stage:'preview',status:'failed',attempt:1}); previewError = 'Preview unavailable. Check the gateway configuration and application startup logs.'; }

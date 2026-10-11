@@ -682,3 +682,25 @@ body {
  .phone-profile-grid { grid-template-columns:1fr; }
  .workspace-card, .phone-onboarding-dialog { padding:1.25rem; }
 }
+
+/* Coding chat and preview must remain usable on laptop and narrow screens. */
+.dashboard-coding-grid { display:grid; grid-template-columns:minmax(300px, 400px) minmax(0, 1fr); gap:1.5rem; min-height:680px; }
+.dashboard-coding-grid > * { min-width:0; }
+.preview-toolbar, .preview-toolbar > div { flex-wrap:wrap; min-width:0; }
+.preview-address { overflow:hidden; }
+@media (max-width:1200px) {
+  .dashboard-coding-grid { grid-template-columns:minmax(0,1fr); height:auto; }
+  .dashboard-coding-grid > * { min-height:480px; }
+}
+@media (max-width:600px) {
+  .preview-address { flex-basis:100% !important; order:3; }
+  .preview-toolbar { gap:.5rem !important; padding:.6rem !important; }
+}
+
+@media (max-width:768px) {
+  .dashboard-sidebar { justify-content:flex-start !important; overflow-y:hidden !important; }
+  .dashboard-sidebar > div:not(.sidebar-nav-group) { display:none !important; }
+  .dashboard-sidebar .sidebar-nav-group { display:contents; }
+  .dashboard-sidebar .sidebar-nav-group > div { flex-direction:row !important; flex-shrink:0; margin:0 !important; }
+  .dashboard-sidebar .sidebar-nav-group button { width:44px !important; height:44px; padding:.6rem !important; flex-shrink:0; justify-content:center !important; }
+}

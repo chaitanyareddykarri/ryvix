@@ -1,3 +1,4 @@
+import {publicTaskError} from './task-error';
 import { randomUUID } from 'node:crypto';
 import {ModelQuotaError} from '../../../ai/src/model-capacity';
 import { RepositoryJobStore } from '../../../backend/src/services/repository-job-store';
@@ -28,7 +29,6 @@ export async function runRepositoryJob(store: RepositoryJobStore, workerId: stri
     console.log(`\n======================================================`);
     console.log(`[Ryvix Worker] 📦 Claimed Task #${job.task_id.slice(0, 8)}`);
     console.log(`[Ryvix Worker] 📂 Repository: ${job.full_name} (${job.default_branch})`);
-    console.log(`[Ryvix Worker] 💬 User prompt: "${job.user_prompt}"`);
     console.log(`======================================================`);
     const githubToken = await store.credentials(job,workerId);
     const lessons=await store.learningContext(job);
@@ -47,7 +47,7 @@ export async function runRepositoryJob(store: RepositoryJobStore, workerId: stri
       },
       onPlan: async (summary,steps) => {
         if (lostLease) throw new Error('Worker lease lost');
-        console.log(`[Ryvix Worker] 📋 Plan generated: ${summary} (${steps.length} steps)`);
+        console.log('[Ryvix Worker] Plan recorded; review it in the authenticated dashboard.');
         await store.plan(job,workerId,summary,steps);
       },
     });
@@ -61,15 +61,13 @@ export async function runRepositoryJob(store: RepositoryJobStore, workerId: stri
         const chatId = await store.getCreatorTelegramChatId(job.created_by);
         if (chatId) {
           const filesCount = result.files?.length || 0;
-          const previewText = result.session?.preview_url
-            ? `\n🌐 *Preview:* ${result.session.preview_url}`
-            : (result.session?.preview_port ? `\n🌐 *Local Preview:* http://localhost:${result.session.preview_port}` : '');
+          const previewText = '\nOpen the authenticated Ryvix dashboard to view an available preview.';
           await sendTelegramMessage(
             process.env.TELEGRAM_BOT_TOKEN,
             chatId,
             `🎉 *Task #${job.task_id.slice(0, 8)} Completed in Sandbox!*\n\n` +
             `📂 *Repo:* \`${job.full_name}\`\n` +
-            `📝 *Plan:* ${result.summary || 'Code modifications applied'}\n` +
+            `📝 *Plan:* ${'Code modifications recorded for review'}\n` +
             `📁 *Files Changed:* ${filesCount}\n` +
             `🧪 *Verification:* Checks passed inside container sandbox${previewText}\n\n` +
             `📊 *Review & Merge:* https://ryvix.co.in/dashboard`,
@@ -77,11 +75,11 @@ export async function runRepositoryJob(store: RepositoryJobStore, workerId: stri
           );
         }
       } catch (tgErr) {
-        console.warn('[Telegram Worker Notice] Could not send completion alert:', tgErr);
+        console.warn('[Telegram Worker Notice] Could not send completion alert.');
       }
     }
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorMsg = publicTaskError(error);
     console.error(`[Ryvix Worker] ❌ Task #${job.task_id.slice(0, 8)} failed:`, errorMsg);
     let cleaned=true;
     if (sessionId) try {await dockerWorkspaceManager.terminateSession(sessionId);await store.markDestroyed(sessionId);}catch{cleaned=false;}
@@ -103,7 +101,7 @@ export async function runRepositoryJob(store: RepositoryJobStore, workerId: stri
           );
         }
       } catch (tgErr) {
-        console.warn('[Telegram Worker Notice] Could not send failure alert:', tgErr);
+        console.warn('[Telegram Worker Notice] Could not send failure alert.');
       }
     }
   } finally { clearInterval(heartbeat); }

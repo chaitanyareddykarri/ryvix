@@ -4,7 +4,7 @@ export default function TaskCheckTimeline({events=[],status,unavailable=false,tr
   return <section aria-label="Recorded task checks" style={{padding:'1rem',border:'1px solid #334155',borderRadius:10,marginBlock:16}}>
     <h3>Analysis, review and check history</h3>
     <p>Recorded worker events. One repair at most per execution; configured checks rerun after a correction. A passing check is not proof that every source-code loop terminates.</p>
-    {unavailable?<p role="alert">Check history is unavailable. Retry later.</p>:!events.length?<p>No execution checks recorded yet. Older workers do not publish this history.</p>:<ol>
+    {unavailable?<p role="alert">Check history is unavailable. Retry later.</p>:!events.length?<p>No execution checks recorded yet. Older workers do not publish this history.</p>:<ol style={{maxHeight:240,overflowY:"auto",paddingInlineStart:24}}>
       {events.map((event,index)=>{
         const interrupted=event.status==='running'&&['failed','cancelled'].includes(status)&&!events.slice(index+1).some(next=>next.stage===event.stage&&next.attempt===event.attempt&&next.status!=='running');
         return <li key={index} style={{marginBlock:8,overflowWrap:'anywhere'}}>

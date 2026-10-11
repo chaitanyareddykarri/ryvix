@@ -14,6 +14,7 @@ export type DetectedStack =
   | 'rust' 
   | 'dotnet' 
   | 'docker' 
+  | 'static'
   | 'generic';
 
 export interface StackProfile {
@@ -179,6 +180,11 @@ export class RepositoryAnalyzer {
       };
     }
 
+    if(filePaths.includes('index.html'))return {
+      stack:'static',displayName:'Static HTML/CSS/JavaScript',language:'html',framework:'Static website',
+      baseImage:'node:22-alpine',dockerBaseImage:'node:22-alpine',packageManager:'none',installCommand:'',buildCommand:'',
+      testCommand:'node /opt/ryvix/static-site.cjs check --standard',devCommand:'node /opt/ryvix/static-site.cjs serve --standard',defaultPort:3000,
+    };
     // Generic fallback
     const baseImg = 'alpine:3.20';
     return {
@@ -190,8 +196,8 @@ export class RepositoryAnalyzer {
       dockerBaseImage: baseImg,
       packageManager: 'none',
       installCommand: 'echo "No package manager"',
-      buildCommand: 'echo "No build step"',
-      testCommand: 'echo "No tests configured"',
+      buildCommand: '',
+      testCommand: '',
       devCommand: 'echo "No dev command"',
       defaultPort: 8080,
     };

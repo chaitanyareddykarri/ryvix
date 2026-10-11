@@ -5,21 +5,23 @@ const path = require('node:path');
 const http = require('node:http');
 const { spawnSync } = require('node:child_process');
 const root = process.cwd();
+// Standard laptop/VM profile remains bounded; Micro static mode keeps its original limits.
+const standard=process.argv.includes('--standard');
 const types = {'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.txt':'text/plain; charset=utf-8','.md':'text/plain; charset=utf-8'};
 function inspect() {
   const files = new Map(); let bytes = 0;
   function walk(dir, depth = 0) {
     if (depth > 12) throw Error('Directory depth exceeded');
     for (const entry of fs.readdirSync(dir, {withFileTypes:true})) {
-      if (dir === root && entry.name === '.git') continue;
+      if (dir === root && (entry.name === '.git'||standard&&entry.name === '.gitignore')) continue;
       if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(entry.name) || entry.isSymbolicLink()) throw Error('Unsupported path');
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) { walk(full, depth + 1); continue; }
       const name = path.relative(root, full).split(path.sep).join('/');
       const stat = fs.lstatSync(full);
-      if (!stat.isFile() || !(types[path.extname(name).toLowerCase()] || name === 'LICENSE') || stat.size > 32768) throw Error('Unsupported static file');
+      if (!stat.isFile() || !(types[path.extname(name).toLowerCase()] || name === 'LICENSE') || stat.size > (standard?1048576:32768)) throw Error('Unsupported static file');
       bytes += stat.size;
-      if (bytes > 262144 || files.size >= 64) throw Error('Static size limit exceeded');
+      if (bytes > (standard?8388608:262144) || files.size >= (standard?512:64)) throw Error('Static size limit exceeded');
       const data = fs.readFileSync(full);
       if (data.includes(0)) throw Error('Binary files are unsupported');
       files.set(name, data);
